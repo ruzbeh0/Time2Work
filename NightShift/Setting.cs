@@ -64,8 +64,8 @@ namespace Time2Work
         {
             return new Dictionary<string, string>
             {
-                { m_Setting.GetSettingsLocaleID(), "Night Shift" },
-                { m_Setting.GetOptionTabLocaleID(Setting.WorkPlaceShiftSection), "Night Shift" },
+                { m_Setting.GetSettingsLocaleID(), "Time2Work" },
+                { m_Setting.GetOptionTabLocaleID(Setting.WorkPlaceShiftSection), "Time2Work" },
 
                 { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceShiftGroup), "Modify the Share of Evening and Night Work Shifts" },
 

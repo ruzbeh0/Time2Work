@@ -25,10 +25,9 @@ namespace Time2Work
 
             AssetDatabase.global.LoadSettings(nameof(Time2Work), m_Setting, new Setting(this));
 
-            updateSystem.UpdateAfter<WorkPlaceShiftUpdateSystem>(SystemUpdatePhase.PrefabUpdate);
-            updateSystem.UpdateBefore<WorkPlaceShiftUpdateSystem>(SystemUpdatePhase.PrefabReferences);
-            updateSystem.UpdateAfter<WorkerShiftUpdateSystem>(SystemUpdatePhase.PrefabUpdate);
-            updateSystem.UpdateBefore<WorkerShiftUpdateSystem>(SystemUpdatePhase.PrefabReferences);
+            updateSystem.UpdateAt<WorkPlaceShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAt<WorkerShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
+
         }
 
         public void OnDispose()

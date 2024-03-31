@@ -34,6 +34,11 @@ namespace Time2Work
             RequireForUpdate(_query);
         }
 
+        public override int GetUpdateInterval(SystemUpdatePhase phase)
+        {
+            // One day (or month) in-game is '262144' ticks
+            return 262144 / 1;
+        }
         protected override void OnUpdate()
         {
             var workers = _query.ToEntityArray(Allocator.Temp);
@@ -119,9 +124,6 @@ namespace Time2Work
             Mod.log.Info($"New Day Shift Workers %: {100*new_sum_day_shift / (new_sum_day_shift + new_sum_evening_shift + new_sum_night_shift)}");
             Mod.log.Info($"New Evening Shift Workers %: {100*new_sum_evening_shift / (new_sum_day_shift + new_sum_evening_shift + new_sum_night_shift)}");
             Mod.log.Info($"New Night Shift Workers %: {100 * new_sum_night_shift / (new_sum_day_shift + new_sum_evening_shift + new_sum_night_shift)}");
-
-
-            Enabled = false;
         }
     }
 }

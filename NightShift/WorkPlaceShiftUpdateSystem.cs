@@ -6,6 +6,7 @@ using Game.Prefabs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Collections;
@@ -33,6 +34,11 @@ namespace Time2Work
             });
 
             RequireForUpdate(_query);
+        }
+        public override int GetUpdateInterval(SystemUpdatePhase phase)
+        {
+            // One day (or month) in-game is '262144' ticks
+            return 262144 / 1;
         }
 
         protected override void OnUpdate()
@@ -65,32 +71,33 @@ namespace Time2Work
             Mod.log.Info($"Evening Shift Probability Weighted Average: {sum_W_WPD_ES / sumMW}");
             Mod.log.Info($"Night Shift Probability Weighted Average: {sum_W_WPD_NS / sumMW}");
 
-            double evening_factor = eveningWorkPlaceShare / (sum_W_WPD_ES / sumMW);
-            double night_factor = nightWorkPlaceShare / (sum_W_WPD_NS / sumMW);
-
-            foreach(var workplace in workplaces)
+            if((sum_W_WPD_ES / sumMW) > 0)
             {
-                WorkplaceData data;
+                double evening_factor = eveningWorkPlaceShare / (sum_W_WPD_ES / sumMW);
+                double night_factor = nightWorkPlaceShare / (sum_W_WPD_NS / sumMW);
 
-                if (!_workplaceToData.TryGetValue(workplace, out data))
+                foreach (var workplace in workplaces)
                 {
-                    data = EntityManager.GetComponentData<WorkplaceData>(workplace);
-                    _workplaceToData.Add(workplace, data);
+                    WorkplaceData data;
 
-                    data.m_EveningShiftProbability = (float)(evening_factor * data.m_EveningShiftProbability);
-                    data.m_NightShiftProbability = (float)(night_factor * data.m_NightShiftProbability);
+                    if (!_workplaceToData.TryGetValue(workplace, out data))
+                    {
+                        data = EntityManager.GetComponentData<WorkplaceData>(workplace);
+                        _workplaceToData.Add(workplace, data);
 
-                    sum_W_WPD_ES_New += data.m_EveningShiftProbability * data.m_MaxWorkers;
-                    sum_W_WPD_NS_New += data.m_NightShiftProbability * data.m_MaxWorkers;
+                        data.m_EveningShiftProbability = (float)(evening_factor * data.m_EveningShiftProbability);
+                        data.m_NightShiftProbability = (float)(night_factor * data.m_NightShiftProbability);
 
-                    EntityManager.SetComponentData<WorkplaceData>(workplace, data);
+                        sum_W_WPD_ES_New += data.m_EveningShiftProbability * data.m_MaxWorkers;
+                        sum_W_WPD_NS_New += data.m_NightShiftProbability * data.m_MaxWorkers;
+
+                        EntityManager.SetComponentData<WorkplaceData>(workplace, data);
+                    }
                 }
+
+                Mod.log.Info($"New Evening Shift Probability Weighted Average: {sum_W_WPD_ES_New / sumMW}");
+                Mod.log.Info($"New Night Shift Probability Weighted Average: {sum_W_WPD_NS_New / sumMW}");
             }
-
-            Mod.log.Info($"New Evening Shift Probability Weighted Average: {sum_W_WPD_ES_New / sumMW}");
-            Mod.log.Info($"New Night Shift Probability Weighted Average: {sum_W_WPD_NS_New / sumMW}");
-
-            Enabled = false;
         }
     }
 }

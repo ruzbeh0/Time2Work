@@ -4,24 +4,33 @@
 	<!--Name of the mod to display to players-->
 	<DisplayName Value="Time2Work" />
 	<!--Short description of the mod-->
-	<ShortDescription Value="This is a short description" />
+	<ShortDescription Value="This mod allows you to configure the time that cims go to work." />
 	<!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
 	<!--LongDescription Value="This is a long description" /-->
 	<LongDescription>
-This is a long description
+		This mod allows you to configure the time that cims go to work.
+
+		Cims goes to work based on three shifts: Day, Evening and Night. This mod allows you to configure the percentage of each of those work shifts, the base game has around 20-25% of work trips being at either the Evening or the Night. This value is too high and does not correspond to reality.
+
+		The mod options menu will allow you to set the percentage for Evening and Night shifts. Day shift percentage will correspond to the remaining percentage points. The default values of the mod are set for 6% for Evening shifts and 4% for Night shifts. These values come from a US Survey which can be found in this [link](https://redline.digital/shift-work-statistics/)
+
+		The effects of this mod will be that you should see more trips during the rush hour and less trips at night. This may affect the performance of the game - decreasing it during the day and improving it at night. With the default settings you can expect a reduction of 10-20% of Traffic at night and increase by around 10-20% during the day.
+		
+		If you enable this mod in an existing city it will take a day or two for you to notice a change in the time of day activity.
 	</LongDescription>
 	<!--Thumbnail-->
 	<Thumbnail Value="Properties/Thumbnail.png" />
 	<!--Screenshot, can be set multiple times-->
-	<Screenshot Value="" />
+	<Screenshot Value="Properties/screenshot_options.png" />
+	<Screenshot Value="Properties/screenshot1.png" />
 	<!--Tag, can be set multiple times-->
 	<Tag Value="" />
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="" />
 	<!--Version of the mod-->
-	<ModVersion Value="1.0" />
+	<ModVersion Value="0.1" />
 	<!--Recommended version of the base game to use the mod-->
-	<GameVersion Value="1.0.*" />
+	<GameVersion Value="1.1.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="" />
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
@@ -29,5 +38,5 @@ This is a long description
 	<!--ChangeLog>
 	</ChangeLog-->
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
-	<ExternalLink Type="" Url="" />
+	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />
 </Publish>
