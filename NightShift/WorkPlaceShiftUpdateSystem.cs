@@ -3,6 +3,7 @@ using Game;
 using Game.Citizens;
 using Game.Companies;
 using Game.Prefabs;
+using Game.Simulation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,8 +21,6 @@ namespace Time2Work
 
         private EntityQuery _query;
 
-        //public static ILog log = LogManager.GetLogger($"{nameof(Time2Work)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
-
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -38,7 +37,7 @@ namespace Time2Work
         public override int GetUpdateInterval(SystemUpdatePhase phase)
         {
             // One day (or month) in-game is '262144' ticks
-            return 262144 / 1;
+            return TimeSystem.kTicksPerDay / 1;
         }
 
         protected override void OnUpdate()

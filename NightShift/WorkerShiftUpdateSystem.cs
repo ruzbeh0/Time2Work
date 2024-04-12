@@ -3,6 +3,7 @@ using Game;
 using Game.Citizens;
 using Game.Companies;
 using Game.Prefabs;
+using Game.Simulation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,7 +38,7 @@ namespace Time2Work
         public override int GetUpdateInterval(SystemUpdatePhase phase)
         {
             // One day (or month) in-game is '262144' ticks
-            return 262144 / 1;
+            return TimeSystem.kTicksPerDay / 4;
         }
         protected override void OnUpdate()
         {
@@ -45,6 +46,8 @@ namespace Time2Work
             float sum_day_shift = 0f;
             float sum_evening_shift = 0f;
             float sum_night_shift = 0f;
+            float sum_last_commute = 0f;
+            int count = 0;
 
             double eveningWorkPlaceShare = (float)(Mod.m_Setting.evening_share) / 100;
             double nightWorkPlaceShare = (float)(Mod.m_Setting.night_share) / 100;
@@ -70,12 +73,17 @@ namespace Time2Work
                     {
                         sum_night_shift++;
                     }
+
+                    sum_last_commute += (data.m_LastCommuteTime * 60f) / 262144f;
+                    count++;
                 }
             }
                     
             Mod.log.Info($"Day Shift Workers %: {100*sum_day_shift / (sum_day_shift + sum_evening_shift + sum_night_shift)}");
             Mod.log.Info($"Evening Shift Workers %: {100*sum_evening_shift / (sum_day_shift + sum_evening_shift + sum_night_shift)}");
             Mod.log.Info($"Night Shift Workers %: {100 * sum_night_shift / (sum_day_shift + sum_evening_shift + sum_night_shift)}");
+            Mod.log.Info($"Average Commute Time: {(sum_last_commute*24f)/(float)count}");
+
 
             float new_sum_day_shift = 0f;
             float new_sum_evening_shift = 0f;

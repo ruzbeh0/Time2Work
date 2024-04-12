@@ -14,7 +14,7 @@
 		<!--The file should contain 2 lines:-->
 		<!--Your.PDX@Account.login-->
 		<!--Your-PDX-Account-Pa$$word-->
-		<PDXAccountDataPath>$(USERPROFILE)\Desktop\pdx_account.txt</PDXAccountDataPath>
+		<PDXAccountDataPath>C:\Users\ruzbe\OneDrive\Desktop\pdx_account.txt</PDXAccountDataPath>
 		
 		<!--The file where mod information which is required for publishing mod on PDX mods are stored-->
 		<PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>
@@ -25,6 +25,9 @@
 	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.targets" />
 
 	<ItemGroup>
+		<Reference Include="Colossal.Collections">
+		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Collections.dll</HintPath>
+		</Reference>
 		<Reference Include="Game">
 			<Private>false</Private>
 		</Reference>
@@ -78,6 +81,10 @@
 	<ItemGroup>
 		<None Include="$(ModPropsFile)" Link="Properties\Mod.props" />
 		<None Include="$(ModTargetsFile)" Link="Properties\Mod.targets" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Lib.Harmony" Version="2.2.2" ExcludeAssets="runtime" />
 	</ItemGroup>
 
 </Project>
