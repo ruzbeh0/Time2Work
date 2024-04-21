@@ -42,11 +42,17 @@ namespace Time2Work
         public override int GetUpdateInterval(SystemUpdatePhase phase)
         {
             // One day (or month) in-game is '262144' ticks
-            return TimeSystem.kTicksPerDay / 32;
+            return TimeSystem.kTicksPerDay / 64;
         }
         protected override void OnUpdate()
         {
             DateTime currentDateTime = this.World.GetExistingSystemManaged<TimeSystem>().GetCurrentDateTime();
+            int half_hour = 0;
+            if(currentDateTime.Minute >= 30)
+            {
+                half_hour = 1;
+            }
+            int index = 2*currentDateTime.Hour + half_hour;
 
             var citizens = _query.ToEntityArray(Allocator.Temp);
 
@@ -61,29 +67,29 @@ namespace Time2Work
                     Purpose[] purp;
                     if (!_outputData.ContainsKey(cim.Index))
                     {
-                        // 0 - 23 YESTERDAY, 24 to 47 TODAY
-                        purp = new Purpose[48];
-                        purp[currentDateTime.Hour + 24] = data2.m_Purpose;
+                        // 0 - 23 YESTERDAY, 24 to 71 TODAY
+                        purp = new Purpose[72];
+                        purp[index + 24] = data2.m_Purpose;
                         _outputData.Add(cim.Index, purp);
                     } else
                     {
                         if(_outputData.TryGetValue(cim.Index, out purp)) 
                         {
-                            purp[currentDateTime.Hour + 24] = data2.m_Purpose;
+                            purp[index + 24] = data2.m_Purpose;
                             _outputData[cim.Index] = purp;
                         }
                     }                  
                 }
             }
 
-            if (currentDateTime.Hour == 0) 
+            if (currentDateTime.Hour == 0 && half_hour == 0) 
             {
-                int[] hbw = new int[24];
-                int[] hbsch = new int[24];
-                int[] hbo = new int[24];
-                int[] nhb = new int[24];
+                int[] hbw = new int[48];
+                int[] hbsch = new int[48];
+                int[] hbo = new int[48];
+                int[] nhb = new int[48];
 
-                for(int h = 0; h < 24; h++)
+                for(int h = 0; h < 48; h++)
                 {
                     hbw[h] = 0;
                     hbsch[h] = 0;
@@ -94,18 +100,20 @@ namespace Time2Work
                 foreach (var key in _outputData.Keys)
                 {
                     Purpose[] purp = _outputData[key];
+                    Purpose prev = Purpose.PathFailed;
                     int i = 0;
                     List<Purpose> tpurp = new List<Purpose>();
                     List<int> thour = new List<int>();
-                    while (i < 48)
+                    while (i < 72)
                     {
                         Purpose current = purp[i];
-                        if (i < 47)
+
+                        if (i < 71)
                         {
                             int j = i + 1;
                             Purpose next = purp[j];
 
-                            while (current.Equals(next) && j < 47)
+                            while (current.Equals(next) && j < 71)
                             {
                                 j++;
                                 next = purp[j];
@@ -113,8 +121,12 @@ namespace Time2Work
 
                             if (!current.Equals(next))
                             {
-                                tpurp.Add(current);
-                                thour.Add(i);
+                                if(!current.Equals(Purpose.None) && !current.Equals(prev))
+                                {
+                                    tpurp.Add(current);
+                                    thour.Add(i);
+                                    prev = current;
+                                }   
                             }
 
                             i = j;
@@ -123,12 +135,26 @@ namespace Time2Work
                         {
                             if (!current.Equals(purp[i - 1]))
                             {
-                                tpurp.Add(current);
-                                thour.Add(i);
+                                if (!current.Equals(Purpose.None) && !current.Equals(prev))
+                                {
+                                    tpurp.Add(current);
+                                    thour.Add(i);
+                                    prev = current;
+                                }
                             }
                             i++;
                         }
                     }
+
+                    Mod.log.Info($"key: {key}");
+                    for (int j = 0; j < tpurp.Count; j++)
+                    {
+                        //if(thour[j] > 23)
+                        {
+                            Mod.log.Info($"{thour[j]},{tpurp[j]}");
+                        }                       
+                    }
+
                     for (int k = 0; k < tpurp.Count; k++)
                     {
                         Purpose current = tpurp[k];
@@ -136,6 +162,7 @@ namespace Time2Work
                         Purpose next;
 
                         int previous_hour;
+                        int next_hour;
 
                         if (k == 0)
                         {
@@ -151,126 +178,227 @@ namespace Time2Work
                         if (k == (tpurp.Count - 1))
                         {
                             next = tpurp[0];
+                            next_hour = thour[0];
                         }
                         else
                         {
                             next = tpurp[k + 1];
+                            next_hour = thour[k + 1];
                         }
 
                         int h = thour[k];
-                        if (h > 23 && (h - previous_hour) < 12)
-                        {
+                        if (h > 23 && (h - previous_hour) < 20)
+                        {     
+                            if((h == 24 && previous.Equals(next) && (next_hour == 25)) || previous.Equals(current))
+                            {
+                                continue;
+                            }
                             // Going to Work
                             if (current.Equals(Purpose.GoingToWork))
                             {
+                                if(h == 24 && next_hour == 25 && (next.Equals(Purpose.Sleeping) || (next.Equals(Purpose.GoingHome) && previous.Equals(Purpose.GoingHome))))
+                                {
+                                    continue;
+                                }
+                                if(previous.Equals(Purpose.Working))
+                                {
+                                    continue;
+                                }
                                 if (previous.Equals(Purpose.Sleeping) || previous.Equals(Purpose.None) || previous.Equals(Purpose.GoingHome))
                                 {
                                     hbw[h - 24]++;
+                                    if (h == 24)
+                                    {
+                                        Mod.log.Info($"1 HBW: {h - 24},-{previous_hour},{previous},{current},{next_hour},{next}");
+                                    }
                                 }
                                 else
                                 {
                                     nhb[h - 24]++;
-                                }
-                            }
-                            // For cases where status is "Working", but there is no "GoingToWork" status before between now and previous location
-                            if (current.Equals(Purpose.Working))
-                            {
-                                if (previous.Equals(Purpose.Sleeping) || previous.Equals(Purpose.None))
-                                {
-                                    hbw[h - 24]++;
-                                }
-                                else
-                                {
-                                    if (!previous.Equals(Purpose.GoingToWork))
+                                    if (h == 24)
                                     {
-                                        nhb[h - 24]++;
+                                        Mod.log.Info($"1 NHB: {h - 24},-{previous_hour},{previous},{current},{next_hour},{next}");
                                     }
 
                                 }
-                            }
-                            if (current.Equals(Purpose.GoingToSchool))
+                            } else
                             {
-                                if (previous.Equals(Purpose.Sleeping) || previous.Equals(Purpose.None))
+                                // For cases where status is "Working", but there is no "GoingToWork" status before between now and previous location
+                                if (current.Equals(Purpose.Working))
                                 {
-                                    hbsch[h - 24]++;
-                                }
-                                else
-                                {
-                                    nhb[h - 24]++;
-                                }
-                            }
-                            // For cases where status is "Studying", but there is no "GoingToSchool" status before between now and previous location
-                            if (current.Equals(Purpose.Studying))
-                            {
-                                if (previous.Equals(Purpose.Sleeping) || previous.Equals(Purpose.None))
-                                {
-                                    hbsch[h - 24]++;
-                                }
-                                else
-                                {
-                                    if (!previous.Equals(Purpose.GoingToSchool))
+                                    if(next.Equals(Purpose.GoingToWork))
                                     {
-                                        nhb[h - 24]++;
+                                        continue;
                                     }
-
-                                }
-                            }
-                            //Going Home
-                            if (current.Equals(Purpose.GoingHome))
-                            {
-                                if (previous.Equals(Purpose.Working))
-                                {
-                                    if (next.Equals(Purpose.Sleeping) || next.Equals(Purpose.None))
+                                    if (previous.Equals(Purpose.GoingHome) || previous.Equals(Purpose.Sleeping) || previous.Equals(Purpose.None))
                                     {
                                         hbw[h - 24]++;
+                                        if (h == 24)
+                                        {
+                                            Mod.log.Info($"2 HBW: {h - 24},-{previous_hour},{previous},{current},{next_hour},{next}");
+                                        }
                                     }
                                     else
                                     {
-                                        nhb[h - 24]++;
+                                        if (!previous.Equals(Purpose.GoingToWork))
+                                        {
+                                            nhb[h - 24]++;
+                                            //Mod.log.Info($"2: {h - 24},{previous},{current},{next}");
+                                            if (h == 24)
+                                            {
+                                                Mod.log.Info($"2 NHB: {h - 24},-{previous_hour},{previous},{current},{next_hour},{next}");
+                                            }
+                                        }
                                     }
-                                }
-                                else
+                                } else
                                 {
-                                    if (previous.Equals(Purpose.Studying))
+                                    if (current.Equals(Purpose.GoingToSchool))
                                     {
-                                        if (next.Equals(Purpose.Sleeping) || next.Equals(Purpose.None))
+                                        if (previous.Equals(Purpose.GoingHome) || previous.Equals(Purpose.Sleeping) || previous.Equals(Purpose.None))
                                         {
                                             hbsch[h - 24]++;
                                         }
                                         else
                                         {
                                             nhb[h - 24]++;
+                                            //Mod.log.Info($"3: {h - 24},{previous},{current},{next}");
+                                            if (h == 24)
+                                            {
+                                                Mod.log.Info($"3 NHB: {h - 24},-{previous_hour},{previous},{current},{next_hour},{next}");
+                                            }
                                         }
-                                    }
+                                    } 
                                     else
                                     {
-                                        if (next.Equals(Purpose.Sleeping) || next.Equals(Purpose.None))
+                                        // For cases where status is "Studying", but there is no "GoingToSchool" status before between now and previous location
+                                        if (current.Equals(Purpose.Studying))
                                         {
-                                            hbo[h - 24]++;
-                                        }
-                                        else
+                                            if (previous.Equals(Purpose.Sleeping) || previous.Equals(Purpose.None))
+                                            {
+                                                hbsch[h - 24]++;
+                                            }
+                                            else
+                                            {
+                                                if (!previous.Equals(Purpose.GoingToSchool))
+                                                {
+                                                    nhb[h - 24]++;
+                                                    //Mod.log.Info($"4: {h - 24},{previous},{current},{next}");
+                                                    if (h == 24)
+                                                    {
+                                                        Mod.log.Info($"4 NHB: {h - 24},-{previous_hour},{previous},{current},{next_hour},{next}");
+                                                    }
+                                                }
+
+                                            }
+                                        } else
                                         {
-                                            nhb[h - 24]++;
+                                            //Going Home
+                                            if (current.Equals(Purpose.GoingHome))
+                                            {
+                                                if (h == 24 && next_hour == 25 && next.Equals(Purpose.Working) && previous.Equals(Purpose.Working))
+                                {
+                                                    continue;
+                                                }
+                                                if (previous.Equals(Purpose.Working) || (previous.Equals(Purpose.GoingToWork)))
+                                                {
+                                                    if ((next.Equals(Purpose.Sleeping) || next.Equals(Purpose.None) || next.Equals(Purpose.GoingToWork)) || (Math.Abs(next_hour - h) > 1))
+                                                    {
+                                                        hbw[h - 24]++;
+                                                        if (h == 24)
+                                                        {
+                                                            Mod.log.Info($"5 HBW: {h - 24},-{previous_hour},{previous},{current},{next_hour},{next}");
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        nhb[h - 24]++;
+                                                        //Mod.log.Info($"5: {h - 24},{previous},{current},{next}");
+                                                        if (h == 24)
+                                                        {
+                                                            Mod.log.Info($"5 NHB: {h - 24},-{previous_hour},{previous},{current},{next_hour},{next}");
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    if (previous.Equals(Purpose.Studying))
+                                                    {
+                                                        if ((next.Equals(Purpose.Sleeping) || next.Equals(Purpose.None)) || (Math.Abs(next_hour - h) > 1))
+                                                        {
+                                                            hbsch[h - 24]++;
+                                                        }
+                                                        else
+                                                        {
+                                                            nhb[h - 24]++;
+                                                            //Mod.log.Info($"6: {h - 24},{previous},{current},{next}");
+                                                            if (h == 24)
+                                                            {
+                                                                Mod.log.Info($"6 NHB: {h - 24},-{previous_hour},{previous},{current},{next_hour},{next}");
+                                                            }
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        if(previous.Equals(Purpose.Sleeping))
+                                                        {
+                                                            continue;
+                                                        }
+                                                        if ((next.Equals(Purpose.Sleeping) || next.Equals(Purpose.None)) || (Math.Abs(next_hour - h) > 1))
+                                                        {
+                                                            hbo[h - 24]++;
+                                                        }
+                                                        else
+                                                        {
+                                                            if(!previous.Equals(Purpose.None) && !previous.Equals(Purpose.Sleeping))
+                                                            {
+                                                                if((Math.Abs(next_hour - h) > 2))
+                                                                {
+                                                                    hbo[h - 24]++;
+                                                                }
+                                                                else
+                                                                {
+                                                                    nhb[h - 24]++;
+                                                                    //Mod.log.Info($"7: {h - 24},{previous},{current},{next}");
+                                                                    if (h == 24)
+                                                                    {
+                                                                        Mod.log.Info($"7 NHB: {h - 24},-{previous_hour},{previous},{current},{next_hour},{next}");
+                                                                    }
+                                                                } 
+                                                            }   
+                                                        }
+                                                    }
+                                                }
+                                            } else
+                                            {
+                                                if(current.Equals(Purpose.None))
+                                                {
+                                                    continue;
+                                                }
+                                                if (previous.Equals(Purpose.Sleeping) || previous.Equals(Purpose.None) || previous.Equals(Purpose.GoingHome))
+                                                {
+                                                    if (!current.Equals(Purpose.Sleeping))
+                                                    {
+                                                        if (!(current.Equals(Purpose.GoingToSchool) || current.Equals(Purpose.GoingToWork) || current.Equals(Purpose.Studying) || current.Equals(Purpose.Working)))
+                                                        {
+                                                            hbo[h - 24]++;
+                                                        }
+                                                        else
+                                                        {
+                                                            nhb[h - 24]++;
+                                                            //Mod.log.Info($"8: {h - 24},{previous},{current},{next}");
+                                                            if (h == 56)
+                                                            {
+                                                                Mod.log.Info($"8: {h - 24},{previous},{current},{next}");
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
-                            if (previous.Equals(Purpose.Sleeping) || previous.Equals(Purpose.None))
-                            {
-                                if(!(current.Equals(Purpose.Sleeping) || current.Equals(Purpose.None)))
-                                {
-                                    if (!(current.Equals(Purpose.GoingToSchool) || current.Equals(Purpose.GoingToWork) || current.Equals(Purpose.Studying) || current.Equals(Purpose.Working)))
-                                    {
-                                        hbo[h - 24]++;
-                                    }
-                                    else
-                                    {
-                                        nhb[h - 24]++;
-                                    }
-                                }                               
-                            }
                         }
-
                     }
                     thour = null;
                     tpurp = null;                    
@@ -284,8 +412,9 @@ namespace Time2Work
                     {
                         for (int h = 0; h < 24; h++)
                         {
-                            purp[h] = purp[h+24];
-                            purp[h+24] = 0;
+                            purp[h] = purp[h+48];
+                            purp[h + 24] = 0;
+                            purp[h + 48] = 0;
                             _outputData[key] = purp;
                         }
                     }
@@ -299,7 +428,7 @@ namespace Time2Work
                 using (StreamWriter sw = File.AppendText(Mod.output))
                 {
                     sw.WriteLine($"hour,trip_purpose,trips");
-                    for (int h = 0; h < 24; h++)
+                    for (int h = 0; h < 48; h++)
                     {
                         sw.WriteLine($"{h},hbw,{hbw[h]}");
                         sw.WriteLine($"{h},hbsch,{hbsch[h]}");

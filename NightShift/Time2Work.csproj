@@ -28,6 +28,9 @@
 		<Reference Include="Colossal.Collections">
 		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Collections.dll</HintPath>
 		</Reference>
+		<Reference Include="Colossal.Mathematics">
+		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Mathematics.dll</HintPath>
+		</Reference>
 		<Reference Include="Game">
 			<Private>false</Private>
 		</Reference>

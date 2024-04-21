@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Burst.Intrinsics;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -20,21 +21,27 @@ namespace Time2Work
     [HarmonyPatch]
     public class Time2WorkPatches
     {
-        //[HarmonyPatch(typeof(Game.Simulation.Time2WorkCitizenBehaviorSystem), "Execute")]
+        //[HarmonyPatch(typeof(Game.Simulation.LeisureSystem), "Execute")]
         //[HarmonyPrefix]
-        //public static bool WorkerSystemPatches_Execute_Prefix()
+        //public static bool LeisureSystem_Execute_Prefix(in ArchetypeChunk chunk,
+        //int unfilteredChunkIndex,
+        //bool useEnabledMask,
+        //in v128 chunkEnabledMask)
         //{
         //    Mod.log.Info($"Execute Pre");
         //    return true;
         //}
         //
-        //[HarmonyPatch(typeof(Game.Simulation.Time2WorkCitizenBehaviorSystem), "Execute")]
+        //[HarmonyPatch(typeof(Game.Simulation.LeisureSystem), "Execute")]
         //[HarmonyPostfix]
-        //public static void WorkerSystemPatches_Execute_Postfix()
+        //public static void LeisureSystem_Execute_Postfix(in ArchetypeChunk chunk,
+        //int unfilteredChunkIndex,
+        //bool useEnabledMask,
+        //in v128 chunkEnabledMask)
         //{
         //    Mod.log.Info($"Execute Post"); 
         //}
-        //
+        
         [HarmonyPatch(typeof(Game.Simulation.StudentSystem), "OnUpdate")]
         [HarmonyPrefix]
         public static bool WorkerSystemPatches_OnUpdate_Prefix(StudentSystem __instance)

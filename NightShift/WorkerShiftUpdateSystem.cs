@@ -35,10 +35,16 @@ namespace Time2Work
             RequireForUpdate(_query);
         }
 
-        public override int GetUpdateInterval(SystemUpdatePhase phase)
+        public override int GetUpdateOffset(SystemUpdatePhase phase)
         {
             // One day (or month) in-game is '262144' ticks
             return TimeSystem.kTicksPerDay / 4;
+        }
+
+        public override int GetUpdateInterval(SystemUpdatePhase phase)
+        {
+            // One day (or month) in-game is '262144' ticks
+            return TimeSystem.kTicksPerDay / 1;
         }
         protected override void OnUpdate()
         {

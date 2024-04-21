@@ -11,8 +11,8 @@ using Unity.Entities;
 namespace Time2Work
 {
     [FileLocation(nameof(Time2Work))]
-    [SettingsUIGroupOrder(WorkPlaceShiftGroup, WorkPlaceDelayGroup)]
-    [SettingsUIShowGroupName(WorkPlaceShiftGroup, WorkPlaceDelayGroup)]
+    [SettingsUIGroupOrder(WorkPlaceShiftGroup, WorkPlaceDelayGroup, LunchBreakGroup)]
+    [SettingsUIShowGroupName(WorkPlaceShiftGroup, WorkPlaceDelayGroup, LunchBreakGroup)]
     public class Setting : ModSetting
     {
         public const string WorkPlaceShiftSection = "Modify WorkPlace Shift Probability";
@@ -20,6 +20,7 @@ namespace Time2Work
 
         public const string WorkPlaceShiftGroup = "WorkPlaceShiftGroup";
         public const string WorkPlaceDelayGroup = "WorkPlaceDelayGroup";
+        public const string LunchBreakGroup = "LunchBreakGroup";
 
         public Setting(IMod mod) : base(mod)
         {
@@ -30,6 +31,7 @@ namespace Time2Work
             evening_share = 6;
             night_share = 4;
             delay_factor = 2;
+            lunch_break_percentage = 25;
         }
 
         public override void Apply()
@@ -53,8 +55,12 @@ namespace Time2Work
         [SettingsUISection(WorkPlaceShiftSection, WorkPlaceDelayGroup)]
         public float delay_factor { get; set; }
 
+        [SettingsUISlider(min = 0, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(WorkPlaceShiftSection, LunchBreakGroup)]
+        public int lunch_break_percentage { get; set; }
+
         [SettingsUIButton]
-        [SettingsUISection(WorkPlaceShiftSection, WorkPlaceDelayGroup)]
+        [SettingsUISection(WorkPlaceShiftSection, LunchBreakGroup)]
         public bool Button { set { SetDefaults(); } }
 
     }
@@ -73,8 +79,9 @@ namespace Time2Work
                 { m_Setting.GetSettingsLocaleID(), "Time2Work" },
                 { m_Setting.GetOptionTabLocaleID(Setting.WorkPlaceShiftSection), "Time2Work" },
 
-                { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceShiftGroup), "Modify the Share of Evening and Night Work Shifts" },
-                { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceDelayGroup), "Modify the Work Arrival and Departure Times" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceShiftGroup), "Modify the share of evening and night work Shifts" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceDelayGroup), "Modify the work arrival and departure times" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.LunchBreakGroup), "Modify the probability of workers taking a lunch break" },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Button)), "Reset" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Button)), $"Reset percentages to default values" },
@@ -85,6 +92,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.night_share)), $"Percentage for night workplaces" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.delay_factor)), "Delay/Early Factor" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.delay_factor)), $"This factor will adjust the variation in arrival and departure times from work. A higher factor will increase the variation on work arrival and departure - meaning more cims will not arrive to work on time or work for longer hours. A value of zero will disable this feature. Note that the effects of this feature in the morning and evening peak hours is different: in the morning there is an equal probabilty of early or late arrival, however, in the evening the probability of leaving late is higher than of leaving early. This was implemented this way to simulate better the differences of morning and evening commute from the real world." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.lunch_break_percentage)), "Lunch Break Probability" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.lunch_break_percentage)), $"Probability of workers that will take a lunch break. During a lunch break, workers might go shopping for food or convenience food, or go for leisure. After that they will return to work." },
             };
         }
 

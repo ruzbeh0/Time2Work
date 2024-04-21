@@ -8,29 +8,31 @@
 	<!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
 	<!--LongDescription Value="This is a long description" /-->
 	<LongDescription>
-		This mod allows you to configure the time that cims go to work and how long they stay there. The mod offers two options to configure this:
+This mod allows you to configure the time that cims go to work and how long they stay there. The mod offers three options to configure this:
 
-		## Work Shifts
+## Work Shifts
 
-		Cims goes to work based on three shifts: Day, Evening and Night. This mod allows you to configure the percentage of each of those work shifts, the base game has around 20-25% of work trips being at either the Evening or at Night. This value is too high and does not correspond to reality.
+Cims goes to work based on three shifts: Day, Evening and Night. This mod allows you to configure the percentage of each of those work shifts, the base game has around 20-25% of work trips being at either the Evening or at Night. This value is too high and does not correspond to reality.
 
-		The mod options menu will allow you to set the percentage for Evening and Night shifts. Day shift percentage will correspond to the remaining percentage points. The default values of the mod are set for 6% for Evening shifts and 4% for Night shifts. These values come from a US Survey which can be found in this link: https://redline.digital/shift-work-statistics/
+The mod options menu will allow you to set the percentage for Evening and Night shifts. Day shift percentage will correspond to the remaining percentage points. The default values of the mod are set for 6% for Evening shifts and 4% for Night shifts. These values come from a US Survey which can be found in this link: https://redline.digital/shift-work-statistics/
 
-		## Work Arrival / Departure
+## Work Arrival / Departure
 
-		Although the vanilla game does implement a variation on the cims' work arrival, it does assume that each shift will last exactly 8 hours. This mod adds a "Delay/Early factor" which adds greater variation to their schedule. The arrival/departure times are implemented using a normal distribution and is implemented differently for the morning and evening commutes to reflect the real world.
+Although the vanilla game does implement a variation on the cims' work arrival, it does assume that each shift will last exactly 8 hours. This mod adds a "Delay/Early factor" which adds greater variation to their schedule. The arrival/departure times are implemented using a normal distribution and is implemented differently for the morning and evening commutes to reflect the real world.
 
-		In real cities, the evening commute tends to be more spread out than the morning commute, this is basically that although most workers have a set time to arrive at work, when it is time to leave the departure time is not as strict, with a few workers working a few extra minutes or hours.
+In real cities, the evening commute tends to be more spread out than the morning commute, this is basically that although most workers have a set time to arrive at work, when it is time to leave the departure time is not as strict, with a few workers working a few extra minutes or hours.
 
-		This feature is also implemented differently for each shift. The Evening and Night shifts have even greater variation, spreading out the start and end work times for the cims that work during those shifts.
+This feature is also implemented differently for each shift. The Evening and Night shifts have even greater variation, spreading out the start and end work times for the cims that work during those shifts.
 
-		## Mod Effects
+## Lunch Break
 
-		The effects of this mod will be that you should see more trips during the rush hour and less trips at night. 
+The lunch break option will add the possibility of some cims to leave work around noon for either Leisure or Shopping. The break lasts around an hour, after that, they will return to work. The lunch break can be configured by setting the lunch break probability in the mod's menu. Also, cims that take a lunch break, might leave work a little later (to compensate for the time that they weren't working).
 
-		If you enable this mod in an existing city it will take a day or two for you to notice a change in the time of day activity.
+## Mod Effects
 
-		This mod allows you to easily change the capacity of school buildings based on their education level (elementary, high school, college, and university).
+The effects of this mod will be that you should see more trips during the rush hour and less trips at night.
+
+If you enable this mod in an existing city it will take a day or two for you to notice a change in the time of day activity.
 	</LongDescription>
 	<!--Thumbnail-->
 	<Thumbnail Value="Properties/Thumbnail.png" />
@@ -42,19 +44,20 @@
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.2" />
+	<ModVersion Value="0.3" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.1.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="77209" />
 	<ChangeLog>
-		# 0.1
-
-		* Added option to configure percetange for each work shift.
-
-		# 0.2
-
-		* Added option to configure delay/early factor for work arrival and departure times.
+v0.1
+* Added option to configure percetange for each work shift.
+v0.2
+* Added option to configure delay/early factor for work arrival and departure times.
+v0.3
+* Added option to configure lunch break.
+* Optimized work arrival and departure times.
+* Fixed bug that was creating Harmony log in the desktop
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

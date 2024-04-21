@@ -687,7 +687,15 @@ namespace Time2Work
                 {
                     Worker worker = this.m_Workers[entity];
                     float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, worker, ref economyParameters, true);
-                    x = math.min(x, this.GetTimeLeftUntilInterval(timeToWork));
+                    float2 timeToLunch = Time2WorkWorkerSystem.GetLunchTime(citizen, worker, ref economyParameters); 
+                    if(timeToLunch.x > 0)
+                    {
+                        float x1 = math.min(this.GetTimeLeftUntilInterval(timeToLunch), this.GetTimeLeftUntilInterval(timeToWork));
+                        x = math.min(x, x1);
+                    } else
+                    {
+                        x = math.min(x, this.GetTimeLeftUntilInterval(timeToWork));
+                    }
                 }
                 else
                 {
@@ -931,6 +939,43 @@ namespace Time2Work
                                             {
                                                 if (this.m_Workers.HasComponent(entity1) && !Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population) && Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime) || this.m_Students.HasComponent(entity1) && StudentSystem.IsTimeToStudy(citizen, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population))
                                                 {
+                                                    if(Time2WorkWorkerSystem.IsLunchTime(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime))
+                                                    {
+                                                        HouseholdNeed householdNeed = this.m_HouseholdNeeds[household];
+
+                                                        if (this.m_Transforms.HasComponent(currentBuilding))
+                                                        {
+                                                            if (householdNeed.m_Resource == Resource.NoResource)
+                                                            {
+                                                                int num = 50;
+                                                                if (Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom)).NextInt(100) > num)
+                                                                {
+                                                                    householdNeed.m_Resource = Resource.ConvenienceFood;
+                                                                } else
+                                                                {
+                                                                    householdNeed.m_Resource = Resource.Food;
+                                                                }
+                                                                
+                                                            }
+                                                            //Mod.log.Info($"Shopping:{householdNeed.m_Resource},{householdNeed.m_Amount}");
+                                                            this.GoShopping(unfilteredChunkIndex, entity1, household, householdNeed, this.m_Transforms[currentBuilding].m_Position);
+                                                            householdNeed.m_Resource = Resource.NoResource;
+                                                            this.m_HouseholdNeeds[household] = householdNeed;
+                                                            if (chunk.Has<Leisure>(ref this.m_LeisureType))
+                                                            {
+                                                                this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
+                                                            }
+                                                        } else
+                                                        {
+                                                            int num = chunk.Has<Leisure>(ref this.m_LeisureType) || this.m_OutsideConnections.HasComponent(currentBuilding) ? 0 : (this.CheckLeisure(ref citizen, ref random) ? 1 : 0);
+                                                            nativeArray2[index] = citizen;
+                                                            if (num != 0)
+                                                            {
+                                                                if (this.DoLeisure(unfilteredChunkIndex, entity1, ref citizen, household, this.m_Transforms[currentBuilding].m_Position, population, ref random, ref this.m_EconomyParameters))
+                                                                    nativeArray2[index] = citizen;
+                                                            }
+                                                        }
+                                                    }
                                                     if (chunk.Has<Leisure>(ref this.m_LeisureType))
                                                     {
                                                         this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
