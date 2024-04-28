@@ -20,6 +20,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using System;
 
 namespace Time2Work
 {
@@ -53,10 +54,11 @@ namespace Time2Work
           ref ComponentLookup<Game.Citizens.Student> students)
         {
             int age = (int)citizen.GetAge();
-            float2 float2_1 = new float2(0.875f, 0.175f);
+            float2 float2_1 = new float2(0.875f, 0.21f);
             float num = float2_1.y - float2_1.x;
             Unity.Mathematics.Random pseudoRandom = citizen.GetPseudoRandom(CitizenPseudoRandom.SleepOffset);
-            float2 x1 = float2_1 + pseudoRandom.NextFloat(0.0f, 0.2f);
+            float2 x1 = float2_1 + (float)(GaussianRandom.NextGaussianDouble(pseudoRandom)*0.1f) + 0.1f;
+
             if (age == 3)
                 x1 -= 0.05f;
             if (age == 0)
@@ -73,7 +75,7 @@ namespace Time2Work
             {
                 if (!students.HasComponent(entity))
                     return x2;
-                float2_2 = StudentSystem.GetTimeToStudy(citizen, students[entity], ref economyParameters);
+                float2_2 = Time2WorkStudentSystem.GetTimeToStudy(citizen, students[entity], ref economyParameters);
             }
             if ((double)float2_2.x < (double)float2_2.y)
             {
@@ -545,7 +547,19 @@ namespace Time2Work
                 }
                 else
                 {
-                    this.GoHome(entity, home, trips, currentBuilding);
+                    //if(this.m_NormalizedTime < 0.03)
+                    //{
+                    //    Mod.log.Info($"SleepTime: {this.m_NormalizedTime}, {entity.Index},{Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students)}");
+                    //}
+
+                    //If too much time has passed since sleep start time, stay where you are
+                    float2 sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students);
+                    double threshold_go_home = Math.Min(Math.Abs(sleepTime.x - this.m_NormalizedTime), Math.Abs(1 - (sleepTime.x - this.m_NormalizedTime)));
+
+                    if (threshold_go_home <= 0.03)
+                    {
+                        this.GoHome(entity, home, trips, currentBuilding);
+                    }      
                 }
                 return true;
             }
@@ -702,7 +716,7 @@ namespace Time2Work
                     if (this.m_Students.HasComponent(entity))
                     {
                         Game.Citizens.Student student = this.m_Students[entity];
-                        float2 timeToStudy = StudentSystem.GetTimeToStudy(citizen, student, ref economyParameters);
+                        float2 timeToStudy = Time2WorkStudentSystem.GetTimeToStudy(citizen, student, ref economyParameters);
                         x = math.min(x, this.GetTimeLeftUntilInterval(timeToStudy));
                     }
                 }
@@ -937,9 +951,9 @@ namespace Time2Work
                                         {
                                             if (!this.m_AttendingMeetings.HasComponent(entity1) || !this.AttendMeeting(unfilteredChunkIndex, entity1, ref citizen, household, currentBuilding, trips, ref random))
                                             {
-                                                if (this.m_Workers.HasComponent(entity1) && !Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population) && Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime) || this.m_Students.HasComponent(entity1) && StudentSystem.IsTimeToStudy(citizen, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population))
+                                                if (this.m_Workers.HasComponent(entity1) && !Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime) && Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime) || this.m_Students.HasComponent(entity1) && Time2WorkStudentSystem.IsTimeToStudy(citizen, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population))
                                                 {
-                                                    if(Time2WorkWorkerSystem.IsLunchTime(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime))
+                                                    if(this.m_Workers.HasComponent(entity1) && Time2WorkWorkerSystem.IsLunchTime(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime))
                                                     {
                                                         HouseholdNeed householdNeed = this.m_HouseholdNeeds[household];
 
@@ -992,26 +1006,32 @@ namespace Time2Work
                                                     }
                                                     else
                                                     {
-                                                        if (age == CitizenAge.Adult || age == CitizenAge.Elderly)
+                                                        //If today is off day, go shopping or for leisure around 10 AM
+                                                        float x1 = (float)(GaussianRandom.NextGaussianDouble(random)) * 0.05f + 0.4f;
+
+                                                        if (this.m_NormalizedTime > x1 || !Mod.m_Setting.disable_early_shop_leisure)
                                                         {
-                                                            HouseholdNeed householdNeed = this.m_HouseholdNeeds[household];
-                                                            if (householdNeed.m_Resource != Resource.NoResource && this.m_Transforms.HasComponent(currentBuilding))
+                                                            if (age == CitizenAge.Adult || age == CitizenAge.Elderly)
                                                             {
-                                                                this.GoShopping(unfilteredChunkIndex, entity1, household, householdNeed, this.m_Transforms[currentBuilding].m_Position);
-                                                                householdNeed.m_Resource = Resource.NoResource;
-                                                                this.m_HouseholdNeeds[household] = householdNeed;
-                                                                if (chunk.Has<Leisure>(ref this.m_LeisureType))
+                                                                HouseholdNeed householdNeed = this.m_HouseholdNeeds[household];
+                                                                if (householdNeed.m_Resource != Resource.NoResource && this.m_Transforms.HasComponent(currentBuilding))
                                                                 {
-                                                                    this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
+                                                                    this.GoShopping(unfilteredChunkIndex, entity1, household, householdNeed, this.m_Transforms[currentBuilding].m_Position);
+                                                                    householdNeed.m_Resource = Resource.NoResource;
+                                                                    this.m_HouseholdNeeds[household] = householdNeed;
+                                                                    if (chunk.Has<Leisure>(ref this.m_LeisureType))
+                                                                    {
+                                                                        this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
+                                                                        continue;
+                                                                    }
                                                                     continue;
                                                                 }
-                                                                continue;
                                                             }
                                                         }
 
                                                         int num = chunk.Has<Leisure>(ref this.m_LeisureType) || this.m_OutsideConnections.HasComponent(currentBuilding) ? 0 : (this.CheckLeisure(ref citizen, ref random) ? 1 : 0);
                                                         nativeArray2[index] = citizen;
-                                                        if (num != 0)
+                                                        if (num != 0 && (this.m_NormalizedTime > x1 || Mod.m_Setting.disable_early_shop_leisure))
                                                         {
                                                             if (this.DoLeisure(unfilteredChunkIndex, entity1, ref citizen, household, this.m_Transforms[currentBuilding].m_Position, population, ref random, ref this.m_EconomyParameters))
                                                                 nativeArray2[index] = citizen;

@@ -46,9 +46,40 @@ namespace Time2Work
           ref EconomyParameterData economyParameters,
           uint frame,
           TimeData timeData,
-          int population)
+          int population, float timeOfDay)
         {
-            return WorkerSystem.IsTodayOffDay(citizen, ref economyParameters, frame, timeData, population);
+            float offdayprob = 100*(Mod.m_Setting.vacation_per_year + Mod.m_Setting.holidays_per_year + 104f) / 365f;
+            if(Mod.m_Setting.use_vanilla_timeoff)
+            {
+                offdayprob = 60f;
+            } else
+            {
+                if (WeekSystem.currentDayOfTheWeek.Equals(WeekSystem.currentDayOfTheWeek))
+                {
+                    offdayprob /= 1.8f;
+                    offdayprob = Math.Max(offdayprob, 5f);
+                }
+                else
+                {
+                    if (WeekSystem.currentDayOfTheWeek.Equals(WeekSystem.currentDayOfTheWeek))
+                    {
+                        offdayprob *= 2.1f;
+                        offdayprob = Math.Min(offdayprob, 95f);
+                    }
+                }
+            }
+           
+
+            int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
+            int day = TimeSystem.GetDay(frame, timeData);
+            bool todayOff = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + day)).NextInt(100) <= num;
+            bool yesterdayOff = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + day - 1)).NextInt(100) <= num;
+            if (yesterdayOff && timeOfDay < 0.18)
+            {
+                return yesterdayOff;
+            }
+
+            return todayOff;
         }
 
         public static bool IsTimeToWork(
@@ -100,7 +131,8 @@ namespace Time2Work
         {
             float lunch_median = 0.5f;
             float lunch_duration = 0.05f;
-            Unity.Mathematics.Random random = citizen.GetPseudoRandom(CitizenPseudoRandom.WorkOffset);
+            Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom));
+            //Unity.Mathematics.Random random = citizen.GetPseudoRandom(CitizenPseudoRandom.WorkOffset);
             double startOnTime = GaussianRandom.NextGaussianDouble(random)*0.02;
             double endOnTime = GaussianRandom.NextGaussianDouble(random)*0.02;
 
@@ -120,41 +152,62 @@ namespace Time2Work
           ref EconomyParameterData economyParameters,
           bool includeCommute)
         {
-            Unity.Mathematics.Random random = citizen.GetPseudoRandom(CitizenPseudoRandom.WorkOffset);
+            //Unity.Mathematics.Random random = citizen.GetPseudoRandom(CitizenPseudoRandom.WorkOffset);
+            Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom));
             double startOnTime = GaussianRandom.NextGaussianDouble(random) * delayFactor;
-            double endOnTime = (GaussianRandom.NextGaussianDouble(random) + 0.1) * delayFactor;
-            if (endOnTime > 0)
-            {
-                endOnTime *= 2f;
-            }
+            double endOnTime = (GaussianRandom.NextGaussianDouble(random) + 0.2) * delayFactor;
+            endOnTime *= 1.5f;
+
+            float startTimeOffset = ((float)Mod.m_Setting.work_start_time - 4f) * (1 / 48f);
+            float endTimeOffset = ((float)Mod.m_Setting.work_end_time - 19f) * (1 / 48f);
 
             float workOffset = WorkerSystem.GetWorkOffset(citizen);
             double lateShiftOffset = GaussianRandom.NextGaussianDouble(random);
             if (worker.m_Shift == Workshift.Day)
             {
-                workOffset *= 0.5f;
-                if(Time2WorkWorkerSystem.IsTodayLunchBreak(citizen))
+                workOffset *= 0.9f;
+                if (Time2WorkWorkerSystem.IsTodayLunchBreak(citizen))
                 {
-                    endOnTime += random.NextFloat(0f, 0.5f);
+                    endOnTime += random.NextFloat(0.0f, 0.04f);
                 }
-            }   
+                startOnTime += startTimeOffset;
+                endOnTime += endTimeOffset;
+            }
             else if (worker.m_Shift == Workshift.Evening)
             {
-                workOffset *= 2f;
-                startOnTime *= 2f;
-                endOnTime *= 2f;
-                workOffset += random.NextFloat(0.2f, 0.5f) + (float)(lateShiftOffset * delayFactor * 4);
-            }   
+                //workOffset *= 2f;
+                startOnTime *= 1.2f;
+                endOnTime *= 1.2f;
+                //workOffset += random.NextFloat(0.2f, 0.6f) + (float)(lateShiftOffset * delayFactor * 2);
+                workOffset += 0.42f + (float)(lateShiftOffset * delayFactor * 2);
+            }
             else if (worker.m_Shift == Workshift.Night)
             {
-                workOffset *= 4f;
-                startOnTime *= 4f;
-                endOnTime *= 4f;
-                workOffset += random.NextFloat(0.4f,0.7f) + (float)(lateShiftOffset * delayFactor * 10);
+                //workOffset *= 4f;
+                //workOffset += random.NextFloat(0.4f,0.8f) + (float)(lateShiftOffset * delayFactor * 4);
+                //Night shifts can start either around 11pm or 4am
+                if (random.NextInt(100) >= 60)
+                {
+                    workOffset -= 0.18f;
+                    workOffset += (float)(lateShiftOffset * delayFactor * 3);
+                    startOnTime *= 1.2f;
+                    endOnTime *= 1.2f;
+                }
+                else
+                {
+                    workOffset += 0.63f + (float)(lateShiftOffset * delayFactor * 3);
+                    startOnTime *= 1.3f;
+                    endOnTime *= 1.3f;
+                }
             }
                 
-            double num1 = (double)math.frac((float)(((double)economyParameters.m_WorkDayStart + (double)workOffset + startOnTime)));
+            double num1 = (double)(float)(((double)economyParameters.m_WorkDayStart + (double)workOffset + startOnTime));
             float y = math.frac((float)(((double)economyParameters.m_WorkDayEnd + (double)workOffset + endOnTime)));
+            //Evening and Night Shifts are 6 to 4 hours long
+            if(worker.m_Shift != Workshift.Day)
+            {
+                y -= random.NextFloat(0.10f,0.16f);
+            }
 
             float num2 = 0.0f;
             if (includeCommute)
@@ -165,6 +218,7 @@ namespace Time2Work
                 num2 = num3 / Time2WorkTimeSystem.kTicksPerDay;
             }
             double num4 = (double)num2;
+
             return new float2(math.frac((float)(num1 - num4)), y);
         }
 
@@ -327,12 +381,14 @@ namespace Time2Work
                 BufferAccessor<TripNeeded> bufferAccessor = chunk.GetBufferAccessor<TripNeeded>(ref this.m_TripType);
 
                 int population = this.m_PopulationData[this.m_PopulationEntity].m_Population;
+                //Mod.log.Info($"NativeArrayCount: {this.m_TimeOfDay}, {nativeArray1.Length}");
+                
                 for (int index = 0; index < nativeArray1.Length; ++index)
                 {
                     Entity entity1 = nativeArray1[index];
                     Citizen citizen = nativeArray2[index];
 
-                    if (!Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_Frame, this.m_TimeData, population) && !Time2WorkWorkerSystem.IsLunchTime(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay) && Time2WorkWorkerSystem.IsTimeToWork(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay))
+                    if (!Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_Frame, this.m_TimeData, population, this.m_TimeOfDay) && !Time2WorkWorkerSystem.IsLunchTime(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay) && Time2WorkWorkerSystem.IsTimeToWork(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay))
                     {
                         DynamicBuffer<TripNeeded> dynamicBuffer = bufferAccessor[index];
                         if (!this.m_Attendings.HasComponent(entity1) && (citizen.m_State & CitizenFlags.MovingAway) == CitizenFlags.None)
@@ -363,11 +419,20 @@ namespace Time2Work
                                     {
                                         this.m_CarReserverQueue.Enqueue(entity1);
                                     }
-                                    dynamicBuffer.Add(new TripNeeded()
+                                    float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, nativeArray3[index], ref this.m_EconomyParameters, true);
+                                    float2 timeToLunch = Time2WorkWorkerSystem.GetLunchTime(citizen, nativeArray3[index], ref this.m_EconomyParameters);
+                                    //If too much time has passed since work start time, not go to work
+                                    double threshold_start_work = Math.Min(Math.Abs(timeToWork.x - this.m_TimeOfDay), Math.Abs(1 - (timeToWork.x - this.m_TimeOfDay)));
+                                    double threshold_resume_work = Math.Min(Math.Abs(timeToLunch.y - this.m_TimeOfDay), Math.Abs(1 - (timeToLunch.y - this.m_TimeOfDay)));
+
+                                    if (threshold_start_work <= 0.03 || threshold_resume_work <= 0.03)
                                     {
-                                        m_TargetAgent = workplace,
-                                        m_Purpose = Game.Citizens.Purpose.GoingToWork
-                                    });
+                                        dynamicBuffer.Add(new TripNeeded()
+                                        {
+                                            m_TargetAgent = workplace,
+                                            m_Purpose = Game.Citizens.Purpose.GoingToWork
+                                        });
+                                    }
                                 }
                             }
                             else
@@ -467,7 +532,7 @@ namespace Time2Work
               bool useEnabledMask,
               in v128 chunkEnabledMask)
             {
-                // ISSUE: reference to a compiler-generated method
+
                 this.Execute(in chunk, unfilteredChunkIndex, useEnabledMask, in chunkEnabledMask);
             }
         }

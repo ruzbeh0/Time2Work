@@ -8,31 +8,48 @@
 	<!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
 	<!--LongDescription Value="This is a long description" /-->
 	<LongDescription>
-This mod allows you to configure the time that cims go to work and how long they stay there. The mod offers three options to configure this:
+This mod has several options to configure cims' work and school schedule and also some options to adjust their behaviour for shopping and leisure. Another feature is the ability to change the simulation to function either as an Average Day, a Weekday, a Weekend or follow a Weekly pattern.
 
-## Work Shifts
+## Work
 
-Cims goes to work based on three shifts: Day, Evening and Night. This mod allows you to configure the percentage of each of those work shifts, the base game has around 20-25% of work trips being at either the Evening or at Night. This value is too high and does not correspond to reality.
+* **Work Shifts:** Cims go to work based on three shifts: Day, Evening and Night. This mod allows you to configure the percentage of each of those work shifts, the base game has around 20-25% of work trips being at either the Evening or at Night. The mod options menu will allow you to set the percentage for Evening and Night shifts. Day shift percentage will correspond to the remaining percentage points. The default values of the mod are set for 6% for Evening shifts and 4% for Night shifts. These values come from a US Survey which can be found in this link: https://redline.digital/shift-work-statistics/
+* **Work Arrival / Departure:** The "Delay/Early factor" adds greater variation to cims work arrival and departure times. The arrival/departure times are implemented using a normal distribution and it works differently in the morning and evening commutes to reflect the real world. In real cities, the evening commute tends to be more spread out than the morning commute, this happens because although most workers have a set time to arrive at work, when it is time to leave work the departure time is not as strict, with a few workers working a few extra minutes or hours. This feature is also implemented differently for each shift. The Evening and Night shifts have even greater variation, spreading out the start and end work times for the cims that work during those shifts.
+* **Lunch Break:** The lunch break option will add the possibility of some cims to leave work around noon for either Leisure or Shopping. The break lasts around an hour, after that, they will return to work. The lunch break can be configured by setting the lunch break probability in the mod's menu. Also, cims that take a lunch break, might leave work a little later (to compensate for the time that they weren't working).
+* **Work Start/End Time Settings:** This option allows the user to change work start and end times for the day shift.
 
-The mod options menu will allow you to set the percentage for Evening and Night shifts. Day shift percentage will correspond to the remaining percentage points. The default values of the mod are set for 6% for Evening shifts and 4% for Night shifts. These values come from a US Survey which can be found in this link: https://redline.digital/shift-work-statistics/
+## Shopping and Leisure
 
-## Work Arrival / Departure
+* **Disable Early Shopping or Leisure:** This option will significantly reduce shopping and leisure trips happening between Midnight and 6 AM. With this option, those trips will mostly start between 8 to 10 AM.
+* **Vacation and Holiday System:** The vanilla game simulation works as a combination of a Weekday and a Weekend, with work and schools trips having a certain probability of not happening assuming that that cim is taking a day off. The vanilla probability is around 60% of not going to work or school. With vacation and holidays default settings, that probability will be around 30% for work trips.
 
-Although the vanilla game does implement a variation on the cims' work arrival, it does assume that each shift will last exactly 8 hours. This mod adds a "Delay/Early factor" which adds greater variation to their schedule. The arrival/departure times are implemented using a normal distribution and is implemented differently for the morning and evening commutes to reflect the real world.
+## School
+* **School Vacation System** This feature works similar to the vacation and holiday system for work, with the difference that on Weekends schools are assumed to be closed.
+* **School Start/End Time Settings:** This option allows the user to change school start and end times.
 
-In real cities, the evening commute tends to be more spread out than the morning commute, this is basically that although most workers have a set time to arrive at work, when it is time to leave the departure time is not as strict, with a few workers working a few extra minutes or hours.
+## Day Type Simulation
 
-This feature is also implemented differently for each shift. The Evening and Night shifts have even greater variation, spreading out the start and end work times for the cims that work during those shifts.
+The options in this tab will allow you to change the simulation from an Average Day, a Weekday or a Weekend. And even allow you to simulate a week rotating from Weekdays (Monday to Friday) and Weekends (Saturday and Sunday).
 
-## Lunch Break
+An Average Day, is similar to the vanilla default setting. It consists of a combination of Weekday and Weekends behavior, with around 30% of cims behaving as on a weekend and the rest as on a weekday.
 
-The lunch break option will add the possibility of some cims to leave work around noon for either Leisure or Shopping. The break lasts around an hour, after that, they will return to work. The lunch break can be configured by setting the lunch break probability in the mod's menu. Also, cims that take a lunch break, might leave work a little later (to compensate for the time that they weren't working).
+On a Weekday, most of the trips will be work or school related. On a Weekend, there will be more Leisure and Shopping trips. Schools are closed on Weekends.
+
+Note that if the 7 Day Week option is selected, currently, there is no place in the UI that will indicate if the current day is a weekday or a weekend. However, that will be indicated in the Mod's log.
 
 ## Mod Effects
 
-The effects of this mod will be that you should see more trips during the rush hour and less trips at night.
+This mods can have a significant impact on the game's performance. You should expect to see less trips at night and a significant increase in rush hour traffic.
 
 If you enable this mod in an existing city it will take a day or two for you to notice a change in the time of day activity.
+
+## Explaining the Plots
+
+In one of the screenshots above there are four plots comparing the mod in its default settings with the vanilla game in a test city with a population of 20,000. In those plots, trips are classified based on their origin and destination and below is a brief explanation of what each one of them mean:
+
+* **Home Based Work:** This include trips from Home to Work and from Work to Home.
+* **Home Based School:** This include trips from Home to School and School to Home.
+* **Home Based Other:** This consists of trips that start or end at home and go to or are from anyplace that is **not** work or school. This will include trips from home to shopping or leisure, for example. This plot shows the significant reduction of shopping and leisure trips from midnight to 6 AM with the "Disable Early Shopping/Leisure" feature.
+* **Non Home Based:** All trips that don't have home as the origin or destination. In this plot you will notice a peak between noon and 2 PM, which consists of the lunch break - which are trips from work to shopping or leisure and back to work.
 	</LongDescription>
 	<!--Thumbnail-->
 	<Thumbnail Value="Properties/Thumbnail.png" />
@@ -44,20 +61,19 @@ If you enable this mod in an existing city it will take a day or two for you to 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.3" />
+	<ModVersion Value="0.4" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.1.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="77209" />
 	<ChangeLog>
-v0.1
-* Added option to configure percetange for each work shift.
-v0.2
-* Added option to configure delay/early factor for work arrival and departure times.
-v0.3
-* Added option to configure lunch break.
+* Reduced trips being generated at midnight.
+* Added option to limit shopping and leisure trips in the early morning.
+* Added options to choose start and end hours for work and school.
+* Added Day Type Simulation (Average Day, Weekday, Weekend, Week)
+* Added vacation and holiday system for work and school.
 * Optimized work arrival and departure times.
-* Fixed bug that was creating Harmony log in the desktop
+* Added Portuguese Localization.
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

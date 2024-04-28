@@ -84,11 +84,14 @@ namespace Time2Work
                     count++;
                 }
             }
-                    
-            Mod.log.Info($"Day Shift Workers %: {100*sum_day_shift / (sum_day_shift + sum_evening_shift + sum_night_shift)}");
-            Mod.log.Info($"Evening Shift Workers %: {100*sum_evening_shift / (sum_day_shift + sum_evening_shift + sum_night_shift)}");
-            Mod.log.Info($"Night Shift Workers %: {100 * sum_night_shift / (sum_day_shift + sum_evening_shift + sum_night_shift)}");
-            Mod.log.Info($"Average Commute Time: {(sum_last_commute*24f)/(float)count}");
+
+            float current_day_prob = sum_day_shift / (sum_day_shift + sum_evening_shift + sum_night_shift);
+            float current_eve_prob = sum_evening_shift / (sum_day_shift + sum_evening_shift + sum_night_shift);
+            float current_night_prob = sum_night_shift / (sum_day_shift + sum_evening_shift + sum_night_shift);
+            Mod.log.Info($"Day Shift Workers %: {100 * current_day_prob}");
+            Mod.log.Info($"Evening Shift Workers %: {100 * current_eve_prob}");
+            Mod.log.Info($"Night Shift Workers %: {100 * current_night_prob}");
+            Mod.log.Info($"Average Commute Time: {(sum_last_commute * 24f) / (float)count}");
 
 
             float new_sum_day_shift = 0f;
@@ -96,48 +99,55 @@ namespace Time2Work
             float new_sum_night_shift = 0f;
 
             Unity.Mathematics.Random random = new Unity.Mathematics.Random(1);
-            float current_day_prob = sum_day_shift / (sum_day_shift + sum_evening_shift + sum_night_shift);
-            double day_prob2 = (1 - (eveningWorkPlaceShare + nightWorkPlaceShare) - current_day_prob) /(1f - current_day_prob);
-            foreach (var worker in workers)
+
+            double day_prob2 = (1 - (eveningWorkPlaceShare + nightWorkPlaceShare) - current_day_prob) / (1f - current_day_prob);
+
+            if (Math.Abs(current_night_prob - nightWorkPlaceShare) > 0.01 || Math.Abs(current_eve_prob - eveningWorkPlaceShare) > 0.01)
             {
-                Worker data;
-
-                if (!_WorkerToData.TryGetValue(worker, out data))
+                foreach (var worker in workers)
                 {
-                    data = EntityManager.GetComponentData<Worker>(worker);
-                    _WorkerToData.Add(worker, data);
+                    Worker data;
 
-                    if(data.m_Shift != Workshift.Day)
+                    if (!_WorkerToData.TryGetValue(worker, out data))
                     {
-                        float prob = random.NextFloat();
-                        if (prob < day_prob2)
+                        data = EntityManager.GetComponentData<Worker>(worker);
+                        _WorkerToData.Add(worker, data);
+
+                        if (data.m_Shift != Workshift.Day)
                         {
-                            data.m_Shift = Workshift.Day;
-                            new_sum_day_shift++;
-                        } else
-                        {
-                            if(prob >= day_prob2 && prob < (day_prob2 + eveningWorkPlaceShare/(1f - current_day_prob)))
+                            float prob = random.NextFloat();
+                            if (prob < day_prob2)
                             {
-                                data.m_Shift = Workshift.Evening;
-                                new_sum_evening_shift++;
-                            } else
+                                data.m_Shift = Workshift.Day;
+                                new_sum_day_shift++;
+                            }
+                            else
                             {
-                                data.m_Shift = Workshift.Night;
-                                new_sum_night_shift++;
+                                if (prob >= day_prob2 && prob < (day_prob2 + eveningWorkPlaceShare / (1f - current_day_prob)))
+                                {
+                                    data.m_Shift = Workshift.Evening;
+                                    new_sum_evening_shift++;
+                                }
+                                else
+                                {
+                                    data.m_Shift = Workshift.Night;
+                                    new_sum_night_shift++;
+                                }
                             }
                         }
-                    } else
-                    {
-                        new_sum_day_shift++;
+                        else
+                        {
+                            new_sum_day_shift++;
+                        }
+
+                        EntityManager.SetComponentData<Worker>(worker, data);
                     }
+                }
 
-                    EntityManager.SetComponentData<Worker>(worker, data);
-                } 
-            }
-
-            Mod.log.Info($"New Day Shift Workers %: {100*new_sum_day_shift / (new_sum_day_shift + new_sum_evening_shift + new_sum_night_shift)}");
-            Mod.log.Info($"New Evening Shift Workers %: {100*new_sum_evening_shift / (new_sum_day_shift + new_sum_evening_shift + new_sum_night_shift)}");
-            Mod.log.Info($"New Night Shift Workers %: {100 * new_sum_night_shift / (new_sum_day_shift + new_sum_evening_shift + new_sum_night_shift)}");
+                Mod.log.Info($"New Day Shift Workers %: {100 * new_sum_day_shift / (new_sum_day_shift + new_sum_evening_shift + new_sum_night_shift)}");
+                Mod.log.Info($"New Evening Shift Workers %: {100 * new_sum_evening_shift / (new_sum_day_shift + new_sum_evening_shift + new_sum_night_shift)}");
+                Mod.log.Info($"New Night Shift Workers %: {100 * new_sum_night_shift / (new_sum_day_shift + new_sum_evening_shift + new_sum_night_shift)}");
+            }           
         }
     }
 }

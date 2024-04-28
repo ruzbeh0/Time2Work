@@ -42,13 +42,13 @@ namespace Time2Work
         //    Mod.log.Info($"Execute Post"); 
         //}
         
-        [HarmonyPatch(typeof(Game.Simulation.StudentSystem), "OnUpdate")]
-        [HarmonyPrefix]
-        public static bool WorkerSystemPatches_OnUpdate_Prefix(StudentSystem __instance)
-        {
-            Traverse.Create(__instance).Field("m_Time2WorkCitizenBehaviorSystem").SetValue(World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkCitizenBehaviorSystem>());
-            return true;
-        }
+        //[HarmonyPatch(typeof(Game.Simulation.StudentSystem), "OnUpdate")]
+        //[HarmonyPrefix]
+        //public static bool WorkerSystemPatches_OnUpdate_Prefix(StudentSystem __instance)
+        //{
+        //    Traverse.Create(__instance).Field("m_Time2WorkCitizenBehaviorSystem").SetValue(World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkCitizenBehaviorSystem>());
+        //    return true;
+        //}
         
         //[HarmonyPatch(typeof(Game.Simulation.StudentSystem), "OnUpdate")]
         //[HarmonyPostfix]
