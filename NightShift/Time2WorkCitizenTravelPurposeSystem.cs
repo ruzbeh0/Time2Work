@@ -145,8 +145,14 @@ namespace Time2Work
                 m_EconomyParameters = this.m_EconomyParameterGroup.GetSingleton<EconomyParameterData>(),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 m_ArriveQueue = nativeQueue.AsParallelWriter(),
-                m_NormalizedTime = this.m_TimeSystem.normalizedTime
-            };
+                m_NormalizedTime = this.m_TimeSystem.normalizedTime,
+                lunch_break_pct = Mod.m_Setting.lunch_break_percentage,
+                school_start_time = (int)Mod.m_Setting.school_start_time,
+                school_end_time = (int)Mod.m_Setting.school_end_time,
+                work_start_time = (float)Mod.m_Setting.work_start_time,
+                work_end_time = (float)Mod.m_Setting.work_end_time,
+                delayFactor = (float)(Mod.m_Setting.delay_factor) / 100
+        };
             
             this.Dependency = jobData.ScheduleParallel<Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob>(this.m_ArrivedGroup, this.Dependency);
             
@@ -250,6 +256,7 @@ namespace Time2Work
         {
         }
 
+        [BurstCompile]
         private struct CitizenArriveJob : IJobChunk
         {
             [ReadOnly]
@@ -289,6 +296,12 @@ namespace Time2Work
             public NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive>.ParallelWriter m_ArriveQueue;
             public EconomyParameterData m_EconomyParameters;
             public float m_NormalizedTime;
+            public int lunch_break_pct;
+            public int school_start_time;
+            public int school_end_time;
+            public float work_start_time;
+            public float work_end_time;
+            public float delayFactor;
 
             public void Execute(
               in ArchetypeChunk chunk,
@@ -320,7 +333,7 @@ namespace Time2Work
                     {
                         
                         Citizen citizen = this.m_Citizens[entity];
-                        if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students))
+                        if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor))
                         {
                             
                             this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);

@@ -17,7 +17,6 @@ namespace Time2Work
     {
         public static readonly string harmonyID = "Time2Work";
         public static ILog log = LogManager.GetLogger($"{nameof(Time2Work)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
-        //public static string output = "C:\\Users\\ruzbe\\AppData\\LocalLow\\Colossal Order\\Cities Skylines II\\ModsData\\DataOutput.csv";
         public static string tripsoutput = "TripsOutput.csv";
         public static string cimpurposeoutput = "CimPurposeOutput.csv";
         public static ILog log2 = LogManager.GetLogger($"DataOutput").SetShowsErrorsInUI(false);
@@ -44,15 +43,15 @@ namespace Time2Work
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.LeisureSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.StudentSystem>().Enabled = false;
 
+            updateSystem.UpdateAt<WeekSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<WorkPlaceShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<WorkerShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
-            updateSystem.UpdateAt<CitizenStatistics>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkCitizenBehaviorSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkCitizenTravelPurposeSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkWorkerSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkLeisureSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkStudentSystem>(SystemUpdatePhase.GameSimulation);
-            updateSystem.UpdateAt<WeekSystem>(SystemUpdatePhase.GameSimulation);
+            
             //updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.GameSimulation);
             //updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.EditorSimulation);
             //updateSystem.UpdateAfter<PostDeserialize<Time2WorkTimeSystem>>(SystemUpdatePhase.Deserialize);

@@ -47,37 +47,14 @@ namespace Time2Work
           float timeOfDay,
           uint frame,
           TimeData timeData,
-          int population)
+          int population,
+          float offdayprob,
+          int school_start_time,
+          int school_end_time)
         {
-            //Value for an average day
-            float offdayprob = 100 * (Mod.m_Setting.vacation_per_year + Mod.m_Setting.holidays_per_year + 104f) / 365f;
-            if (Mod.m_Setting.use_school_vanilla_timeoff)
-            {
-                offdayprob = 60f;
-            } else
-            {
-                //On weekend, schools are closed
-                if (WeekSystem.currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.Weekend))
-                {
-                    return false;
-                } else
-                {
-                    //On weekday, the probability of being on vacation does not include the number of weekends per year
-                    if (WeekSystem.currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.Weekday))
-                    {
-                        offdayprob = 100 * (Mod.m_Setting.vacation_per_year + Mod.m_Setting.holidays_per_year) / 365f;
-                    } else
-                    {
-                        //Average Day
-                        offdayprob = 100 * (Mod.m_Setting.vacation_per_year + Mod.m_Setting.holidays_per_year + 104f) / 365f;
-                    }
-                }
-            }
-           
-
             int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
             int day = TimeSystem.GetDay(frame, timeData);
-            float2 timeToStudy = Time2WorkStudentSystem.GetTimeToStudy(citizen, student, ref economyParameters);
+            float2 timeToStudy = Time2WorkStudentSystem.GetTimeToStudy(citizen, student, ref economyParameters, school_start_time, school_end_time);
             if (Unity.Mathematics.Random.CreateFromIndex((uint)citizen.m_PseudoRandom + (uint)day).NextInt(100) <= num)
                 return false;
             return (double)timeToStudy.x >= (double)timeToStudy.y ? (double)timeOfDay >= (double)timeToStudy.x || (double)timeOfDay <= (double)timeToStudy.y : (double)timeOfDay >= (double)timeToStudy.x && (double)timeOfDay <= (double)timeToStudy.y;
@@ -86,11 +63,13 @@ namespace Time2Work
         public static float2 GetTimeToStudy(
           Citizen citizen,
           Game.Citizens.Student student,
-          ref EconomyParameterData economyParameters)
+          ref EconomyParameterData economyParameters,
+          int school_start_time,
+          int school_end_time)
         {
             float studyOffset = Time2WorkStudentSystem.GetStudyOffset(citizen);
-            float startTimeOffset = ((float)Mod.m_Setting.school_start_time - 4f) * (1 / 48f);
-            float endTimeOffset = ((float)Mod.m_Setting.school_end_time - 19f) * (1 / 48f);
+            float startTimeOffset = ((float)school_start_time - 4f) * (1 / 48f);
+            float endTimeOffset = ((float)school_end_time - 19f) * (1 / 48f);
 
             float num1 = 60f * student.m_LastCommuteTime;
             if ((double)num1 < 60.0)
@@ -152,7 +131,10 @@ namespace Time2Work
                 m_PopulationEntity = this.m_PopulationQuery.GetSingletonEntity(),
                 m_TimeData = this.m_TimeDataQuery.GetSingleton<TimeData>(),
                 m_CarReserverQueue = this.m_CitizenBehaviorSystem.GetCarReserverQueue(out deps),
-                m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter()
+                m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
+                school_offdayprob = WeekSystem.getSchoolOffDayProb(),
+                school_start_time = (int)Mod.m_Setting.school_start_time,
+                school_end_time = (int)Mod.m_Setting.school_end_time
             }.ScheduleParallel<Time2WorkStudentSystem.GoToSchoolJob>(this.m_GotoSchoolQuery, JobHandle.CombineDependencies(this.Dependency, deps));
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle);
             this.m_CitizenBehaviorSystem.AddCarReserveWriter(jobHandle);
@@ -220,6 +202,9 @@ namespace Time2Work
             public EconomyParameterData m_EconomyParameters;
             public NativeQueue<Entity>.ParallelWriter m_CarReserverQueue;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
+            public float school_offdayprob;
+            public int school_start_time;
+            public int school_end_time;
             public void Execute(
               in ArchetypeChunk chunk,
               int unfilteredChunkIndex,
@@ -238,7 +223,7 @@ namespace Time2Work
                     Entity entity1 = nativeArray1[index];
                     Citizen citizen = nativeArray2[index];
 
-                    if (Time2WorkStudentSystem.IsTimeToStudy(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_Frame, this.m_TimeData, population))
+                    if (Time2WorkStudentSystem.IsTimeToStudy(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_Frame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time))
                     {
                         DynamicBuffer<TripNeeded> dynamicBuffer = bufferAccessor[index];
                         if (!this.m_Attendings.HasComponent(entity1) && (citizen.m_State & CitizenFlags.MovingAway) == CitizenFlags.None)

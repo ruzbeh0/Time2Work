@@ -220,7 +220,7 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_end_time)), $"End time for schools, colleges, and universities." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.work_start_time)), "Work Day Shift Start Time" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_start_time)), $"Start time for work day shift." },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.work_end_time)), "Work Day End Time" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.work_end_time)), "Work Day Shift End Time" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_end_time)), $"End time for work day shift." },
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Average Day" },

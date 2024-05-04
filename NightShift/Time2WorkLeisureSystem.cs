@@ -48,6 +48,7 @@ namespace Time2Work
         private NativeQueue<LeisureEvent> m_LeisureQueue;
         private NativeQueue<ResourceStack> m_ConsumptionQueue;
         private Time2WorkLeisureSystem.TypeHandle __TypeHandle;
+        private Setting.DTSimulationEnum m_daytype;
 
         public override int GetUpdateInterval(SystemUpdatePhase phase) => 16;
 
@@ -75,6 +76,7 @@ namespace Time2Work
             this.RequireForUpdate(this.m_LeisureQuery);
             this.RequireForUpdate(this.m_EconomyParameterQuery);
             this.RequireForUpdate(this.m_LeisureParameterQuery);
+            this.m_daytype = WeekSystem.currentDayOfTheWeek;
         }
 
         protected override void OnDestroy()
@@ -122,6 +124,7 @@ namespace Time2Work
             this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_Leisure_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
+            this.m_daytype = WeekSystem.currentDayOfTheWeek;
             JobHandle outJobHandle;
             JobHandle deps1;
 
@@ -180,7 +183,15 @@ namespace Time2Work
                 m_LeisureQueue = this.m_LeisureQueue.AsParallelWriter(),
                 m_TimeData = this.m_TimeDataQuery.GetSingleton<TimeData>(),
                 m_PopulationEntity = this.m_PopulationQuery.GetSingletonEntity(),
-                m_ConsumptionQueue = this.m_ConsumptionQueue.AsParallelWriter()
+                m_ConsumptionQueue = this.m_ConsumptionQueue.AsParallelWriter(),
+                lunch_break_pct = Mod.m_Setting.lunch_break_percentage,
+                offdayprob  = WeekSystem.getOffDayProb(),
+                school_start_time = (int)Mod.m_Setting.school_start_time,
+                school_end_time = (int)Mod.m_Setting.school_end_time,
+                work_start_time = (float)Mod.m_Setting.work_start_time,
+                work_end_time = (float)Mod.m_Setting.work_end_time,
+                delayFactor = (float)(Mod.m_Setting.delay_factor) / 100,
+                school_offdayprob = WeekSystem.getSchoolOffDayProb()
             }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobHandle.CombineDependencies(this.Dependency, JobHandle.CombineDependencies(outJobHandle, deps1)));
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle1);
             this.m_PathFindSetupSystem.AddQueueWriter(jobHandle1);
@@ -256,6 +267,7 @@ namespace Time2Work
         {
         }
 
+        [BurstCompile]
         private struct SpendLeisurejob : IJob
         {
             public NativeQueue<LeisureEvent> m_LeisureQueue;
@@ -402,7 +414,8 @@ namespace Time2Work
                 }
             }
         }
-
+        
+        [BurstCompile]
         private struct LeisureJob : IJobChunk
         {
             public ComponentTypeHandle<Leisure> m_LeisureType;
@@ -497,6 +510,14 @@ namespace Time2Work
             public float m_Temperature;
             public Entity m_PopulationEntity;
             public TimeData m_TimeData;
+            public int lunch_break_pct;
+            public float offdayprob;
+            public int school_start_time;
+            public int school_end_time;
+            public float work_start_time;
+            public float work_end_time;
+            public float delayFactor;
+            public float school_offdayprob;
 
             private void SpendLeisure(
               int index,
@@ -615,18 +636,15 @@ namespace Time2Work
                                 Entity destination = pathInfo.m_Destination;
                                 if ((this.m_PropertyRenters.HasComponent(destination) || this.m_Prefabs.HasComponent(destination)) && !this.m_Targets.HasComponent(entity1))
                                 {
-                                    if ((!this.m_Workers.HasComponent(entity1) || Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay) || !Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay) ||
-                                        (!Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay) && Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay) && Time2WorkWorkerSystem.IsLunchTime(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay))) && (!this.m_Students.HasComponent(entity1) || Time2WorkStudentSystem.IsTimeToStudy(citizenData, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_SimulationFrame, this.m_TimeData, population)))
+                                    if ((!this.m_Workers.HasComponent(entity1) || Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob) || !Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor) ||
+                                        (!Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob) && Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor) && Time2WorkWorkerSystem.IsLunchTime(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct))) && (!this.m_Students.HasComponent(entity1) || Time2WorkStudentSystem.IsTimeToStudy(citizenData, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time)))
                                     {
                                         LeisureProviderData leisureProviderData = this.m_LeisureProviderDatas[this.m_Prefabs[destination].m_Prefab];
                                         if (leisureProviderData.m_Efficiency == 0)
                                             UnityEngine.Debug.LogWarning((object)string.Format("Warning: Leisure provider {0} has zero efficiency", (object)destination.Index));
                                         leisure.m_TargetAgent = destination;
                                         nativeArray2[index] = leisure;
-                                        //if (!Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population) && Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay) && Time2WorkWorkerSystem.IsLunchTime(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay))
-                                        //{
-                                        //    Mod.log.Info($"Lunch: {destination}");
-                                        //}
+
                                         dynamicBuffer.Add(new TripNeeded()
                                         {
                                             m_TargetAgent = destination,
