@@ -1,0 +1,102 @@
+﻿using Game.Citizens;
+using Game.Common;
+using Game.Companies;
+using Game.Prefabs;
+using Game.Simulation;
+using HarmonyLib;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Unity.Burst.Intrinsics;
+using Unity.Entities;
+using Unity.Mathematics;
+using UnityEngine;
+using static Game.Rendering.Debug.RenderPrefabRenderer;
+
+namespace Time2Work.Patches
+{
+
+    [HarmonyPatch]
+    public class Time2WorkPatches
+    {
+        [HarmonyPatch(typeof(TimeSystem), "OnUpdate")]
+        [HarmonyPostfix]
+        public static void TimeSystemPatches_OnUpdate_Postfix(TimeSystem __instance)
+        {
+            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+            Traverse.Create(__instance).Field("m_Time").SetValue(t2wTimeSystem.normalizedTime);
+            Traverse.Create(__instance).Field("m_Date").SetValue(t2wTimeSystem.normalizedDate);
+            Traverse.Create(__instance).Field("m_Year").SetValue(t2wTimeSystem.year);
+        }
+
+        [HarmonyPatch(typeof(TimeSystem), "GetYear")]
+        [HarmonyPrefix]
+        static bool TimeSystemPatches_GetYear(TimeSettingsData settings, TimeData data, ref int __result, TimeSystem __instance)
+        {
+            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+
+            __result = t2wTimeSystem.GetYear(settings, data);
+            return false;
+        }
+
+        [HarmonyPatch(typeof(TimeSystem), "GetDay")]
+        [HarmonyPrefix]
+        static bool TimeSystemPatches_GetDay(uint frame, TimeData data, ref int __result, TimeSystem __instance)
+        {
+            __result = Time2WorkTimeSystem.GetDay(frame, data);
+            return false;
+        }
+
+        [HarmonyPatch(typeof(TimeSystem), "GetCurrentDateTime")]
+        [HarmonyPrefix]
+        static bool TimeSystemPatches_GetCurrentDateTime(ref DateTime __result, TimeSystem __instance)
+        {
+            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+
+            __result = t2wTimeSystem.GetCurrentDateTime();
+            return false;
+        }
+
+        [HarmonyPatch(typeof(TimeSystem), "GetStartingDate")]
+        [HarmonyPrefix]
+        static bool TimeSystemPatches_GetStartingDate(TimeSettingsData settings, TimeData data, ref float __result, TimeSystem __instance)
+        {
+            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+
+            __result = t2wTimeSystem.GetStartingDate(settings, data);
+            return false;
+        }
+
+        [HarmonyPatch(typeof(TimeSystem), "GetElapsedYears")]
+        [HarmonyPrefix]
+        static bool TimeSystemPatches_GetElapsedYears(TimeSettingsData settings, TimeData data, ref float __result, TimeSystem __instance)
+        {
+            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+
+            __result = t2wTimeSystem.GetElapsedYears(settings, data);
+            return false;
+        }
+
+        [HarmonyPatch(typeof(TimeSystem), "GetTimeOfYear", new Type[] { typeof(TimeSettingsData), typeof(TimeData), typeof(double) })]
+        [HarmonyPrefix]
+        static bool TimeSystemPatches_GetTimeOfYear(TimeSettingsData settings, TimeData data, double renderingFrame, ref float __result, TimeSystem __instance)
+        {
+            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+
+            __result = t2wTimeSystem.GetTimeOfYear(settings, data, renderingFrame);
+            return false;
+        }
+
+        [HarmonyPatch(typeof(TimeSystem), "GetTimeOfDay", new Type[] { typeof(TimeSettingsData), typeof(TimeData), typeof(double) })]
+        [HarmonyPrefix]
+        static bool TimeSystemPatches_GetTimeOfDay(TimeSettingsData settings, TimeData data, double renderingFrame, ref float __result, TimeSystem __instance)
+        {
+            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+
+            __result = t2wTimeSystem.GetTimeOfDay(settings, data, renderingFrame);
+            return false;
+        }
+    }
+}

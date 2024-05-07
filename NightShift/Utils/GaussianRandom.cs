@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Time2Work
+namespace Time2Work.Utils
 {
     internal static class GaussianRandom
     {

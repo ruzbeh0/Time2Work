@@ -30,7 +30,7 @@ namespace Time2Work
 {
     public partial class Time2WorkCitizenTravelPurposeSystem : GameSystemBase
     {
-        private TimeSystem m_TimeSystem;
+        private Time2WorkTimeSystem m_TimeSystem;
         private CityStatisticsSystem m_CityStatisticsSystem;
         private EndFrameBarrier m_EndFrameBarrier;
         private EntityQuery m_ArrivedGroup;
@@ -46,7 +46,7 @@ namespace Time2Work
         {
             base.OnCreate();
             
-            this.m_TimeSystem = this.World.GetOrCreateSystemManaged<TimeSystem>();
+            this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
             
             this.m_CityStatisticsSystem = this.World.GetOrCreateSystemManaged<CityStatisticsSystem>();
             
@@ -62,7 +62,7 @@ namespace Time2Work
             
             this.m_EconomyParameterGroup = this.GetEntityQuery(ComponentType.ReadOnly<EconomyParameterData>());
             
-            this.m_TimeSystem = this.World.GetOrCreateSystemManaged<TimeSystem>();
+            this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
             
             
             this.RequireAnyForUpdate(this.m_ArrivedGroup, this.m_StuckGroup);
@@ -151,7 +151,9 @@ namespace Time2Work
                 school_end_time = (int)Mod.m_Setting.school_end_time,
                 work_start_time = (float)Mod.m_Setting.work_start_time,
                 work_end_time = (float)Mod.m_Setting.work_end_time,
-                delayFactor = (float)(Mod.m_Setting.delay_factor) / 100
+                delayFactor = (float)(Mod.m_Setting.delay_factor) / 100,
+                ticksPerDay = Time2WorkTimeSystem.kTicksPerDay,
+                part_time_prob = Mod.m_Setting.part_time_percentage
         };
             
             this.Dependency = jobData.ScheduleParallel<Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob>(this.m_ArrivedGroup, this.Dependency);
@@ -302,6 +304,8 @@ namespace Time2Work
             public float work_start_time;
             public float work_end_time;
             public float delayFactor;
+            public int ticksPerDay;
+            public int part_time_prob;
 
             public void Execute(
               in ArchetypeChunk chunk,
@@ -333,7 +337,7 @@ namespace Time2Work
                     {
                         
                         Citizen citizen = this.m_Citizens[entity];
-                        if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor))
+                        if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob))
                         {
                             
                             this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);

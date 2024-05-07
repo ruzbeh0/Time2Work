@@ -9,6 +9,7 @@ using Game.Simulation;
 using Game.Tools;
 using System;
 using System.Runtime.CompilerServices;
+using Time2Work.Systems;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
@@ -23,7 +24,7 @@ namespace Time2Work
     public partial class Time2WorkStudentSystem : GameSystemBase
     {
         private EndFrameBarrier m_EndFrameBarrier;
-        private TimeSystem m_TimeSystem;
+        private Time2WorkTimeSystem m_TimeSystem;
         private Time2WorkCitizenBehaviorSystem m_CitizenBehaviorSystem;
         private SimulationSystem m_SimulationSystem;
         private EntityQuery m_EconomyParameterQuery;
@@ -35,9 +36,9 @@ namespace Time2Work
 
         public override int GetUpdateInterval(SystemUpdatePhase phase) => 16;
 
-        public static float GetStudyOffset(Citizen citizen)
+        public static float GetStudyOffset(Citizen citizen, int ticksPerDay)
         {
-            return (float)(citizen.GetPseudoRandom(CitizenPseudoRandom.WorkOffset).NextInt(21845) - 10922) / 262144f;
+            return (float)(citizen.GetPseudoRandom(CitizenPseudoRandom.WorkOffset).NextInt((int)(21845* (ticksPerDay / TimeSystem.kTicksPerDay))) - ((int)10922*(ticksPerDay/TimeSystem.kTicksPerDay))) / ticksPerDay;
         }
 
         public static bool IsTimeToStudy(
@@ -50,11 +51,12 @@ namespace Time2Work
           int population,
           float offdayprob,
           int school_start_time,
-          int school_end_time)
+          int school_end_time,
+          int ticksPerDay)
         {
             int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
-            int day = TimeSystem.GetDay(frame, timeData);
-            float2 timeToStudy = Time2WorkStudentSystem.GetTimeToStudy(citizen, student, ref economyParameters, school_start_time, school_end_time);
+            int day = Time2WorkTimeSystem.GetDay(frame, timeData, ticksPerDay);
+            float2 timeToStudy = Time2WorkStudentSystem.GetTimeToStudy(citizen, student, ref economyParameters, school_start_time, school_end_time, ticksPerDay);
             if (Unity.Mathematics.Random.CreateFromIndex((uint)citizen.m_PseudoRandom + (uint)day).NextInt(100) <= num)
                 return false;
             return (double)timeToStudy.x >= (double)timeToStudy.y ? (double)timeOfDay >= (double)timeToStudy.x || (double)timeOfDay <= (double)timeToStudy.y : (double)timeOfDay >= (double)timeToStudy.x && (double)timeOfDay <= (double)timeToStudy.y;
@@ -65,16 +67,17 @@ namespace Time2Work
           Game.Citizens.Student student,
           ref EconomyParameterData economyParameters,
           int school_start_time,
-          int school_end_time)
+          int school_end_time,
+          int ticksPerDay)
         {
-            float studyOffset = Time2WorkStudentSystem.GetStudyOffset(citizen);
+            float studyOffset = Time2WorkStudentSystem.GetStudyOffset(citizen, ticksPerDay);
             float startTimeOffset = ((float)school_start_time - 4f) * (1 / 48f);
             float endTimeOffset = ((float)school_end_time - 19f) * (1 / 48f);
 
             float num1 = 60f * student.m_LastCommuteTime;
             if ((double)num1 < 60.0)
                 num1 = 1800f;
-            float num2 = num1 / 262144f;
+            float num2 = num1 / ticksPerDay;
 
             return new float2(math.frac(economyParameters.m_WorkDayStart + studyOffset + startTimeOffset - num2), math.frac(economyParameters.m_WorkDayEnd + studyOffset + endTimeOffset));
         }
@@ -84,7 +87,7 @@ namespace Time2Work
             base.OnCreate();
             this.m_CitizenBehaviorSystem = this.World.GetOrCreateSystemManaged<Time2WorkCitizenBehaviorSystem>();
             this.m_EndFrameBarrier = this.World.GetOrCreateSystemManaged<EndFrameBarrier>();
-            this.m_TimeSystem = this.World.GetOrCreateSystemManaged<TimeSystem>();
+            this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
             this.m_SimulationSystem = this.World.GetOrCreateSystemManaged<SimulationSystem>();
             this.m_StudentQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Citizens.Student>(), ComponentType.ReadOnly<Citizen>(), ComponentType.ReadOnly<TravelPurpose>(), ComponentType.ReadOnly<CurrentBuilding>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
             this.m_GotoSchoolQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Citizens.Student>(), ComponentType.ReadOnly<Citizen>(), ComponentType.ReadOnly<CurrentBuilding>(), ComponentType.Exclude<ResourceBuyer>(), ComponentType.Exclude<TravelPurpose>(), ComponentType.Exclude<HealthProblem>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
@@ -134,7 +137,8 @@ namespace Time2Work
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 school_offdayprob = WeekSystem.getSchoolOffDayProb(),
                 school_start_time = (int)Mod.m_Setting.school_start_time,
-                school_end_time = (int)Mod.m_Setting.school_end_time
+                school_end_time = (int)Mod.m_Setting.school_end_time,
+                ticksPerDay = Time2WorkTimeSystem.kTicksPerDay
             }.ScheduleParallel<Time2WorkStudentSystem.GoToSchoolJob>(this.m_GotoSchoolQuery, JobHandle.CombineDependencies(this.Dependency, deps));
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle);
             this.m_CitizenBehaviorSystem.AddCarReserveWriter(jobHandle);
@@ -159,7 +163,8 @@ namespace Time2Work
                 m_Schools = this.__TypeHandle.__Game_Buildings_School_RO_ComponentLookup,
                 m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                 m_TimeOfDay = this.m_TimeSystem.normalizedTime,
-                m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter()
+                m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
+                ticksPerDay = Time2WorkTimeSystem.kTicksPerDay
             }.ScheduleParallel<Time2WorkStudentSystem.StudyJob>(this.m_StudentQuery, JobHandle.CombineDependencies(this.Dependency, jobHandle));
 
             this.m_EndFrameBarrier.AddJobHandleForProducer(producerJob);
@@ -205,6 +210,7 @@ namespace Time2Work
             public float school_offdayprob;
             public int school_start_time;
             public int school_end_time;
+            public int ticksPerDay;
             public void Execute(
               in ArchetypeChunk chunk,
               int unfilteredChunkIndex,
@@ -223,7 +229,7 @@ namespace Time2Work
                     Entity entity1 = nativeArray1[index];
                     Citizen citizen = nativeArray2[index];
 
-                    if (Time2WorkStudentSystem.IsTimeToStudy(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_Frame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time))
+                    if (Time2WorkStudentSystem.IsTimeToStudy(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_Frame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay))
                     {
                         DynamicBuffer<TripNeeded> dynamicBuffer = bufferAccessor[index];
                         if (!this.m_Attendings.HasComponent(entity1) && (citizen.m_State & CitizenFlags.MovingAway) == CitizenFlags.None)
@@ -299,6 +305,7 @@ namespace Time2Work
             public EconomyParameterData m_EconomyParameters;
             public float m_TimeOfDay;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
+            public int ticksPerDay;
             public void Execute(
               in ArchetypeChunk chunk,
               int unfilteredChunkIndex,
@@ -313,7 +320,7 @@ namespace Time2Work
                 {
                     Entity entity = nativeArray1[index];
                     Entity school = nativeArray2[index].m_School;
-                    float studyOffset = Time2WorkStudentSystem.GetStudyOffset(nativeArray4[index]);
+                    float studyOffset = Time2WorkStudentSystem.GetStudyOffset(nativeArray4[index], ticksPerDay);
                     if (!this.m_Schools.HasComponent(school))
                     {
                         TravelPurpose travelPurpose = nativeArray3[index];

@@ -16,6 +16,8 @@ This mod has several options to configure cims' work and school schedule and als
 * **Work Arrival / Departure:** The "Delay/Early factor" adds greater variation to cims work arrival and departure times. The arrival/departure times are implemented using a normal distribution and it works differently in the morning and evening commutes to reflect the real world. In real cities, the evening commute tends to be more spread out than the morning commute, this happens because although most workers have a set time to arrive at work, when it is time to leave work the departure time is not as strict, with a few workers working a few extra minutes or hours. This feature is also implemented differently for each shift. The Evening and Night shifts have even greater variation, spreading out the start and end work times for the cims that work during those shifts.
 * **Lunch Break:** The lunch break option will add the possibility of some cims to leave work around noon for either Leisure or Shopping. The break lasts around an hour, after that, they will return to work. The lunch break can be configured by setting the lunch break probability in the mod's menu. Also, cims that take a lunch break, might leave work a little later (to compensate for the time that they weren't working).
 * **Work Start/End Time Settings:** This option allows the user to change work start and end times for the day shift.
+* **Part Time Settings:** This setting only applies to the day shift. The workers that are part time will either work in the morning or afternoon. Since their shift is shorter, they will not take a lunch break.
+* **Remote Work Settings:** The portion of citizens that work remotely will stay at home and not go to work. They might still go out for a lunch break and then come back to work at home. Only workers with at least level 3 of education will work remotely.
 
 ## Shopping and Leisure
 
@@ -26,15 +28,15 @@ This mod has several options to configure cims' work and school schedule and als
 * **School Vacation System** This feature works similar to the vacation and holiday system for work, with the difference that on Weekends schools are assumed to be closed.
 * **School Start/End Time Settings:** This option allows the user to change school start and end times.
 
-## Day Type Simulation
+## Simulation
 
-The options in this tab will allow you to change the simulation from an Average Day, a Weekday or a Weekend. And even allow you to simulate a week rotating from Weekdays (Monday to Friday) and Weekends (Saturday and Sunday).
+* **Day Type Simulation** The options in this menu will allow you to change the simulation from an Average Day, a Weekday, a Weekend or simulate a 7 Day Week. With the 7 Day Week option, each day will be a different day of the week, Monday to Thursday will function as a Weekday, Friday as an Average Day, and Saturday and Sunday as a Weekend. The current day of the week will be shown in the UI in the bottom left corner.
 
 An Average Day, is similar to the vanilla default setting. It consists of a combination of Weekday and Weekends behavior, with around 30% of cims behaving as on a weekend and the rest as on a weekday.
 
 On a Weekday, most of the trips will be work or school related. On a Weekend, there will be more Leisure and Shopping trips. Schools are closed on Weekends.
 
-Note that if the 7 Day Week option is selected, currently, there is no place in the UI that will indicate if the current day is a weekday or a weekend. However, that will be indicated in the Mod's log.
+* **Slow Time and Increase Day Length** If enabled, this option will make the day longer - while keeping the simulation speed the same. The day length of the vanilla game when compared to the cim's travel times is not reasonable. It is commom to find cims that take around 2 in game hours to get from home to work and this is not realistic. Most major cities in the world have an average commute of 25 to 30 minutes, in my test city the average commute was around 1 hour and 40 minutes. Based on this, if this option is enabled I recommend that the reduction factor be set to 3.5.
 
 ## Performance Impacts
 This mods can have a significant impact on the game's performance - specially in big cities. If you have issues with performance, I would recommend using "Average Day" setting and disabling the Vacation and Holiday features for work and school. 
@@ -74,17 +76,19 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.5" />
+	<ModVersion Value="0.6" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.1.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="77209" />
+	<Dependency Id="75426" />
 	<ChangeLog>
-* Fixed bug that was setting Weekday/Weekend factor incorrectly
-* Recalibrated time of day distribution of trips to better match US National Household Travel Survey
-* Improved performance by using Burst Compiler
-* Refactored Lunch Break code to improve performance and added Meals as a shopping option for lunch
-* Modified shopping and leisure night reduction feature to start at 11 PM instead of midnight
+* Updated Friday to function as an Average Day
+* Added UI for day of the week in the bottom left corner
+* Added option to slow time and increase length of the day
+* Added option to configure part time work
+* Added remote work feature
+* Refactored lunch break to improve performance and added Beverages as a shopping option
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

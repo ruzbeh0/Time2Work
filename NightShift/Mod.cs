@@ -5,11 +5,13 @@ using Game.Modding;
 using Game.SceneFlow;
 using Game.Serialization;
 using Game.Simulation;
-using Time2Work;
 using Unity.Entities;
 using HarmonyLib;
 using System.Linq;
 using System.IO;
+using Colossal.UI;
+using Game.UI.InGame;
+using Time2Work.Systems;
 
 namespace Time2Work
 {
@@ -42,7 +44,11 @@ namespace Time2Work
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.WorkerSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.LeisureSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.StudentSystem>().Enabled = false;
+            World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.UI.InGame.TimeUISystem>().Enabled = false;
 
+            updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.EditorSimulation);
+            updateSystem.UpdateAfter<Time2WorkTimeSystem>(SystemUpdatePhase.Deserialize);
             updateSystem.UpdateAt<WeekSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<WorkPlaceShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<WorkerShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
@@ -51,21 +57,19 @@ namespace Time2Work
             updateSystem.UpdateAt<Time2WorkWorkerSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkLeisureSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkStudentSystem>(SystemUpdatePhase.GameSimulation);
-            
-            //updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.GameSimulation);
-            //updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.EditorSimulation);
-            //updateSystem.UpdateAfter<PostDeserialize<Time2WorkTimeSystem>>(SystemUpdatePhase.Deserialize);
-
+            updateSystem.UpdateAt<Time2WorkTimeUISystem>(SystemUpdatePhase.UIUpdate);
+            updateSystem.UpdateAt<Time2WorkUISystem>(SystemUpdatePhase.UIUpdate);
+           
             //Harmony
-            //var harmony = new Harmony(harmonyID);
-            ////Harmony.DEBUG = true;
-            //harmony.PatchAll(typeof(Mod).Assembly);
-            //var patchedMethods = harmony.GetPatchedMethods().ToArray();
-            //log.Info($"Plugin {harmonyID} made patches! Patched methods: " + patchedMethods);
-            //foreach (var patchedMethod in patchedMethods)
-            //{
-            //    log.Info($"Patched method: {patchedMethod.Module.Name}:{patchedMethod.Name}");
-            //}
+            var harmony = new Harmony(harmonyID);
+            //Harmony.DEBUG = true;
+            harmony.PatchAll(typeof(Mod).Assembly);
+            var patchedMethods = harmony.GetPatchedMethods().ToArray();
+            log.Info($"Plugin {harmonyID} made patches! Patched methods: " + patchedMethods);
+            foreach (var patchedMethod in patchedMethods)
+            {
+                log.Info($"Patched method: {patchedMethod.Module.Name}:{patchedMethod.Name}");
+            }
 
         }
 

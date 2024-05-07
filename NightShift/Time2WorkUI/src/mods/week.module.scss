@@ -1,0 +1,28 @@
+.week {
+    --iconHeight: 19rem;
+    --iconWidth: 19rem;
+    --buttonWidth: 40rem;
+}
+
+.content {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+}
+
+.center-box {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    border-top-left-radius: var(--toolbarFieldRadius);
+    border-bottom-left-radius: var(--toolbarFieldRadius);
+    border-top-right-radius: var(--toolbarFieldRadius);
+    border-bottom-right-radius: var(--toolbarFieldRadius);
+    background-color: var(--toolbarFieldColor);
+}
+

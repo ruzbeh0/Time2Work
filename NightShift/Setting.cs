@@ -6,13 +6,14 @@ using Game.Settings;
 using Game.UI;
 using Game.UI.Widgets;
 using System.Collections.Generic;
+using Time2Work.Systems;
 using Unity.Entities;
 
 namespace Time2Work
 {
     [FileLocation(nameof(Time2Work))]
-    [SettingsUIGroupOrder(WorkPlaceShiftGroup, WorkPlaceDelayGroup, LunchBreakGroup, WorkTimeGroup, ResetGroup, ShopLeisureGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, DTSimulationGroup)]
-    [SettingsUIShowGroupName(WorkPlaceShiftGroup, WorkPlaceDelayGroup, LunchBreakGroup, WorkTimeGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup)]
+    [SettingsUIGroupOrder(DelayGroup, WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup)]
+    [SettingsUIShowGroupName(WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup)]
     public class Setting : ModSetting
     {
         public const string WorkSection = "Work";
@@ -23,13 +24,14 @@ namespace Time2Work
         public const string ShopLeisureGroup = "ShopLeisureGroup";
 
         public const string WorkPlaceShiftGroup = "WorkPlaceShiftGroup";
-        public const string WorkPlaceDelayGroup = "WorkPlaceDelayGroup";
-        public const string LunchBreakGroup = "LunchBreakGroup";
-        public const string WorkTimeGroup = "WorkTimeGroup";
+        public const string DelayGroup = "DelayGroup";
+        public const string RemoteGroup = "RemoteGroup";
+        public const string DayShiftGroup = "DayShiftGroup";
         public const string TimeOffGroup = "TimeOffGroup";
         public const string SchoolTimeOffGroup = "SchoolTimeOffGroup";
         public const string SchoolTimeGroup = "SchoolTimeGroup";
         public const string DTSimulationGroup = "DTSimulationGroup";
+        public const string SlowerTimeGroup = "SlowerTimeGroup";
 
         public Setting(IMod mod) : base(mod)
         {
@@ -52,6 +54,10 @@ namespace Time2Work
             work_start_time = timeEnum.t900;
             work_end_time = timeEnum.t1700;
             dt_simulation = DTSimulationEnum.AverageDay;
+            slow_time_factor = 4;
+            enable_slower_time = false;
+            part_time_percentage = 22;
+            remote_percentage = 14;
         }
 
         public override void Apply()
@@ -72,12 +78,16 @@ namespace Time2Work
         public int night_share { get; set; }
 
         [SettingsUISlider(min = 0, max = 10, step = 0.5f, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
-        [SettingsUISection(WorkSection, WorkPlaceDelayGroup)]
+        [SettingsUISection(WorkSection, DelayGroup)]
         public float delay_factor { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
-        [SettingsUISection(WorkSection, LunchBreakGroup)]
+        [SettingsUISection(WorkSection, DayShiftGroup)]
         public int lunch_break_percentage { get; set; }
+
+        [SettingsUISlider(min = 0, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(WorkSection, RemoteGroup)]
+        public int remote_percentage { get; set; }
 
         [SettingsUISection(ShopLeisureSection, ShopLeisureGroup)]
         public bool disable_early_shop_leisure { get; set; }
@@ -110,16 +120,33 @@ namespace Time2Work
         [SettingsUISection(SchoolSection, SchoolTimeGroup)]
         public timeEnum school_end_time { get; set; } = timeEnum.t1700;
 
-        [SettingsUISection(WorkSection, WorkTimeGroup)]
+        [SettingsUISection(WorkSection, DayShiftGroup)]
         public timeEnum work_start_time { get; set; } = timeEnum.t900;
 
-        [SettingsUISection(WorkSection, WorkTimeGroup)]
+        [SettingsUISection(WorkSection, DayShiftGroup)]
         public timeEnum work_end_time { get; set; } = timeEnum.t1700;
+
+        [SettingsUISlider(min = 0, max = 40, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(WorkSection, DayShiftGroup)]
+        public int part_time_percentage { get; set; }
 
         [SettingsUISection(DayTypeSimulationSection, DTSimulationGroup)]
         public DTSimulationEnum dt_simulation { get; set; } = DTSimulationEnum.AverageDay;
 
-        public enum DTSimulationEnum 
+        [SettingsUISection(DayTypeSimulationSection, SlowerTimeGroup)]
+        public bool enable_slower_time { get; set; }
+
+        private bool disableSlowerTime()
+        {
+            return !enable_slower_time;
+        }
+
+        [SettingsUISlider(min = 1.1f, max = 5, step = 0.1f, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
+        [SettingsUISection(DayTypeSimulationSection, SlowerTimeGroup)]
+        [SettingsUIHideByCondition(typeof(Setting), nameof(disableSlowerTime))]
+        public float slow_time_factor { get; set; }
+
+        public enum DTSimulationEnum
         {
             AverageDay,
             Weekday,
@@ -179,15 +206,16 @@ namespace Time2Work
                 { m_Setting.GetOptionTabLocaleID(Setting.WorkSection), "Work" },
                 { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Shopping and Leisure" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SchoolSection), "School" },
-                { m_Setting.GetOptionTabLocaleID(Setting.DayTypeSimulationSection), "Day Type Simulation" },
+                { m_Setting.GetOptionTabLocaleID(Setting.DayTypeSimulationSection), "Simulation" },
 
                 { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceShiftGroup), "Modify the share of evening and night work shifts" },
-                { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceDelayGroup), "Modify the work arrival and departure times" },
-                { m_Setting.GetOptionGroupLocaleID(Setting.LunchBreakGroup), "Modify the probability of workers taking a lunch break" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.RemoteGroup), "Remote Work Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TimeOffGroup), "Vacation and Holiday Settings" },
-                { m_Setting.GetOptionGroupLocaleID(Setting.WorkTimeGroup), "Work Start/End Time Settings" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.DayShiftGroup), "Day Shift Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeOffGroup), "School Vacation Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeGroup), "School Start/End Time Settings" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.SlowerTimeGroup), "Slow Time and Increase Day Length" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.DTSimulationGroup), "Day Type Simulation" },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Button)), "Reset" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Button)), $"Reset all settings to default values" },
@@ -196,6 +224,10 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.evening_share)), $"Percentage for evening workplaces" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.night_share)), "Night" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.night_share)), $"Percentage for night workplaces" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.part_time_percentage)), "Part Time Percentage" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.part_time_percentage)), $"Percentage of day shift workers that work part time. These workers will work either in the morning or in the afternoon. They do not take lunch break, and a higher value will increase trips in the middle of the day and reduce the rush hour peaks." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.remote_percentage)), "Percentage of Remote Workers" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.remote_percentage)), $"Percentage of workers that work from home. These workers can still go out for a lunch break." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.delay_factor)), "Delay/Early Factor" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.delay_factor)), $"This factor will adjust the variation in arrival and departure times from work. A higher factor will increase the variation on work arrival and departure - meaning more cims will not arrive to work on time or work for longer hours. A value of zero will disable this feature. Note that the effects of this feature in the morning and evening peak hours is different: in the morning there is an equal probabilty of early or late arrival, however, in the evening the probability of leaving late is higher than of leaving early. This was implemented this way to simulate better the differences of morning and evening commute from the real world." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.lunch_break_percentage)), "Lunch Break Probability" },
@@ -222,6 +254,10 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_start_time)), $"Start time for work day shift." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.work_end_time)), "Work Day Shift End Time" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_end_time)), $"End time for work day shift." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.enable_slower_time)), "Enable Slower Time" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.enable_slower_time)), $"Slower time without changing the simulation speed." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.slow_time_factor)), "Slower Time Factor" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.slow_time_factor)), $"This factor will slow down time and increase the length of the day. A factor of 1 will have no effect. A factor of 2, for example, will make the day last twice as long. Note that the simulation speed does not change, and other systems not affected by this mod will update based on the simulation speed and not on the length of the day." },
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Average Day" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Weekday" },
@@ -279,15 +315,16 @@ namespace Time2Work
                 { m_Setting.GetOptionTabLocaleID(Setting.WorkSection), "Emprego" },
                 { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Compras e Lazer" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SchoolSection), "Escola" },
-                { m_Setting.GetOptionTabLocaleID(Setting.DayTypeSimulationSection), "Tipo de Simulação Diária" },
+                { m_Setting.GetOptionTabLocaleID(Setting.DayTypeSimulationSection), "Simulação" },
 
                 { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceShiftGroup), "Alterar a porcentagem de turnos vespertinos e noturnos." },
-                { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceDelayGroup), "Alterar o horário de chegada e saida do trabalho." },
-                { m_Setting.GetOptionGroupLocaleID(Setting.LunchBreakGroup), "mMdificar a probabilidade dos trabalhadores saírem para um intervalo de almoço" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.RemoteGroup), "Configurações de Home Office" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TimeOffGroup), "Configurações de férias e feriados" },
-                { m_Setting.GetOptionGroupLocaleID(Setting.WorkTimeGroup), "Configurações de horário de início/término do trabalho" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.DayShiftGroup), "Configurações do turno diurno."},
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeOffGroup), "Configurações de férias escolares" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeGroup), "Configurações de horário de início/término das aulas nas escolas" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.SlowerTimeGroup), "Reduzir a velocidade do tempo e aumentar a duração do dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.DTSimulationGroup), "Tipo de Simulação Diária" },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Button)), "Restaurar Configurações" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Button)), $"Redefinir todas as configurações para os valores padrões." },
@@ -296,6 +333,10 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.evening_share)), $"Porcentagem para locais de trabalho vespertinos" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.night_share)), "Noite" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.night_share)), $"Porcentagem para locais de trabalho noturnos" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.remote_percentage)), "Porcentagem de trabalhadores que fazem Home Office" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.remote_percentage)), $"Porcentagem de trabalhadores que trabalham em casa. Estes funcionários também tem intervalo para almoço." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.part_time_percentage)), "Porcentagem de trabalhadores de meio período" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.part_time_percentage)), $"Porcentagem de trabalhadores do turno diurno que trabalham meio período. Estes funcionários trabalham ou de manhã ou de tarde. Eles não tem horário de almoço e um valor mais alto vai aumentar as viagens durante o meio do dia e diminuir os picos dos horários de rush." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.delay_factor)), "Fator de chegada/saída atrasada ou antecipada" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.delay_factor)), $"Este fator ajustará a variação dos horários de chegada e saída do trabalho. Um fator mais alto aumentará a variação na chegada e saída do trabalho - o que significa que mais cims não chegarão ao trabalho na hora certa ou trabalharão por mais horas. Um valor zero desativará essa funcionalidade. Observe que os efeitos desta opção nos horários de pico da manhã e da tarde são diferentes: de manhã há igual probabilidade de chegar cedo ou mais tarde, porém, à tarde a probabilidade de sair atrasado é maior do que de sair mais cedo. Isso foi implementado desta forma para simular melhor as diferenças entre o deslocamento matinal e vespertino em relação ao mundo real." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.lunch_break_percentage)), "Probabilidade de intervalo para almoço" },
@@ -322,6 +363,10 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_start_time)), $"Horário de início do turno diurno de trabalho." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.work_end_time)), "Horário de término do turno diurno" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_end_time)), $"Horário de término do turno diurno de trabalho." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.enable_slower_time)), "Ativer tempo mais lento" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.enable_slower_time)), $"Reduz a velocidade do tempo sem mudar a velocidade da simulação." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.slow_time_factor)), "Fator de redução da velocidade do tempo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.slow_time_factor)), $"Esse fator vai reduzir a velocidade do tempo e aumentar a duração do dia. Um fator de valor 1 não vai ter efeito. Um fator de valor 2, por exemplo, vai dobrar a duração do dia. Observe que a velocidade da simulação não será alterada. Outros sistemas que não usados neste mod serão atualizados baseados na velocidade da simulação e não na duração do dia." },
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Dia Padrão" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Dia da Semana" },
