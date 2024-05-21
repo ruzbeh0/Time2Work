@@ -63,7 +63,8 @@ namespace Time2Work
           float work_end_time,
           float delayFactor,
           int ticksPerDay,
-          int part_time_prob)
+          int part_time_prob,
+          float commute_top10)
         {
             int age = (int)citizen.GetAge();
             float2 float2_1 = new float2(0.875f, 0.21f);
@@ -81,7 +82,7 @@ namespace Time2Work
             float2 float2_2;
             if (workers.HasComponent(entity))
             {
-                float2_2 = Time2WorkWorkerSystem.GetTimeToWork(citizen, workers[entity], ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob);
+                float2_2 = Time2WorkWorkerSystem.GetTimeToWork(citizen, workers[entity], ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10);
             }
             else
             {
@@ -116,9 +117,10 @@ namespace Time2Work
           float work_end_time,
           float delayFactor,
           int ticksPerDay,
-          int part_time_prob)
+          int part_time_prob,
+          float commute_top10)
         {
-            float2 sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref workers, ref students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob);
+            float2 sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref workers, ref students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10);
             return (double)sleepTime.y < (double)sleepTime.x ? (double)normalizedTime > (double)sleepTime.x || (double)normalizedTime < (double)sleepTime.y : (double)normalizedTime > (double)sleepTime.x && (double)normalizedTime < (double)sleepTime.y;
         }
 
@@ -258,7 +260,8 @@ namespace Time2Work
                 disable_early_shop_leisure = Mod.m_Setting.disable_early_shop_leisure,
                 school_offdayprob = WeekSystem.getSchoolOffDayProb(),
                 ticksPerDay = Time2WorkTimeSystem.kTicksPerDay,
-                part_time_prob = Mod.m_Setting.part_time_percentage
+                part_time_prob = Mod.m_Setting.part_time_percentage,
+                commute_top10 = Mod.m_ModData.commute_top10per
             };
             JobHandle jobHandle1 = jobData.ScheduleParallel<Time2WorkCitizenBehaviorSystem.CitizenAITickJob>(this.m_CitizenQuery, JobHandle.CombineDependencies(this.m_CarReserveWriters, JobHandle.CombineDependencies(this.Dependency, outJobHandle)));
             jobData.m_OutsideConnectionEntities.Dispose(jobHandle1);
@@ -571,6 +574,7 @@ namespace Time2Work
             public float school_offdayprob;
             public int ticksPerDay;
             public int part_time_prob;
+            public float commute_top10;
 
             private bool CheckSleep(
               int index,
@@ -588,7 +592,7 @@ namespace Time2Work
               float work_start_time,
               float work_end_time)
             {
-                if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref economyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob))
+                if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref economyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10))
                     return false;
                 if (home != Entity.Null && currentBuilding == home)
                 {
@@ -603,7 +607,7 @@ namespace Time2Work
                 else
                 {
                     //If too much time has passed since sleep start time, stay where you are
-                    float2 sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob);
+                    float2 sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10);
                     double threshold_go_home = Math.Min(Math.Abs(sleepTime.x - this.m_NormalizedTime), Math.Abs(1 - (sleepTime.x - this.m_NormalizedTime)));
 
                     if (threshold_go_home <= 0.03)
@@ -746,11 +750,11 @@ namespace Time2Work
                     citizen.m_LeisureCounter = byte.MaxValue;
                     return true;
                 }
-                float x = this.GetTimeLeftUntilInterval(Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob));
+                float x = this.GetTimeLeftUntilInterval(Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10));
                 if (this.m_Workers.HasComponent(entity))
                 {
                     Worker worker = this.m_Workers[entity];
-                    float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, worker, ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob);
+                    float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, worker, ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10);
                     float2 timeToLunch = Time2WorkWorkerSystem.GetLunchTime(citizen, worker, ref economyParameters); 
                     if(timeToLunch.x > 0)
                     {
@@ -999,10 +1003,23 @@ namespace Time2Work
                                         }
                                         else
                                         {
+                                            //if (currentBuilding == entity3)
+                                            //{
+                                            //    Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, this.m_TimeData, ticksPerDay)));
+                                            //    int simulate_prob = rand.NextInt(100);
+                                            //    if(simulate_prob > (100-Mod.simulation_reduction))
+                                            //    {
+                                            //        if (chunk.Has<Leisure>(ref this.m_LeisureType))
+                                            //        {
+                                            //            this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
+                                            //        }
+                                            //        continue;
+                                            //    }
+                                            //}
                                             if (!this.m_AttendingMeetings.HasComponent(entity1) || !this.AttendMeeting(unfilteredChunkIndex, entity1, ref citizen, household, currentBuilding, trips, ref random))
                                             {
                                                 if (this.m_Workers.HasComponent(entity1) && !Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob,ticksPerDay) 
-                                                    && Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob) || this.m_Students.HasComponent(entity1) && Time2WorkStudentSystem.IsTimeToStudy(citizen, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay))
+                                                    && Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10) || this.m_Students.HasComponent(entity1) && Time2WorkStudentSystem.IsTimeToStudy(citizen, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay))
                                                 {
                                                     if(this.m_Workers.HasComponent(entity1) && Time2WorkWorkerSystem.IsLunchTime(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))
                                                     {

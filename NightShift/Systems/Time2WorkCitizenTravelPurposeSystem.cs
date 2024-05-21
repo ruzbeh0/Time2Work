@@ -153,7 +153,8 @@ namespace Time2Work
                 work_end_time = (float)Mod.m_Setting.work_end_time,
                 delayFactor = (float)(Mod.m_Setting.delay_factor) / 100,
                 ticksPerDay = Time2WorkTimeSystem.kTicksPerDay,
-                part_time_prob = Mod.m_Setting.part_time_percentage
+                part_time_prob = Mod.m_Setting.part_time_percentage,
+                commute_top10 = Mod.m_ModData.commute_top10per
         };
             
             this.Dependency = jobData.ScheduleParallel<Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob>(this.m_ArrivedGroup, this.Dependency);
@@ -306,6 +307,7 @@ namespace Time2Work
             public float delayFactor;
             public int ticksPerDay;
             public int part_time_prob;
+            public float commute_top10;
 
             public void Execute(
               in ArchetypeChunk chunk,
@@ -337,7 +339,7 @@ namespace Time2Work
                     {
                         
                         Citizen citizen = this.m_Citizens[entity];
-                        if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob))
+                        if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10))
                         {
                             
                             this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);

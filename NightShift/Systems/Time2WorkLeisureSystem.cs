@@ -194,7 +194,8 @@ namespace Time2Work
                 delayFactor = (float)(Mod.m_Setting.delay_factor) / 100,
                 school_offdayprob = WeekSystem.getSchoolOffDayProb(),
                 ticksPerDay = Time2WorkTimeSystem.kTicksPerDay,
-                part_time_prob = Mod.m_Setting.part_time_percentage
+                part_time_prob = Mod.m_Setting.part_time_percentage,
+                commute_top10 = Mod.m_ModData.commute_top10per
             }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobHandle.CombineDependencies(this.Dependency, JobHandle.CombineDependencies(outJobHandle, deps1)));
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle1);
             this.m_PathFindSetupSystem.AddQueueWriter(jobHandle1);
@@ -523,6 +524,7 @@ namespace Time2Work
             public float school_offdayprob;
             public int ticksPerDay;
             public int part_time_prob;
+            public float commute_top10;
 
             private void SpendLeisure(
               int index,
@@ -633,6 +635,19 @@ namespace Time2Work
                     }
                     else
                     {
+                        //Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizenData.m_PseudoRandom + Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, this.m_TimeData, ticksPerDay)));
+                        //int simulate_prob = rand.NextInt(100);
+                        //if (simulate_prob > (100 - Mod.simulation_reduction))
+                        //{
+                        //    if(this.m_Purposes.HasComponent(entity1) && (this.m_Purposes[entity1].m_Purpose == Game.Citizens.Purpose.Leisure || this.m_Purposes[entity1].m_Purpose == Game.Citizens.Purpose.Traveling))
+                        //                {
+                        //        this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity1);
+                        //    }
+                        //    this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
+                        //    this.m_CommandBuffer.RemoveComponent(unfilteredChunkIndex, entity1, in this.m_PathfindTypes);
+                        //    continue;
+                        //}
+
                         if (!flag && this.m_PathInfos.HasComponent(entity1))
                         {
                             PathInformation pathInfo = this.m_PathInfos[entity1];
@@ -641,8 +656,8 @@ namespace Time2Work
                                 Entity destination = pathInfo.m_Destination;
                                 if ((this.m_PropertyRenters.HasComponent(destination) || this.m_Prefabs.HasComponent(destination)) && !this.m_Targets.HasComponent(entity1))
                                 {
-                                    if ((!this.m_Workers.HasComponent(entity1) || Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) || !Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob) ||
-                                        (!Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) && Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob) && Time2WorkWorkerSystem.IsLunchTime(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))) && (!this.m_Students.HasComponent(entity1) || Time2WorkStudentSystem.IsTimeToStudy(citizenData, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay)))
+                                    if ((!this.m_Workers.HasComponent(entity1) || Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) || !Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10) ||
+                                        (!Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) && Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10) && Time2WorkWorkerSystem.IsLunchTime(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))) && (!this.m_Students.HasComponent(entity1) || Time2WorkStudentSystem.IsTimeToStudy(citizenData, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay)))
                                     {
                                         LeisureProviderData leisureProviderData = this.m_LeisureProviderDatas[this.m_Prefabs[destination].m_Prefab];
                                         if (leisureProviderData.m_Efficiency == 0)

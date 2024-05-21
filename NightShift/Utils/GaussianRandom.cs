@@ -11,7 +11,7 @@ namespace Time2Work.Utils
         public static double NextGaussianDouble(Unity.Mathematics.Random r)
         {
             double u, v, S;
-
+            
             do
             {
                 u = 2.0 * r.NextDouble() - 1.0;

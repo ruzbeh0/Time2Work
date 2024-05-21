@@ -4,7 +4,7 @@
 		<OutputType>Library</OutputType>
 		<TargetFramework>net472</TargetFramework>
 		<Configurations>Debug;Release</Configurations>
-		<LangVersion>9.0</LangVersion>
+		<LangVersion>10.0</LangVersion>
 		
 		<!--The folder where Game.dll is located. Set it only if the game is not installed in the default location, otherwise keep it empty-->
 		<CustomManagedPath>C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed</CustomManagedPath>
@@ -33,6 +33,15 @@
 		</Reference>
 		<Reference Include="Colossal.PSI.Common">
 		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.PSI.Common.dll</HintPath>
+		</Reference>
+		<Reference Include="Colossal.PSI.Discord">
+		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.PSI.Discord.dll</HintPath>
+		</Reference>
+		<Reference Include="Colossal.PSI.PdxSdk">
+		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.PSI.PdxSdk.dll</HintPath>
+		</Reference>
+		<Reference Include="Colossal.PSI.Steamworks">
+		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.PSI.Steamworks.dll</HintPath>
 		</Reference>
 		<Reference Include="Game">
 			<Private>false</Private>

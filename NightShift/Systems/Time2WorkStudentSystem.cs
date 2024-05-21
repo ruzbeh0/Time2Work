@@ -54,7 +54,8 @@ namespace Time2Work
           int school_end_time,
           int ticksPerDay)
         {
-            int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
+            int num = (int)Math.Round(offdayprob);
+            //int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
             int day = Time2WorkTimeSystem.GetDay(frame, timeData, ticksPerDay);
             float2 timeToStudy = Time2WorkStudentSystem.GetTimeToStudy(citizen, student, ref economyParameters, school_start_time, school_end_time, ticksPerDay);
             if (Unity.Mathematics.Random.CreateFromIndex((uint)citizen.m_PseudoRandom + (uint)day).NextInt(100) <= num)
@@ -228,6 +229,13 @@ namespace Time2Work
                 {
                     Entity entity1 = nativeArray1[index];
                     Citizen citizen = nativeArray2[index];
+
+                    //Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + Time2WorkTimeSystem.GetDay(this.m_Frame, this.m_TimeData, ticksPerDay)));
+                    //int simulate_prob = rand.NextInt(100);
+                    //if (simulate_prob > (100 - Mod.simulation_reduction))
+                    //{
+                    //    continue;
+                    //}
 
                     if (Time2WorkStudentSystem.IsTimeToStudy(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_Frame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay))
                     {

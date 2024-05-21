@@ -40,7 +40,7 @@ namespace Time2Work.Systems
         public override int GetUpdateInterval(SystemUpdatePhase phase)
         {
             // One day (or month) in-game is '262144' ticks
-            return (int)(Time2WorkTimeSystem.kTicksPerDay / Time2WorkTimeSystem.timeReductionFactor) / 512;
+            return 262144 / 512;
         }
 
         protected override void OnUpdate()

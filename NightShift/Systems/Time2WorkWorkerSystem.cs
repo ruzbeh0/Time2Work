@@ -49,7 +49,8 @@ namespace Time2Work
           int ticksPerDay
           )
         {
-            int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
+            int num = (int)Math.Round(offdayprob);
+            //int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
             int day = Time2WorkTimeSystem.GetDay(frame, timeData, ticksPerDay);
             bool todayOff = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + day)).NextInt(100) <= num;
             bool yesterdayOff = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + day - 1)).NextInt(100) <= num;
@@ -71,9 +72,10 @@ namespace Time2Work
           float work_end_time,
           float delayFactor,
           int ticksPerDay,
-          int part_time_prob)
+          int part_time_prob,
+          float commute_top10)
         {
-            float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, worker, ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob);
+            float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, worker, ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10);
             return (double)timeToWork.x >= (double)timeToWork.y ? (double)timeOfDay >= (double)timeToWork.x || (double)timeOfDay <= (double)timeToWork.y : (double)timeOfDay >= (double)timeToWork.x && (double)timeOfDay <= (double)timeToWork.y;
         }
 
@@ -126,7 +128,7 @@ namespace Time2Work
           ref EconomyParameterData economyParameters)
         {
             Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom));
-            float lunch_median = 0.51f;
+            float lunch_median = 0.5f;
             float lunch_duration = 0.05f;
             
             double startOnTime = random.NextDouble(-0.04,0.04) + GaussianRandom.NextGaussianDouble(random)*0.02;
@@ -152,7 +154,8 @@ namespace Time2Work
           float work_end_time,
           float delayFactor,
           int ticksPerDay,
-          int part_time_prob)
+          int part_time_prob,
+          float commute_top10)
         {
             //Unity.Mathematics.Random random = citizen.GetPseudoRandom(CitizenPseudoRandom.WorkOffset);
             Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom));
@@ -239,16 +242,23 @@ namespace Time2Work
             }
 
             float num2 = 0.0f;
+            float peak_spread = 0f;
             if (includeCommute)
             {
                 float num3 = 60f * worker.m_LastCommuteTime;
                 if ((double)num3 < 60.0)
                     num3 = 40000f;
                 num2 = num3 / ticksPerDay;
+
+                if (commute_top10 > 0 && (24f*num2) > commute_top10)
+                {
+                    peak_spread = 0.2f * num2;
+                    num2 += peak_spread;
+                }
             }
             double num4 = (double)num2;
 
-            return new float2(math.frac((float)(num1 - num4)), y);
+            return new float2(math.frac((float)(num1 - num4)), y - peak_spread);
         }
 
         protected override void OnCreate()
@@ -328,7 +338,8 @@ namespace Time2Work
                 delayFactor = (float)(Mod.m_Setting.delay_factor) / 100,
                 ticksPerDay = Time2WorkTimeSystem.kTicksPerDay,
                 part_time_prob = Mod.m_Setting.part_time_percentage,
-                remote_work_prob = Mod.m_Setting.remote_percentage
+                remote_work_prob = Mod.m_Setting.remote_percentage,
+                commute_top10 = Mod.m_ModData.commute_top10per
             }.ScheduleParallel<Time2WorkWorkerSystem.GoToWorkJob>(this.m_GotoWorkQuery, JobHandle.CombineDependencies(this.Dependency, deps));
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle1);
             this.m_Time2WorkCitizenBehaviorSystem.AddCarReserveWriter(jobHandle1);
@@ -362,7 +373,8 @@ namespace Time2Work
                 work_end_time = (float)Mod.m_Setting.work_end_time,
                 delayFactor = (float)(Mod.m_Setting.delay_factor) / 100,
                 ticksPerDay = Time2WorkTimeSystem.kTicksPerDay,
-                part_time_prob = Mod.m_Setting.part_time_percentage
+                part_time_prob = Mod.m_Setting.part_time_percentage,
+                commute_top10 = Mod.m_ModData.commute_top10per
             }.ScheduleParallel<Time2WorkWorkerSystem.WorkJob>(this.m_WorkerQuery, JobHandle.CombineDependencies(this.Dependency, jobHandle1));
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle2);
             this.m_TriggerSystem.AddActionBufferWriter(jobHandle2);
@@ -433,6 +445,7 @@ namespace Time2Work
             public int ticksPerDay;
             public int part_time_prob;
             public int remote_work_prob;
+            public float commute_top10;
 
             public void Execute(
               in ArchetypeChunk chunk,
@@ -457,7 +470,7 @@ namespace Time2Work
                     Citizen citizen = nativeArray2[index];
 
                     if (!Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_Frame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) 
-                        && !Time2WorkWorkerSystem.IsLunchTime(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_Frame,this.m_TimeData, ticksPerDay) && Time2WorkWorkerSystem.IsTimeToWork(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob))
+                        && !Time2WorkWorkerSystem.IsLunchTime(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_Frame,this.m_TimeData, ticksPerDay) && Time2WorkWorkerSystem.IsTimeToWork(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10))
                     {
                         DynamicBuffer<TripNeeded> dynamicBuffer = bufferAccessor[index];
                         if (!this.m_Attendings.HasComponent(entity1) && (citizen.m_State & CitizenFlags.MovingAway) == CitizenFlags.None)
@@ -488,7 +501,7 @@ namespace Time2Work
                                     {
                                         this.m_CarReserverQueue.Enqueue(entity1);
                                     }
-                                    float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, nativeArray3[index], ref this.m_EconomyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob);
+                                    float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, nativeArray3[index], ref this.m_EconomyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10);
                                     float2 timeToLunch = Time2WorkWorkerSystem.GetLunchTime(citizen, nativeArray3[index], ref this.m_EconomyParameters);
                                     //If too much time has passed since work start time, not go to work
                                     double threshold_start_work = Math.Min(Math.Abs(timeToWork.x - this.m_TimeOfDay), Math.Abs(1 - (timeToWork.x - this.m_TimeOfDay)));
@@ -501,6 +514,14 @@ namespace Time2Work
                                     {
                                         home = this.m_Properties[household].m_Property;
                                     }
+                                    //if (nativeArray4[index].m_CurrentBuilding == home)
+                                    //{
+                                    //    int simulate_prob = random.NextInt(100);
+                                    //    if (simulate_prob > (100 - Mod.simulation_reduction))
+                                    //    {
+                                    //        continue;
+                                    //    }
+                                    //}
                                     if (threshold_start_work <= 0.03 ||
                                         threshold_resume_work <= 0.03)
                                     {
@@ -591,6 +612,7 @@ namespace Time2Work
             public float delayFactor;
             public int ticksPerDay;
             public int part_time_prob;
+            public float commute_top10;
 
             public void Execute(
               in ArchetypeChunk chunk,
@@ -624,7 +646,7 @@ namespace Time2Work
                     }
                     else
                     {
-                        if ((!Time2WorkWorkerSystem.IsTimeToWork(citizen, worker, ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob) || this.m_Attendings.HasComponent(entity) || Time2WorkWorkerSystem.IsLunchTime(citizen, worker, ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_Frame, this.m_TimeData, ticksPerDay)) && nativeArray3[index].m_Purpose == Game.Citizens.Purpose.Working)
+                        if ((!Time2WorkWorkerSystem.IsTimeToWork(citizen, worker, ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10) || this.m_Attendings.HasComponent(entity) || Time2WorkWorkerSystem.IsLunchTime(citizen, worker, ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_Frame, this.m_TimeData, ticksPerDay)) && nativeArray3[index].m_Purpose == Game.Citizens.Purpose.Working)
                         {
                             this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
                         }

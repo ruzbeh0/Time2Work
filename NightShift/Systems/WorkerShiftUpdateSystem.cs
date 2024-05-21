@@ -40,7 +40,7 @@ namespace Time2Work.Systems
         public override int GetUpdateInterval(SystemUpdatePhase phase)
         {
             // One day (or month) in-game is '262144' ticks
-            return (int)(Time2WorkTimeSystem.kTicksPerDay / Time2WorkTimeSystem.timeReductionFactor) / 512;
+            return 262144/512;
         }
         protected override void OnUpdate()
         {
@@ -57,6 +57,10 @@ namespace Time2Work.Systems
                 double eveningWorkPlaceShare = (float)Mod.m_Setting.evening_share / 100;
                 double nightWorkPlaceShare = (float)Mod.m_Setting.night_share / 100;
                 double dayProb = 1f - eveningWorkPlaceShare - nightWorkPlaceShare;
+
+                int bin_size = (int)Math.Floor(30*Time2WorkTimeSystem.timeReductionFactor);
+                float bin_min_size = 15f / Time2WorkTimeSystem.timeReductionFactor;
+                int[] commute_min_bins = new int[bin_size];
 
                 foreach (var worker in workers)
                 {
@@ -79,9 +83,26 @@ namespace Time2Work.Systems
                             sum_night_shift++;
                         }
 
+                        float commute = 24f * 60f * 60f * (data.m_LastCommuteTime / Time2WorkTimeSystem.kTicksPerDay);
+
+                        int b = (int)Math.Floor(commute / bin_min_size);
+                        if (b > (bin_size - 1))
+                        {
+                            b = bin_size - 1;
+                        }
+                        commute_min_bins[b]++;
+
                         sum_last_commute += data.m_LastCommuteTime * 60f / Time2WorkTimeSystem.kTicksPerDay;
                         count++;
                     }
+                }
+
+                float percent_sum = 0;
+                int i = bin_size - 1;
+                while(percent_sum < 0.1f)
+                {
+                    percent_sum += (float)commute_min_bins[i] / (float)count;
+                    i--;
                 }
 
                 float current_day_prob = sum_day_shift / (sum_day_shift + sum_evening_shift + sum_night_shift);
@@ -90,8 +111,15 @@ namespace Time2Work.Systems
                 Mod.log.Info($"Day Shift Workers %: {100 * current_day_prob}");
                 Mod.log.Info($"Evening Shift Workers %: {100 * current_eve_prob}");
                 Mod.log.Info($"Night Shift Workers %: {100 * current_night_prob}");
-                Mod.log.Info($"Average Commute Time: {sum_last_commute * 24f / count}");
+                Mod.m_ModData.average_commute = sum_last_commute * 24f / count;
+                Mod.m_ModData.commute_top10per = (i * bin_min_size) /60f;
+                Mod.log.Info($"Average Commute Time (hours): {Mod.m_ModData.average_commute}");
+                Mod.log.Info($"Commute Time Top 10% (hours): {Mod.m_ModData.commute_top10per}");
 
+                if(!Mod.m_Setting.peak_spread)
+                {
+                    Mod.m_ModData.commute_top10per = 0;
+                }
 
                 float new_sum_day_shift = 0f;
                 float new_sum_evening_shift = 0f;
