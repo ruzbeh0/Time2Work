@@ -16,6 +16,7 @@ using static Colossal.Json.DiffUtility;
 using static Time2Work.Setting;
 using Game.Settings;
 using Colossal.PSI.Environment;
+using System.Runtime.Remoting.Messaging;
 
 namespace Time2Work
 {
@@ -40,6 +41,7 @@ namespace Time2Work
             {
                 Directory.CreateDirectory(SettingsFolder);
             }
+            
             if (!Directory.Exists(DataFolder))
             {
                 Directory.CreateDirectory(DataFolder);
@@ -63,8 +65,8 @@ namespace Time2Work
             GameManager.instance.localizationManager.AddSource("en-US", new LocaleEN(m_Setting));
             GameManager.instance.localizationManager.AddSource("pt-BR", new LocalePT(m_Setting));
 
-            AssetDatabase.global.LoadSettings("settings", m_Setting, new Setting(this));
-            AssetDatabase.global.LoadSettings("data", m_ModData, new ModData());
+            AssetDatabase.global.LoadSettings("data_"+ nameof(Time2Work), m_ModData, new ModData());
+            AssetDatabase.global.LoadSettings(nameof(Time2Work), m_Setting, new Setting(this));
 
             // Disable original systems
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.CitizenBehaviorSystem>().Enabled = false;
@@ -74,6 +76,7 @@ namespace Time2Work
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.StudentSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TrafficSpawnerAISystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.GoodsDeliveryRequestSystem>().Enabled = false;
+            //World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.CalendarEventLaunchSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.StorageTransferSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.UI.InGame.TimeUISystem>().Enabled = false;
             
@@ -91,9 +94,12 @@ namespace Time2Work
             updateSystem.UpdateAt<Time2WorkTrafficSpawnerAISystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkGoodsDeliveryRequestSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkStorageTransferSystem>(SystemUpdatePhase.GameSimulation);
+            //updateSystem.UpdateAt<Time2WorkCalendarEventLaunchSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTimeUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkUISystem>(SystemUpdatePhase.UIUpdate);
-           
+            updateSystem.UpdateAfter<TimeSettingsMultiplierSystem>(SystemUpdatePhase.PrefabUpdate);
+            updateSystem.UpdateBefore<TimeSettingsMultiplierSystem>(SystemUpdatePhase.PrefabReferences);
+
             //Harmony
             var harmony = new Harmony(harmonyID);
             //Harmony.DEBUG = true;

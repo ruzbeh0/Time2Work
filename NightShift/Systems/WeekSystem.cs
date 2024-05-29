@@ -66,6 +66,11 @@ namespace Time2Work.Systems
             return dayOfWeekTemp.ToString();
         }
 
+        public static int getDayOfWeekInt()
+        {
+            return (int)dayOfWeekTemp;
+        }
+
         public static float getOffDayProb()
         {
             return offdayprob;

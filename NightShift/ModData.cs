@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Time2Work
 {
-    [FileLocation($"ModsData\\{nameof(Time2Work)}\\data")]
+    [FileLocation($"ModsData\\{nameof(Time2Work)}\\data_{nameof(Time2Work)}")]
     public class ModData
     {
         public float average_commute { get; set; } = 0f;

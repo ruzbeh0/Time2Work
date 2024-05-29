@@ -13,7 +13,7 @@ using Unity.Entities;
 namespace Time2Work
 {
     //[FileLocation(nameof(Time2Work))]
-    [FileLocation($"ModsSettings\\{nameof(Time2Work)}\\settings")]
+    [FileLocation($"ModsSettings\\{nameof(Time2Work)}\\{nameof(Time2Work)}")]
     [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, TrucksGroup, DTSimulationGroup, SlowerTimeGroup)]
     [SettingsUIShowGroupName(WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, TrucksGroup)]
     public class Setting : ModSetting
@@ -239,6 +239,10 @@ namespace Time2Work
         [SettingsUIHideByCondition(typeof(Setting), nameof(disableSlowerTime))]
         public float slow_time_factor { get; set; }
 
+        [SettingsUISlider(min = 1, max = 30, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(OtherSection, SlowerTimeGroup)]
+        public int daysPerMonth { get; set; } = 1;
+
         public enum DTSimulationEnum
         {
             AverageDay,
@@ -284,6 +288,33 @@ namespace Time2Work
             t2000
         }
 
+        public enum months
+        {
+            January,
+            February,
+            March,
+            April,
+            May,
+            June, 
+            July,
+            August, 
+            Septermber, 
+            October,
+            November,
+            December
+        }
+
+        public enum dayOfWeek
+        {
+            Sunday,
+            Monday,
+            Tuesday,
+            Wednesday,
+            Thursday,
+            Friday,
+            Saturday
+        }
+
         public class LocaleEN : IDictionarySource
         {
             private readonly Setting m_Setting;
@@ -308,7 +339,7 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.DayShiftGroup), "Day Shift Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeOffGroup), "School Vacation Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeGroup), "School Start/End Time Settings" },
-                { m_Setting.GetOptionGroupLocaleID(Setting.SlowerTimeGroup), "Slow Time and Increase Day Length" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.SlowerTimeGroup), "Day and Time Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.DTSimulationGroup), "Day Type Simulation" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TrucksGroup), "Trucks" },
 
@@ -360,6 +391,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.enable_slower_time)), $"Slower time without changing the simulation speed." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.slow_time_factor)), "Slower Time Factor" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.slow_time_factor)), $"This factor will slow down time and increase the length of the day. A factor of 1 will have no effect. A factor of 2, for example, will make the day last twice as long. Note that the simulation speed does not change, and other systems not affected by this mod will update based on the simulation speed and not on the length of the day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.daysPerMonth)), "Days per Month" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.daysPerMonth)), $"Changes the number of days per month. Default is 1" },
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Average Day" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Weekday" },
@@ -397,6 +430,27 @@ namespace Time2Work
                 { m_Setting.GetEnumValueLocaleID(Setting.timeEnum.t1900), "7:00 PM" },
                 { m_Setting.GetEnumValueLocaleID(Setting.timeEnum.t1930), "7:30 PM" },
                 { m_Setting.GetEnumValueLocaleID(Setting.timeEnum.t2000), "8:00 PM" },
+
+                { m_Setting.GetEnumValueLocaleID(Setting.months.January), "Jan" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.February), "Feb" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.March), "Mar" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.April), "Apr" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.May), "May" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.June), "Jun" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.July), "Jul" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.August), "Aug" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.Septermber), "Sep" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.October), "Oct" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.November), "Nov" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.December), "Dec" },
+
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Sunday), "Sun" },
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Monday), "Mon" },
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Tuesday), "Tue" },
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Wednesday), "Wed" },
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Thursday), "Thu" },
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Friday), "Fri" },
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Saturday), "Sat" }
             };
             }
 
@@ -430,7 +484,7 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.DayShiftGroup), "Configurações do turno diurno."},
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeOffGroup), "Configurações de férias escolares" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeGroup), "Configurações de horário de início/término das aulas nas escolas" },
-                { m_Setting.GetOptionGroupLocaleID(Setting.SlowerTimeGroup), "Reduzir a velocidade do tempo e aumentar a duração do dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.SlowerTimeGroup), "Configurações do Dia e do Tempo" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.DTSimulationGroup), "Tipo de Simulação Diária" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TrucksGroup), "Caminhões" },
 
@@ -482,6 +536,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.enable_slower_time)), $"Reduz a velocidade do tempo sem mudar a velocidade da simulação." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.slow_time_factor)), "Fator de redução da velocidade do tempo" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.slow_time_factor)), $"Esse fator vai reduzir a velocidade do tempo e aumentar a duração do dia. Um fator de valor 1 não vai ter efeito. Um fator de valor 2, por exemplo, vai dobrar a duração do dia. Observe que a velocidade da simulação não será alterada. Outros sistemas que não usados neste mod serão atualizados baseados na velocidade da simulação e não na duração do dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.daysPerMonth)), "Dias por mês" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.daysPerMonth)), $"Altera o número de dias por mês. O valor padrão é 1." },
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Dia Padrão" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Dia da Semana" },
@@ -519,6 +575,27 @@ namespace Time2Work
                 { m_Setting.GetEnumValueLocaleID(Setting.timeEnum.t1900), "19:00" },
                 { m_Setting.GetEnumValueLocaleID(Setting.timeEnum.t1930), "19:30" },
                 { m_Setting.GetEnumValueLocaleID(Setting.timeEnum.t2000), "20:00" },
+
+                { m_Setting.GetEnumValueLocaleID(Setting.months.January), "Jan" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.February), "Fev" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.March), "Mar" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.April), "Abr" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.May), "Mai" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.June), "Jun" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.July), "Jul" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.August), "Ago" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.Septermber), "Set" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.October), "Out" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.November), "Nov" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.December), "Dez" },
+
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Sunday), "Dom" },
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Monday), "Seg" },
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Tuesday), "Ter" },
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Wednesday), "Qua" },
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Thursday), "Qui" },
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Friday), "Sex" },
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Saturday), "Sab" }
             };
             }
 

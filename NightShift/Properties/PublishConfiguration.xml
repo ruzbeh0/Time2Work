@@ -57,6 +57,7 @@ An Average Day, is similar to the vanilla default setting. It consists of a comb
 On a Weekday, most of the trips will be work or school related. On a Weekend, there will be more Leisure and Shopping trips. Schools are closed on Weekends.
 
 * **Slow Time and Increase Day Length** If enabled, this option will make the day longer - while keeping the simulation speed the same. The day length of the vanilla game when compared to the cim's travel times is not reasonable. It is commom to find cims that take around 2 in game hours to get from home to work and this is not realistic. Most major cities in the world have an average commute of 25 to 30 minutes, in my test city the average commute was around 1 hour and 40 minutes. Based on this, if this option is enabled I recommend that the reduction factor be set to 3.5.
+* **Days per Month** Default value is 1, if increased the number of days per month and year will change. This does affect the simulation, if with the default values it took 1 year (12 days) for a cim do age 1 year, with 2 days per month it will still take 1 year (24 days) for a cim to age 1 year.
 
 ## Performance Impacts
 This mods can have a significant impact on the game's performance - specially in big cities. If you have issues with performance, I would recommend reducing the lunch break percentage, using "Average Day" setting and disabling the Vacation and Holiday features for work and school. The lunch break feature has a significant impact on performance during the middle of the day and it is recommended to keep that percentage with a lower value.
@@ -89,7 +90,7 @@ In one of the screenshots above there are four plots comparing the mod in its de
 There are also other four plots comparing the three day types: Weekday, Average Day and Weekend.
 	</LongDescription>
 	<!--Thumbnail-->
-	<Thumbnail Value="Properties/Thumbnail2.png" />
+	<Thumbnail Value="Properties/Thumbnail2.jpg" />
 	<!--Screenshot, can be set multiple times-->
 	<Screenshot Value="Properties/screenshot_hbw.png" />
 	<Screenshot Value="Properties/screenshot_hbs.png" />
@@ -105,21 +106,19 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.7" />
+	<ModVersion Value="0.8" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.1.*" />
 	<!--Dependency for the mod, can be set multiple times-->
-	<Dependency Id="77209" />
 	<Dependency Id="75426" />
 	<ChangeLog>
-* Fixed bug that was causing the mod to not load with specific slower day factors
-* Added truck feature
-* Reorganized Mod's menu and added option to set all settings to predefined values
-* Changed settings file save location
-* Implemented Peak Spreading feature
-* Renamed Mod to "Realistic Trips"
+* Removed unnecessary DLLs
+* Reorganized UI
+* Added the option to choose the number of days per month
+* Removed Dependency Pack as a dependency
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />
-	<ExternalLink Type="discord" Url="https://discord.com/channels/1024242828114673724/1224077120641302558" />	
+	<ExternalLink Type="discord" Url="https://discord.com/channels/1024242828114673724/1224077120641302558" />
+	<ExternalLink Type="paypal" Url="https://www.paypal.com/paypalme/ruzbeh0" />	
 </Publish>

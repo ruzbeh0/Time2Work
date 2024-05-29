@@ -10,8 +10,10 @@ using System;
 using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using Unity.Entities;
+using Unity.Entities.UniversalDelegates;
 using UnityEngine;
 using UnityEngine.Scripting;
+using static Unity.Entities.SystemBaseDelegates;
 
 namespace Time2Work
 {
@@ -41,20 +43,23 @@ namespace Time2Work
             {
                 TimeSettingsData timeSettingsData = this.GetTimeSettingsData();
                 TimeData singleton = TimeData.GetSingleton(this.m_TimeDataQuery);
+
                 return new Time2WorkTimeUISystem.TimeSettings()
                 {
                     ticksPerDay = Time2WorkTimeSystem.kTicksPerDay,
                     daysPerYear = timeSettingsData.m_DaysPerYear,
                     epochTicks = Mathf.RoundToInt(singleton.TimeOffset * Time2WorkTimeSystem.kTicksPerDay) + Mathf.RoundToInt(singleton.GetDateOffset(timeSettingsData.m_DaysPerYear) * Time2WorkTimeSystem.kTicksPerDay * (float)timeSettingsData.m_DaysPerYear),
                     epochYear = singleton.m_StartingYear
-                };
+                };  
+
             }), (IWriter<Time2WorkTimeUISystem.TimeSettings>)new ValueWriter<Time2WorkTimeUISystem.TimeSettings>()));
             this.AddUpdateBinding((IUpdateBinding)new GetterValueBinding<int>("time", "ticks", (Func<int>)(() =>
             {
                 float num = 182.044449f*3f;
                 return Mathf.FloorToInt(Mathf.Floor((float)(this.m_SimulationSystem.frameIndex - TimeData.GetSingleton(this.m_TimeDataQuery).m_FirstFrame) / num) * num);
             })));
-            this.AddUpdateBinding((IUpdateBinding)new GetterValueBinding<int>("time", "day", (Func<int>)(() => Time2WorkTimeSystem.GetDay(this.m_SimulationSystem.frameIndex, TimeData.GetSingleton(this.m_TimeDataQuery)))));
+            this.AddUpdateBinding((IUpdateBinding)new GetterValueBinding<int>("time", "day", (Func<int>)(() => (int)Math.Ceiling((double)Time2WorkTimeSystem.GetDay(this.m_SimulationSystem.frameIndex, TimeData.GetSingleton(this.m_TimeDataQuery))))));
+            Mod.log.Info(this.m_TimeSystem.normalizedTime);
             this.AddUpdateBinding((IUpdateBinding)new GetterValueBinding<LightingSystem.State>("time", "lightingState", (Func<LightingSystem.State>)(() =>
             {
                 LightingSystem.State state = this.m_LightingSystem.state;
@@ -128,6 +133,7 @@ namespace Time2Work
         protected override void OnUpdate()
         {
             base.OnUpdate();
+
             if ((double)this.m_SimulationSystem.selectedSpeed > 0.0)
             {
                 this.m_SpeedBeforePause = this.m_SimulationSystem.selectedSpeed;
@@ -196,7 +202,7 @@ namespace Time2Work
             {
                 return this.m_TimeSettingsQuery.GetSingleton<TimeSettingsData>();
             }
-            return new TimeSettingsData() { m_DaysPerYear = 12 };
+            return new TimeSettingsData() { m_DaysPerYear = 12};
         }
 
         private void SetSimulationPaused(bool paused)

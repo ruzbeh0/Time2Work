@@ -27,21 +27,15 @@
 	<ItemGroup>
 		<Reference Include="Colossal.Collections">
 		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Collections.dll</HintPath>
+			<Private>true</Private>
 		</Reference>
 		<Reference Include="Colossal.Mathematics">
 		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Mathematics.dll</HintPath>
+			<Private>true</Private>
 		</Reference>
 		<Reference Include="Colossal.PSI.Common">
 		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.PSI.Common.dll</HintPath>
-		</Reference>
-		<Reference Include="Colossal.PSI.Discord">
-		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.PSI.Discord.dll</HintPath>
-		</Reference>
-		<Reference Include="Colossal.PSI.PdxSdk">
-		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.PSI.PdxSdk.dll</HintPath>
-		</Reference>
-		<Reference Include="Colossal.PSI.Steamworks">
-		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.PSI.Steamworks.dll</HintPath>
+			<Private>true</Private>
 		</Reference>
 		<Reference Include="Game">
 			<Private>false</Private>
@@ -99,7 +93,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Lib.Harmony" Version="2.2.2" ExcludeAssets="runtime" />
+	  <PackageReference Include="Lib.Harmony" Version="2.2.2" />
 	</ItemGroup>
 
 	<ItemGroup>
