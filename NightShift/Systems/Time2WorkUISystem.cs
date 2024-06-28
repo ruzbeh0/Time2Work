@@ -66,30 +66,40 @@ namespace Time2Work
             int r = (int)Math.Floor((float)n / ticksPerDay);
             int year = (int)epochYear + (int)Math.Floor((float)r / daysPerYear);
             //Mod.log.Info($"year: {epochYear + Math.Floor((float)r / daysPerYear)}");
-            int monthsPerYear = daysPerYear / Mod.m_Setting.daysPerMonth;
-            int day = (int)Math.Floor((float)(r / Mod.m_Setting.daysPerMonth));
-            int o = (day % monthsPerYear + monthsPerYear) % monthsPerYear;
+            int monthsPerYear = 12;
+            int day = (int)(Math.Floor((float)(r / Mod.m_Setting.daysPerMonth)));
+            //Mod.log.Info($"monthsPerYear: {monthsPerYear}, day: {day}, {daysPerYear}, {Mod.m_Setting.daysPerMonth}");
+            int o = (day % monthsPerYear + monthsPerYear) % monthsPerYear + 1;
+            int daysMonth = 30;
+            if(o == 2)
+            {
+                daysMonth = 28;
+            }
+            day = day % daysMonth + 1;
+            
             //Mod.log.Info($"month: {o}");
 
-            if(year != 0 && WeekSystem.getDayOfWeekInt() >= 0)
+            if (year > 0 && WeekSystem.getDayOfWeekInt() >= 0)
             {
-                DateTime date = new DateTime(year, o, day, 0, 0, 0);
-                //while (!date.DayOfWeek.Equals((DayOfWeek)WeekSystem.getDayOfWeekInt()) && day < 28)
-                //{
-                //    Mod.log.Info($"date: {year},{o},{day},{date.DayOfWeek},{(DayOfWeek)WeekSystem.getDayOfWeekInt()}");
-                //    date = new DateTime(year, o, day++, 0, 0, 0);
-                //}
+                try
+                {
+                    DateTime date = new DateTime(year, o, day, 0, 0, 0);
+                    Setting.months m = (Setting.months)date.Month;
+                    Setting.dayOfWeek w = (Setting.dayOfWeek)WeekSystem.getDayOfWeekInt();
 
-                Setting.months m = (Setting.months)date.Month;
-                Setting.dayOfWeek w = (Setting.dayOfWeek)WeekSystem.getDayOfWeekInt();
+                    Colossal.Localization.LocalizationDictionary dic = GameManager.instance.localizationManager.activeDictionary;
 
-                Colossal.Localization.LocalizationDictionary dic = GameManager.instance.localizationManager.activeDictionary;
-
-                string mm = "";
-                string ww = "";
-                dic.TryGetValue(Mod.m_Setting.GetEnumValueLocaleID(m), out mm);
-                dic.TryGetValue(Mod.m_Setting.GetEnumValueLocaleID(w), out ww);
-                dateOutput = ww + " " + mm + " " + date.Year.ToString();
+                    string mm = "";
+                    string ww = "";
+                    dic.TryGetValue(Mod.m_Setting.GetEnumValueLocaleID(m), out mm);
+                    dic.TryGetValue(Mod.m_Setting.GetEnumValueLocaleID(w), out ww);
+                    dateOutput = ww + " " + mm + " " + date.Year.ToString();
+                }
+                catch (Exception)
+                {
+                    Mod.log.Error($"Invalid Date - year:{year}, month:{o}, day:{day}, Days Per Month: {Mod.m_Setting.daysPerMonth}");
+                    throw;
+                }
             }
         }
 

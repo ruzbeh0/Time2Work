@@ -94,9 +94,6 @@ namespace Time2Work
             this.__TypeHandle.__Game_Companies_StorageCompany_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Prefabs_ResourceData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Objects_OutsideConnection_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Citizens_Household_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Companies_CompanyData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_City_CityServiceUpkeep_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Economy_Resources_RW_BufferLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_TripNeeded_RW_BufferLookup.Update(ref this.CheckedStateRef);
 
@@ -104,15 +101,10 @@ namespace Time2Work
             {
                 m_TripNeededs = this.__TypeHandle.__Game_Citizens_TripNeeded_RW_BufferLookup,
                 m_Resources = this.__TypeHandle.__Game_Economy_Resources_RW_BufferLookup,
-                m_CityServices = this.__TypeHandle.__Game_City_CityServiceUpkeep_RO_ComponentLookup,
-                m_Companies = this.__TypeHandle.__Game_Companies_CompanyData_RO_ComponentLookup,
-                m_Households = this.__TypeHandle.__Game_Citizens_Household_RO_ComponentLookup,
                 m_OutsideConnections = this.__TypeHandle.__Game_Objects_OutsideConnection_RO_ComponentLookup,
                 m_ResourceDatas = this.__TypeHandle.__Game_Prefabs_ResourceData_RO_ComponentLookup,
                 m_StorageCompanies = this.__TypeHandle.__Game_Companies_StorageCompany_RO_ComponentLookup,
                 m_ResourcePrefabs = this.m_ResourceSystem.GetPrefabs(),
-                m_City = this.m_CitySystem.City,
-                m_Landlords = this.m_PropertyRenterSystem.Landlords,
                 m_DeliveryQueue = this.m_DeliveryQueue
             };
             this.Dependency = jobData2.Schedule<Time2WorkGoodsDeliveryRequestSystem.DispatchJob>(this.Dependency);
@@ -148,12 +140,6 @@ namespace Time2Work
             public BufferLookup<TripNeeded> m_TripNeededs;
             public NativeQueue<Time2WorkGoodsDeliveryRequestSystem.DeliveryOrder> m_DeliveryQueue;
             [ReadOnly]
-            public ComponentLookup<Household> m_Households;
-            [ReadOnly]
-            public ComponentLookup<CompanyData> m_Companies;
-            [ReadOnly]
-            public ComponentLookup<CityServiceUpkeep> m_CityServices;
-            [ReadOnly]
             public ComponentLookup<Game.Objects.OutsideConnection> m_OutsideConnections;
             [ReadOnly]
             public ComponentLookup<Game.Companies.StorageCompany> m_StorageCompanies;
@@ -162,8 +148,6 @@ namespace Time2Work
             public ResourcePrefabs m_ResourcePrefabs;
             [ReadOnly]
             public ComponentLookup<ResourceData> m_ResourceDatas;
-            public Entity m_City;
-            public Entity m_Landlords;
 
             public void Execute()
             {
@@ -198,16 +182,6 @@ namespace Time2Work
                     int amount = Mathf.RoundToInt(EconomyUtils.GetMarketPrice(deliveryOrder.m_Trip.m_Resource, this.m_ResourcePrefabs, ref this.m_ResourceDatas) * (float)x);
                     if (deliveryOrder.m_Trip.m_Purpose == Game.Citizens.Purpose.Collect)
                         amount *= -1;
-                    if (this.m_Households.HasComponent(targetAgent) || this.m_Companies.HasComponent(targetAgent))
-                    {
-                        DynamicBuffer<Game.Economy.Resources> resource = this.m_Resources[this.m_Landlords];
-                        EconomyUtils.AddResources(Resource.Money, -amount, resource);
-                    }
-                    else
-                    {
-                        DynamicBuffer<Game.Economy.Resources> resource = this.m_Resources[this.m_Landlords];
-                        EconomyUtils.AddResources(Resource.Money, -amount, resource);
-                    }
                     Entity entity = deliveryOrder.m_Entity;
                     if (!this.m_OutsideConnections.HasComponent(entity) && !this.m_StorageCompanies.HasComponent(entity) && this.m_Resources.HasBuffer(entity))
                     {
@@ -307,14 +281,14 @@ namespace Time2Work
               Entity requestEntity,
               GoodsDeliveryRequest requestData)
             {
-                float transportCost = EconomyUtils.GetTransportCost(1f, requestData.m_Amount, this.m_ResourceDatas[this.m_ResourcePrefabs[requestData.m_Resource]].m_Weight, StorageTransferFlags.Car);
+                float transportCost = EconomyUtils.GetTransportCost(100f, requestData.m_Amount, this.m_ResourceDatas[this.m_ResourcePrefabs[requestData.m_Resource]].m_Weight, StorageTransferFlags.Car);
                 PathfindParameters parameters = new PathfindParameters()
                 {
                     m_MaxSpeed = (float2)111.111115f,
                     m_WalkSpeed = (float2)5.555556f,
-                    m_Weights = new PathfindWeights(0.01f, 0.01f, transportCost, 0.01f),
+                    m_Weights = new PathfindWeights(1f, 1f, transportCost, 1f),
                     m_Methods = PathMethod.Road | PathMethod.CargoLoading,
-                    m_IgnoredFlags = EdgeFlags.ForbidSlowTraffic
+                    m_IgnoredRules = RuleFlags.ForbidSlowTraffic
                 };
                 SetupQueueTarget setupQueueTarget = new SetupQueueTarget();
                 setupQueueTarget.m_Type = (requestData.m_Flags & GoodsDeliveryFlags.ResourceExportTarget) != (GoodsDeliveryFlags)0 ? SetupTargetType.ResourceExport : SetupTargetType.ResourceSeller;
@@ -372,12 +346,6 @@ namespace Time2Work
             public BufferLookup<TripNeeded> __Game_Citizens_TripNeeded_RW_BufferLookup;
             public BufferLookup<Game.Economy.Resources> __Game_Economy_Resources_RW_BufferLookup;
             [ReadOnly]
-            public ComponentLookup<CityServiceUpkeep> __Game_City_CityServiceUpkeep_RO_ComponentLookup;
-            [ReadOnly]
-            public ComponentLookup<CompanyData> __Game_Companies_CompanyData_RO_ComponentLookup;
-            [ReadOnly]
-            public ComponentLookup<Household> __Game_Citizens_Household_RO_ComponentLookup;
-            [ReadOnly]
             public ComponentLookup<Game.Objects.OutsideConnection> __Game_Objects_OutsideConnection_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<Game.Companies.StorageCompany> __Game_Companies_StorageCompany_RO_ComponentLookup;
@@ -391,9 +359,6 @@ namespace Time2Work
                 this.__Game_Prefabs_ResourceData_RO_ComponentLookup = state.GetComponentLookup<ResourceData>(true);
                 this.__Game_Citizens_TripNeeded_RW_BufferLookup = state.GetBufferLookup<TripNeeded>();
                 this.__Game_Economy_Resources_RW_BufferLookup = state.GetBufferLookup<Game.Economy.Resources>();
-                this.__Game_City_CityServiceUpkeep_RO_ComponentLookup = state.GetComponentLookup<CityServiceUpkeep>(true);
-                this.__Game_Companies_CompanyData_RO_ComponentLookup = state.GetComponentLookup<CompanyData>(true);
-                this.__Game_Citizens_Household_RO_ComponentLookup = state.GetComponentLookup<Household>(true);
                 this.__Game_Objects_OutsideConnection_RO_ComponentLookup = state.GetComponentLookup<Game.Objects.OutsideConnection>(true);
                 this.__Game_Companies_StorageCompany_RO_ComponentLookup = state.GetComponentLookup<Game.Companies.StorageCompany>(true);
             }

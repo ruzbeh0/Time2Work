@@ -14,8 +14,8 @@ namespace Time2Work
 {
     //[FileLocation(nameof(Time2Work))]
     [FileLocation($"ModsSettings\\{nameof(Time2Work)}\\{nameof(Time2Work)}")]
-    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, TrucksGroup, DTSimulationGroup, SlowerTimeGroup)]
-    [SettingsUIShowGroupName(WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, TrucksGroup)]
+    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, ExternalGroup, TrucksGroup, DTSimulationGroup, SlowerTimeGroup)]
+    [SettingsUIShowGroupName(WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, TrucksGroup, ExternalGroup)]
     public class Setting : ModSetting
     {
         public const string SettingsSection = "Settings";
@@ -37,6 +37,7 @@ namespace Time2Work
         public const string TrucksGroup = "TrucksGroup";
         public const string DTSimulationGroup = "DTSimulationGroup";
         public const string SlowerTimeGroup = "SlowerTimeGroup";
+        public const string ExternalGroup = "ExternalGroup";
 
         public Setting(IMod mod) : base(mod)
         {
@@ -65,6 +66,8 @@ namespace Time2Work
             remote_percentage = 14;
             night_trucks = true;
             peak_spread = true;
+            tourism_trips = true;
+            commuter_trips = true;
         }
 
         private void setPerformance()
@@ -89,6 +92,8 @@ namespace Time2Work
             part_time_percentage = 22;
             remote_percentage = 20;
             night_trucks = true;
+            tourism_trips = false;
+            commuter_trips = false;
         }
 
         private void setRealistic()
@@ -113,6 +118,8 @@ namespace Time2Work
             part_time_percentage = 22;
             remote_percentage = 14;
             night_trucks = true;
+            tourism_trips = true;
+            commuter_trips = true;
         }
 
         public override void Apply()
@@ -227,7 +234,17 @@ namespace Time2Work
         public DTSimulationEnum dt_simulation { get; set; } = DTSimulationEnum.AverageDay;
 
         [SettingsUISection(OtherSection, SlowerTimeGroup)]
+        [SettingsUIMultilineText]
+        public string DTText => string.Empty;
+
+        [SettingsUISection(OtherSection, SlowerTimeGroup)]
         public bool enable_slower_time { get; set; }
+
+        [SettingsUISection(OtherSection, ExternalGroup)]
+        public bool tourism_trips { get; set; }
+
+        [SettingsUISection(OtherSection, ExternalGroup)]
+        public bool commuter_trips { get; set; }
 
         private bool disableSlowerTime()
         {
@@ -290,18 +307,18 @@ namespace Time2Work
 
         public enum months
         {
-            January,
-            February,
-            March,
-            April,
-            May,
-            June, 
-            July,
-            August, 
-            Septermber, 
-            October,
-            November,
-            December
+            January = 1,
+            February = 2,
+            March = 3,
+            April = 4,
+            May = 5,
+            June = 6, 
+            July = 7,
+            August = 8, 
+            Septermber = 9, 
+            October = 10,
+            November = 11,
+            December= 12
         }
 
         public enum dayOfWeek
@@ -326,7 +343,7 @@ namespace Time2Work
             {
                 return new Dictionary<string, string>
             {
-                { m_Setting.GetSettingsLocaleID(), "Realistic Trips (Time2Work)" },
+                { m_Setting.GetSettingsLocaleID(), "Realistic Trips" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SettingsSection), "Settings" },
                 { m_Setting.GetOptionTabLocaleID(Setting.WorkSection), "Work" },
                 { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Shopping and Leisure" },
@@ -342,7 +359,9 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.SlowerTimeGroup), "Day and Time Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.DTSimulationGroup), "Day Type Simulation" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TrucksGroup), "Trucks" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.ExternalGroup), "External Trips" },
 
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DTText)), $"Changing the parameters below require restarting the game." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.MultilineText)), $"WARNING: Slower Time feature can cause issues with Population Rebalance and Info Loom mods - in an existing city. A new city will probably not have problems with those mods." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.settings_choice)), "Mod settings" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.settings_choice)), $"Change all mod settings. Performance: will update the settings to improve performance, this is similar to the Vanilla game. Balanced: has most of the features from this mod enabled, but a few of them that have high impact on performance are disabled. Realistic: all features are enabled and set to values that would make the simulation more realistic" },
@@ -393,6 +412,11 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.slow_time_factor)), $"This factor will slow down time and increase the length of the day. A factor of 1 will have no effect. A factor of 2, for example, will make the day last twice as long. Note that the simulation speed does not change, and other systems not affected by this mod will update based on the simulation speed and not on the length of the day." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.daysPerMonth)), "Days per Month" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.daysPerMonth)), $"Changes the number of days per month. Default is 1" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.tourism_trips)), "Tourism variation by day of the week" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.tourism_trips)), $"Increases tourists on weekends and reduces them on weekdays." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.commuter_trips)), "Commuter  variation by day of the week" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.commuter_trips)), $"Increases outside connection commuters on weekdays and reduces them on weekends. Also increases the probability of them arriving by plane." },
+
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Average Day" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Weekday" },
@@ -487,7 +511,9 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.SlowerTimeGroup), "Configurações do Dia e do Tempo" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.DTSimulationGroup), "Tipo de Simulação Diária" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TrucksGroup), "Caminhões" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.ExternalGroup), "Viagens Externas" },
 
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DTText)), $"Alterar os parametros abaixo requer reinício do jogo." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.MultilineText)), $"AVISO: O recurso de Tempo mais Lento pode causar problemas com os mods Population Rebalance e Info Loom - em uma cidade existente. Uma nova cidade provavelmente não terá problemas com esses mods." },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.settings_choice)), $"Alterar as configurações do mod" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.settings_choice)), $"Alterar todas as configurações. Desempenho: irá atualizar as configurações para melhorar o desempenho, isso é semelhante ao jogo Vanilla. Balanceado: tem a maioria dos recursos deste mod habilitados, mas alguns deles que têm alto impacto no desempenho estão desabilitadas. Realista: todos os recursos estão habilitados e definidos com valores que tornarão a simulação mais realista" },
@@ -538,6 +564,11 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.slow_time_factor)), $"Esse fator vai reduzir a velocidade do tempo e aumentar a duração do dia. Um fator de valor 1 não vai ter efeito. Um fator de valor 2, por exemplo, vai dobrar a duração do dia. Observe que a velocidade da simulação não será alterada. Outros sistemas que não usados neste mod serão atualizados baseados na velocidade da simulação e não na duração do dia." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.daysPerMonth)), "Dias por mês" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.daysPerMonth)), $"Altera o número de dias por mês. O valor padrão é 1." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.tourism_trips)), "Variação de turistas por dia da semana." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.tourism_trips)), $"Aumenta o número de turistas no fim de semana e reduz nos dias de semana." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.commuter_trips)), "Variação de trabalhadores externos por dia da semana." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.commuter_trips)), $"Aumenta o número de trabalhadores de conexões externas nos dias de semana e reduz nos fim de semana. Também aumenta a probabilidade de eles chegarem de avião." },
+
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Dia Padrão" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Dia da Semana" },

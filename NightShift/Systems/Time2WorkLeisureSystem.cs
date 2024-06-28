@@ -36,9 +36,7 @@ namespace Time2Work
         private Time2WorkTimeSystem m_TimeSystem;
         private ResourceSystem m_ResourceSystem;
         private ClimateSystem m_ClimateSystem;
-        private TaxSystem m_TaxSystem;
         private AddMeetingSystem m_AddMeetingSystem;
-        private CountConsumptionSystem m_CountConsumptionSystem;
         private EntityQuery m_LeisureQuery;
         private EntityQuery m_EconomyParameterQuery;
         private EntityQuery m_LeisureParameterQuery;
@@ -47,7 +45,6 @@ namespace Time2Work
         private EntityQuery m_PopulationQuery;
         private ComponentTypeSet m_PathfindTypes;
         private NativeQueue<LeisureEvent> m_LeisureQueue;
-        private NativeQueue<ResourceStack> m_ConsumptionQueue;
         private Time2WorkLeisureSystem.TypeHandle __TypeHandle;
         private Setting.DTSimulationEnum m_daytype;
 
@@ -62,9 +59,7 @@ namespace Time2Work
             this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
             this.m_ResourceSystem = this.World.GetOrCreateSystemManaged<ResourceSystem>();
             this.m_ClimateSystem = this.World.GetOrCreateSystemManaged<ClimateSystem>();
-            this.m_TaxSystem = this.World.GetOrCreateSystemManaged<TaxSystem>();
             this.m_AddMeetingSystem = this.World.GetOrCreateSystemManaged<AddMeetingSystem>();
-            this.m_CountConsumptionSystem = this.World.GetOrCreateSystemManaged<CountConsumptionSystem>();
             this.m_EconomyParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<EconomyParameterData>());
             this.m_LeisureParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<LeisureParametersData>());
             this.m_LeisureQuery = this.GetEntityQuery(ComponentType.ReadWrite<Citizen>(), ComponentType.ReadWrite<Leisure>(), ComponentType.ReadWrite<TripNeeded>(), ComponentType.ReadWrite<CurrentBuilding>(), ComponentType.Exclude<HealthProblem>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
@@ -73,7 +68,6 @@ namespace Time2Work
             this.m_PopulationQuery = this.GetEntityQuery(ComponentType.ReadOnly<Population>());
             this.m_PathfindTypes = new ComponentTypeSet(ComponentType.ReadWrite<PathInformation>(), ComponentType.ReadWrite<PathElement>());
             this.m_LeisureQueue = new NativeQueue<LeisureEvent>((AllocatorManager.AllocatorHandle)Allocator.Persistent);
-            this.m_ConsumptionQueue = new NativeQueue<ResourceStack>((AllocatorManager.AllocatorHandle)Allocator.Persistent);
             this.RequireForUpdate(this.m_LeisureQuery);
             this.RequireForUpdate(this.m_EconomyParameterQuery);
             this.RequireForUpdate(this.m_LeisureParameterQuery);
@@ -83,7 +77,6 @@ namespace Time2Work
         protected override void OnDestroy()
         {
             this.m_LeisureQueue.Dispose();
-            this.m_ConsumptionQueue.Dispose();
             base.OnDestroy();
         }
 
@@ -91,6 +84,8 @@ namespace Time2Work
         {
             uint frameWithInterval = SimulationUtils.GetUpdateFrameWithInterval(this.m_SimulationSystem.frameIndex, (uint)this.GetUpdateInterval(SystemUpdatePhase.GameSimulation), 16);
             float num = this.m_ClimateSystem.precipitation.value;
+            this.__TypeHandle.__Game_Prefabs_ConsumptionData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.__Game_Buildings_Renter_RO_BufferLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_HouseholdCitizen_RO_BufferLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_City_Population_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Companies_ServiceAvailable_RO_ComponentLookup.Update(ref this.CheckedStateRef);
@@ -101,8 +96,6 @@ namespace Time2Work
             this.__TypeHandle.__Game_Prefabs_HumanData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Prefabs_ObjectGeometryData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Prefabs_CarData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_ResourceData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Economy_Resources_RO_BufferLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_Household_RO_ComponentLookup.Update(ref this.CheckedStateRef);
@@ -127,9 +120,9 @@ namespace Time2Work
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
             JobHandle outJobHandle;
-            JobHandle deps1;
+            JobHandle deps;
 
-            JobHandle jobHandle1 = new Time2WorkLeisureSystem.LeisureJob()
+            JobHandle jobHandle = new Time2WorkLeisureSystem.LeisureJob()
             {
                 m_EntityType = this.__TypeHandle.__Unity_Entities_Entity_TypeHandle,
                 m_LeisureType = this.__TypeHandle.__Game_Citizens_Leisure_RW_ComponentTypeHandle,
@@ -146,7 +139,7 @@ namespace Time2Work
                 m_ParkedCarData = this.__TypeHandle.__Game_Vehicles_ParkedCar_RO_ComponentLookup,
                 m_PersonalCarData = this.__TypeHandle.__Game_Vehicles_PersonalCar_RO_ComponentLookup,
                 m_Targets = this.__TypeHandle.__Game_Common_Target_RO_ComponentLookup,
-                m_Prefabs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
+                m_PrefabRefs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
                 m_LeisureProviderDatas = this.__TypeHandle.__Game_Prefabs_LeisureProviderData_RO_ComponentLookup,
                 m_Students = this.__TypeHandle.__Game_Citizens_Student_RO_ComponentLookup,
                 m_Workers = this.__TypeHandle.__Game_Citizens_Worker_RO_ComponentLookup,
@@ -154,8 +147,6 @@ namespace Time2Work
                 m_Resources = this.__TypeHandle.__Game_Economy_Resources_RO_BufferLookup,
                 m_CitizenDatas = this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentLookup,
                 m_Renters = this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup,
-                m_ResourceDatas = this.__TypeHandle.__Game_Prefabs_ResourceData_RO_ComponentLookup,
-                m_HealthProblems = this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentLookup,
                 m_PrefabCarData = this.__TypeHandle.__Game_Prefabs_CarData_RO_ComponentLookup,
                 m_ObjectGeometryData = this.__TypeHandle.__Game_Prefabs_ObjectGeometryData_RO_ComponentLookup,
                 m_PrefabHumanData = this.__TypeHandle.__Game_Prefabs_HumanData_RO_ComponentLookup,
@@ -166,13 +157,12 @@ namespace Time2Work
                 m_ServiceAvailables = this.__TypeHandle.__Game_Companies_ServiceAvailable_RO_ComponentLookup,
                 m_PopulationData = this.__TypeHandle.__Game_City_Population_RO_ComponentLookup,
                 m_HouseholdCitizens = this.__TypeHandle.__Game_Citizens_HouseholdCitizen_RO_BufferLookup,
-                m_TaxRates = this.m_TaxSystem.GetTaxRates(),
-                m_ResourcePrefabs = this.m_ResourceSystem.GetPrefabs(),
+                m_RenterBufs = this.__TypeHandle.__Game_Buildings_Renter_RO_BufferLookup,
+                m_ConsumptionDatas = this.__TypeHandle.__Game_Prefabs_ConsumptionData_RO_ComponentLookup,
                 m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                 m_SimulationFrame = this.m_SimulationSystem.frameIndex,
                 m_TimeOfDay = this.m_TimeSystem.normalizedTime,
                 m_UpdateFrameIndex = frameWithInterval,
-                m_BaseConsumptionSum = this.m_ResourceSystem.BaseConsumptionSum,
                 m_Weather = num,
                 m_Temperature = ((float)this.m_ClimateSystem.temperature),
                 m_RandomSeed = RandomSeed.Next(),
@@ -180,11 +170,10 @@ namespace Time2Work
                 m_HumanChunks = this.m_ResidentPrefabQuery.ToArchetypeChunkListAsync((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle),
                 m_PathfindQueue = this.m_PathFindSetupSystem.GetQueue((object)this, 64).AsParallelWriter(),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
-                m_MeetingQueue = this.m_AddMeetingSystem.GetMeetingQueue(out deps1).AsParallelWriter(),
+                m_MeetingQueue = this.m_AddMeetingSystem.GetMeetingQueue(out deps).AsParallelWriter(),
                 m_LeisureQueue = this.m_LeisureQueue.AsParallelWriter(),
                 m_TimeData = this.m_TimeDataQuery.GetSingleton<TimeData>(),
                 m_PopulationEntity = this.m_PopulationQuery.GetSingletonEntity(),
-                m_ConsumptionQueue = this.m_ConsumptionQueue.AsParallelWriter(),
                 lunch_break_pct = Mod.m_Setting.lunch_break_percentage,
                 offdayprob  = WeekSystem.getOffDayProb(),
                 school_start_time = (int)Mod.m_Setting.school_start_time,
@@ -196,64 +185,31 @@ namespace Time2Work
                 ticksPerDay = Time2WorkTimeSystem.kTicksPerDay,
                 part_time_prob = Mod.m_Setting.part_time_percentage,
                 commute_top10 = Mod.m_ModData.commute_top10per
-            }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobHandle.CombineDependencies(this.Dependency, JobHandle.CombineDependencies(outJobHandle, deps1)));
-            this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle1);
-            this.m_PathFindSetupSystem.AddQueueWriter(jobHandle1);
-            this.m_TaxSystem.AddReader(jobHandle1);
-            this.__TypeHandle.__Game_Companies_WorkProvider_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_WorkplaceData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Companies_TradeCost_RO_BufferLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_SpawnableBuildingData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Objects_OutsideConnection_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Companies_Employee_RO_BufferLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Areas_CurrentDistrict_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Areas_DistrictModifier_RO_BufferLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Buildings_Efficiency_RO_BufferLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_BuildingData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+            }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobHandle.CombineDependencies(this.Dependency, JobHandle.CombineDependencies(outJobHandle, deps)));
+            this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle);
+            this.m_PathFindSetupSystem.AddQueueWriter(jobHandle);
             this.__TypeHandle.__Game_Companies_ServiceCompanyData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Prefabs_ResourceData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Prefabs_IndustrialProcessData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Agents_TaxPayer_RW_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Economy_Resources_RW_BufferLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Companies_ServiceAvailable_RW_ComponentLookup.Update(ref this.CheckedStateRef);
-            JobHandle deps2;
 
-            JobHandle jobHandle2 = new Time2WorkLeisureSystem.SpendLeisurejob()
+            JobHandle handle = new Time2WorkLeisureSystem.SpendLeisurejob()
             {
                 m_ServiceAvailables = this.__TypeHandle.__Game_Companies_ServiceAvailable_RW_ComponentLookup,
                 m_Resources = this.__TypeHandle.__Game_Economy_Resources_RW_BufferLookup,
-                m_TaxPayers = this.__TypeHandle.__Game_Agents_TaxPayer_RW_ComponentLookup,
                 m_HouseholdMembers = this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentLookup,
                 m_IndustrialProcesses = this.__TypeHandle.__Game_Prefabs_IndustrialProcessData_RO_ComponentLookup,
                 m_Prefabs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
                 m_ResourceDatas = this.__TypeHandle.__Game_Prefabs_ResourceData_RO_ComponentLookup,
                 m_ServiceCompanyDatas = this.__TypeHandle.__Game_Companies_ServiceCompanyData_RO_ComponentLookup,
-                m_BuildingDatas = this.__TypeHandle.__Game_Prefabs_BuildingData_RO_ComponentLookup,
-                m_BuildingEfficiencies = this.__TypeHandle.__Game_Buildings_Efficiency_RO_BufferLookup,
-                m_DistrictModifiers = this.__TypeHandle.__Game_Areas_DistrictModifier_RO_BufferLookup,
-                m_Districts = this.__TypeHandle.__Game_Areas_CurrentDistrict_RO_ComponentLookup,
-                m_Employees = this.__TypeHandle.__Game_Companies_Employee_RO_BufferLookup,
-                m_OutsideConnections = this.__TypeHandle.__Game_Objects_OutsideConnection_RO_ComponentLookup,
-                m_ProcessDatas = this.__TypeHandle.__Game_Prefabs_IndustrialProcessData_RO_ComponentLookup,
-                m_PropertyRenters = this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup,
-                m_Spawnables = this.__TypeHandle.__Game_Prefabs_SpawnableBuildingData_RO_ComponentLookup,
-                m_TradeCosts = this.__TypeHandle.__Game_Companies_TradeCost_RO_BufferLookup,
-                m_WorkplaceDatas = this.__TypeHandle.__Game_Prefabs_WorkplaceData_RO_ComponentLookup,
-                m_WorkProviders = this.__TypeHandle.__Game_Companies_WorkProvider_RO_ComponentLookup,
-                m_TaxRates = this.m_TaxSystem.GetTaxRates(),
-                m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                 m_ResourcePrefabs = this.m_ResourceSystem.GetPrefabs(),
-                m_LeisureQueue = this.m_LeisureQueue,
-                m_ConsumptionQueue = this.m_ConsumptionQueue,
-                m_ConsumptionAccumulator = this.m_CountConsumptionSystem.GetConsumptionAccumulator(out deps2)
-            }.Schedule<Time2WorkLeisureSystem.SpendLeisurejob>(JobHandle.CombineDependencies(deps2, jobHandle1));
-            this.m_CountConsumptionSystem.AddConsumptionWriter(jobHandle2);
-            this.m_ResourceSystem.AddPrefabsReader(jobHandle2);
-            this.m_TaxSystem.AddReader(jobHandle2);
-            this.Dependency = jobHandle2;
+                m_LeisureQueue = this.m_LeisureQueue
+            }.Schedule<Time2WorkLeisureSystem.SpendLeisurejob>(jobHandle);
+            this.m_ResourceSystem.AddPrefabsReader(handle);
+            this.Dependency = handle;
         }
 
         private void __AssignQueries(ref SystemState state)
@@ -277,9 +233,6 @@ namespace Time2Work
             public NativeQueue<LeisureEvent> m_LeisureQueue;
             public ComponentLookup<ServiceAvailable> m_ServiceAvailables;
             public BufferLookup<Game.Economy.Resources> m_Resources;
-            public ComponentLookup<TaxPayer> m_TaxPayers;
-            [ReadOnly]
-            public BufferLookup<TradeCost> m_TradeCosts;
             [ReadOnly]
             public ComponentLookup<PrefabRef> m_Prefabs;
             [ReadOnly]
@@ -291,34 +244,7 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<ServiceCompanyData> m_ServiceCompanyDatas;
             [ReadOnly]
-            public ComponentLookup<PropertyRenter> m_PropertyRenters;
-            [ReadOnly]
-            public ComponentLookup<Game.Prefabs.BuildingData> m_BuildingDatas;
-            [ReadOnly]
-            public ComponentLookup<IndustrialProcessData> m_ProcessDatas;
-            [ReadOnly]
-            public BufferLookup<Employee> m_Employees;
-            [ReadOnly]
-            public ComponentLookup<WorkplaceData> m_WorkplaceDatas;
-            [ReadOnly]
-            public ComponentLookup<SpawnableBuildingData> m_Spawnables;
-            [ReadOnly]
-            public BufferLookup<Efficiency> m_BuildingEfficiencies;
-            [ReadOnly]
-            public ComponentLookup<WorkProvider> m_WorkProviders;
-            [ReadOnly]
-            public ComponentLookup<Game.Objects.OutsideConnection> m_OutsideConnections;
-            [ReadOnly]
-            public ComponentLookup<CurrentDistrict> m_Districts;
-            [ReadOnly]
-            public BufferLookup<DistrictModifier> m_DistrictModifiers;
-            [ReadOnly]
             public ResourcePrefabs m_ResourcePrefabs;
-            public EconomyParameterData m_EconomyParameters;
-            [ReadOnly]
-            public NativeArray<int> m_TaxRates;
-            public NativeQueue<ResourceStack> m_ConsumptionQueue;
-            public NativeArray<int> m_ConsumptionAccumulator;
 
             public void Execute()
             {
@@ -329,21 +255,20 @@ namespace Time2Work
                     if (this.m_HouseholdMembers.HasComponent(leisureEvent.m_Citizen) && this.m_Prefabs.HasComponent(leisureEvent.m_Provider))
                     {
                         Entity household = this.m_HouseholdMembers[leisureEvent.m_Citizen].m_Household;
-                        Entity prefab1 = this.m_Prefabs[leisureEvent.m_Provider].m_Prefab;
-                        if (this.m_IndustrialProcesses.HasComponent(prefab1))
+                        Entity prefab = this.m_Prefabs[leisureEvent.m_Provider].m_Prefab;
+                        if (this.m_IndustrialProcesses.HasComponent(prefab))
                         {
-                            IndustrialProcessData industrialProcess = this.m_IndustrialProcesses[prefab1];
-                            Resource resource1 = industrialProcess.m_Output.m_Resource;
+                            Resource resource1 = this.m_IndustrialProcesses[prefab].m_Output.m_Resource;
 
                             if (resource1 != Resource.NoResource && this.m_Resources.HasBuffer(leisureEvent.m_Provider) && this.m_Resources.HasBuffer(household))
                             {
                                 bool flag = false;
 
                                 float marketPrice = EconomyUtils.GetMarketPrice(resource1, this.m_ResourcePrefabs, ref this.m_ResourceDatas);
-                                if (this.m_ServiceAvailables.HasComponent(leisureEvent.m_Provider) && this.m_ServiceCompanyDatas.HasComponent(prefab1))
+                                if (this.m_ServiceAvailables.HasComponent(leisureEvent.m_Provider) && this.m_ServiceCompanyDatas.HasComponent(prefab))
                                 {
                                     ServiceAvailable serviceAvailable = this.m_ServiceAvailables[leisureEvent.m_Provider];
-                                    ServiceCompanyData serviceCompanyData = this.m_ServiceCompanyDatas[prefab1];
+                                    ServiceCompanyData serviceCompanyData = this.m_ServiceCompanyDatas[prefab];
                                     marketPrice *= (float)serviceCompanyData.m_ServiceConsuming;
                                     if (serviceAvailable.m_ServiceAvailable > 0)
                                     {
@@ -366,55 +291,11 @@ namespace Time2Work
                                         float f = marketPrice * (float)Time2WorkLeisureSystem.kLeisureConsumeAmount;
                                         EconomyUtils.AddResources(Resource.Money, Mathf.RoundToInt(f), resource2);
                                         EconomyUtils.AddResources(Resource.Money, -Mathf.RoundToInt(f), resource3);
-
-                                        if (this.m_TaxPayers.HasComponent(leisureEvent.m_Provider) && this.m_PropertyRenters.HasComponent(leisureEvent.m_Provider) && this.m_WorkProviders.HasComponent(leisureEvent.m_Provider))
-                                        {
-                                            Entity property = this.m_PropertyRenters[leisureEvent.m_Provider].m_Property;
-                                            Entity prefab2 = this.m_Prefabs[property].m_Prefab;
-                                            Game.Prefabs.BuildingData buildingData = this.m_BuildingDatas[prefab2];
-                                            DynamicBuffer<Employee> employee = this.m_Employees[leisureEvent.m_Provider];
-                                            WorkplaceData workplaceData = this.m_WorkplaceDatas[prefab1];
-                                            SpawnableBuildingData spawnable = this.m_Spawnables[prefab2];
-                                            WorkProvider workProvider = this.m_WorkProviders[leisureEvent.m_Provider];
-                                            int commercialTaxRate;
-                                            if (this.m_Districts.HasComponent(property))
-                                            {
-                                                Entity district = this.m_Districts[property].m_District;
-                                                commercialTaxRate = TaxSystem.GetModifiedCommercialTaxRate(industrialProcess.m_Output.m_Resource, this.m_TaxRates, district, this.m_DistrictModifiers);
-                                            }
-                                            else
-                                            {
-                                                commercialTaxRate = TaxSystem.GetCommercialTaxRate(industrialProcess.m_Output.m_Resource, this.m_TaxRates);
-                                            }
-                                            TaxPayer taxPayer = this.m_TaxPayers[leisureEvent.m_Provider];
-                                            if (this.m_ServiceAvailables.HasComponent(leisureEvent.m_Provider))
-                                            {
-                                                ServiceCompanyData serviceCompanyData = this.m_ServiceCompanyDatas[prefab1];
-                                                double efficiency = (double)BuildingUtils.GetEfficiency(property, ref this.m_BuildingEfficiencies);
-                                                DynamicBuffer<TradeCost> tradeCost = this.m_TradeCosts[leisureEvent.m_Provider];
-                                                float num1 = (float)ServiceCompanySystem.EstimateDailyProduction((float)efficiency, workProvider.m_MaxWorkers, (int)spawnable.m_Level, serviceCompanyData, workplaceData, ref this.m_EconomyParameters, industrialProcess.m_Output.m_Resource, buildingData.m_LotSize.x * buildingData.m_LotSize.y);
-
-                                                float num2 = (float)ServiceCompanySystem.EstimateDailyProfit((float)efficiency, workProvider.m_MaxWorkers, employee, this.m_ServiceAvailables[leisureEvent.m_Provider], serviceCompanyData, buildingData, industrialProcess, ref this.m_EconomyParameters, workplaceData, spawnable, this.m_ResourcePrefabs, this.m_ResourceDatas, tradeCost);
-                                                if ((double)num1 > 0.0)
-                                                {
-                                                    int num3 = Mathf.CeilToInt(math.max(0.0f, num2 / num1));
-                                                    taxPayer.m_UntaxedIncome += num3;
-                                                    if (num3 > 0)
-                                                        taxPayer.m_AverageTaxRate = Mathf.RoundToInt(math.lerp((float)taxPayer.m_AverageTaxRate, (float)commercialTaxRate, (float)num3 / (float)(num3 + taxPayer.m_UntaxedIncome)));
-                                                    this.m_TaxPayers[leisureEvent.m_Provider] = taxPayer;
-                                                }
-                                            }
-                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                ResourceStack resourceStack;
-                while (this.m_ConsumptionQueue.TryDequeue(out resourceStack))
-                {
-                    this.m_ConsumptionAccumulator[EconomyUtils.GetResourceIndex(resourceStack.m_Resource)] += resourceStack.m_Amount;
                 }
             }
         }
@@ -451,7 +332,7 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<Building> m_BuildingData;
             [ReadOnly]
-            public ComponentLookup<PrefabRef> m_Prefabs;
+            public ComponentLookup<PrefabRef> m_PrefabRefs;
             [ReadOnly]
             public ComponentLookup<LeisureProviderData> m_LeisureProviderDatas;
             [ReadOnly]
@@ -468,10 +349,6 @@ namespace Time2Work
             public ComponentLookup<Citizen> m_CitizenDatas;
             [ReadOnly]
             public BufferLookup<HouseholdCitizen> m_HouseholdCitizens;
-            [ReadOnly]
-            public ComponentLookup<ResourceData> m_ResourceDatas;
-            [ReadOnly]
-            public ComponentLookup<HealthProblem> m_HealthProblems;
             [ReadOnly]
             public ComponentLookup<CarData> m_PrefabCarData;
             [ReadOnly]
@@ -491,16 +368,15 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<Population> m_PopulationData;
             [ReadOnly]
-            public NativeArray<int> m_TaxRates;
+            public BufferLookup<Renter> m_RenterBufs;
             [ReadOnly]
-            public ResourcePrefabs m_ResourcePrefabs;
+            public ComponentLookup<ConsumptionData> m_ConsumptionDatas;
             [ReadOnly]
             public RandomSeed m_RandomSeed;
             [ReadOnly]
             public ComponentTypeSet m_PathfindTypes;
             [ReadOnly]
             public NativeList<ArchetypeChunk> m_HumanChunks;
-            public NativeQueue<ResourceStack>.ParallelWriter m_ConsumptionQueue;
             public EconomyParameterData m_EconomyParameters;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
             public NativeQueue<SetupQueueItem>.ParallelWriter m_PathfindQueue;
@@ -509,7 +385,6 @@ namespace Time2Work
             public uint m_SimulationFrame;
             public uint m_UpdateFrameIndex;
             public float m_TimeOfDay;
-            public int m_BaseConsumptionSum;
             public float m_Weather;
             public float m_Temperature;
             public Entity m_PopulationEntity;
@@ -539,7 +414,7 @@ namespace Time2Work
                 if (this.m_ServiceAvailables.HasComponent(providerEntity) && this.m_ServiceAvailables[providerEntity].m_ServiceAvailable <= 0)
                     flag = true;
 
-                Entity prefab = this.m_Prefabs[providerEntity].m_Prefab;
+                Entity prefab = this.m_PrefabRefs[providerEntity].m_Prefab;
 
                 if (!flag && this.m_IndustrialProcesses.HasComponent(prefab))
                 {
@@ -591,9 +466,9 @@ namespace Time2Work
                     if (leisure.m_TargetAgent != Entity.Null && this.m_CurrentBuildings.HasComponent(entity1))
                     {
                         Entity currentBuilding = this.m_CurrentBuildings[entity1].m_CurrentBuilding;
-                        if (this.m_PropertyRenters.HasComponent(leisure.m_TargetAgent) && this.m_PropertyRenters[leisure.m_TargetAgent].m_Property == currentBuilding && this.m_Prefabs.HasComponent(leisure.m_TargetAgent))
+                        if (this.m_PropertyRenters.HasComponent(leisure.m_TargetAgent) && this.m_PropertyRenters[leisure.m_TargetAgent].m_Property == currentBuilding && this.m_PrefabRefs.HasComponent(leisure.m_TargetAgent))
                         {
-                            Entity prefab = this.m_Prefabs[leisure.m_TargetAgent].m_Prefab;
+                            Entity prefab = this.m_PrefabRefs[leisure.m_TargetAgent].m_Prefab;
                             if (this.m_LeisureProviderDatas.HasComponent(prefab))
                             {
                                 entity2 = prefab;
@@ -602,9 +477,9 @@ namespace Time2Work
                         }
                         else
                         {
-                            if (this.m_Prefabs.HasComponent(currentBuilding))
+                            if (this.m_PrefabRefs.HasComponent(currentBuilding))
                             {
-                                Entity prefab = this.m_Prefabs[currentBuilding].m_Prefab;
+                                Entity prefab = this.m_PrefabRefs[currentBuilding].m_Prefab;
                                 providerEntity = currentBuilding;
                                 if (this.m_LeisureProviderDatas.HasComponent(prefab))
                                 {
@@ -654,13 +529,12 @@ namespace Time2Work
                             if ((pathInfo.m_State & PathFlags.Pending) == (PathFlags)0)
                             {
                                 Entity destination = pathInfo.m_Destination;
-                                if ((this.m_PropertyRenters.HasComponent(destination) || this.m_Prefabs.HasComponent(destination)) && !this.m_Targets.HasComponent(entity1))
+                                if ((this.m_PropertyRenters.HasComponent(destination) || this.m_PrefabRefs.HasComponent(destination)) && !this.m_Targets.HasComponent(entity1))
                                 {
                                     if ((!this.m_Workers.HasComponent(entity1) || Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) || !Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10) ||
                                         (!Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) && Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10) && Time2WorkWorkerSystem.IsLunchTime(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))) && (!this.m_Students.HasComponent(entity1) || Time2WorkStudentSystem.IsTimeToStudy(citizenData, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay)))
                                     {
-                                        LeisureProviderData leisureProviderData = this.m_LeisureProviderDatas[this.m_Prefabs[destination].m_Prefab];
-                                        if (leisureProviderData.m_Efficiency == 0)
+                                        if (this.m_LeisureProviderDatas[this.m_PrefabRefs[destination].m_Prefab].m_Efficiency == 0)
                                             UnityEngine.Debug.LogWarning((object)string.Format("Warning: Leisure provider {0} has zero efficiency", (object)destination.Index));
                                         leisure.m_TargetAgent = destination;
                                         nativeArray2[index] = leisure;
@@ -674,15 +548,6 @@ namespace Time2Work
                                         {
                                             m_Target = destination
                                         });
-                                        if (this.m_ServiceAvailables.HasComponent(destination))
-                                        {
-                                            IndustrialProcessData industrialProcess = this.m_IndustrialProcesses[this.m_Prefabs[destination].m_Prefab];
-                                            this.m_ConsumptionQueue.Enqueue(new ResourceStack()
-                                            {
-                                                m_Resource = industrialProcess.m_Output.m_Resource,
-                                                m_Amount = ((int)byte.MaxValue - (int)citizenData.m_LeisureCounter) / math.max(1, leisureProviderData.m_Efficiency)
-                                            });
-                                        }
                                     }
                                     else
                                     {
@@ -860,7 +725,7 @@ namespace Time2Work
                     return LeisureType.Attractions;
                 if (this.m_Households.HasComponent(household) && this.m_Resources.HasBuffer(household) && this.m_HouseholdCitizens.HasBuffer(household))
                 {
-                    int wealth = !tourist ? EconomyUtils.GetHouseholdWealth(household, this.m_Households[household], this.m_Resources[household], this.m_HouseholdCitizens[household], ref this.m_Workers, ref this.m_CitizenDatas, ref this.m_HealthProblems, propertyRenter, ref this.m_EconomyParameters, this.m_ResourcePrefabs, ref this.m_ResourceDatas, this.m_BaseConsumptionSum, this.m_TaxRates) : EconomyUtils.GetResources(Resource.Money, this.m_Resources[household]);
+                    int wealth = !tourist ? EconomyUtils.GetHouseholdSpendableMoney(this.m_Households[household], this.m_Resources[household], ref this.m_RenterBufs, ref this.m_ConsumptionDatas, ref this.m_PrefabRefs, propertyRenter) : EconomyUtils.GetResources(Resource.Money, this.m_Resources[household]);
                     float num1 = 0.0f;
                     CitizenAge age = citizenData.GetAge();
                     for (int type = 0; type < 10; ++type)
@@ -922,9 +787,9 @@ namespace Time2Work
                     {
                         m_MaxSpeed = (float2)277.777771f,
                         m_WalkSpeed = (float2)humanData.m_WalkSpeed,
-                        m_Weights = 0.01f * CitizenUtils.GetPathfindWeights(citizenData, household1, householdCitizen.Length),
+                        m_Weights = CitizenUtils.GetPathfindWeights(citizenData, household1, householdCitizen.Length),
                         m_Methods = PathMethod.Pedestrian | PathMethod.Taxi | RouteUtils.GetPublicTransportMethods(this.m_TimeOfDay),
-                        m_SecondaryIgnoredFlags = VehicleUtils.GetIgnoredPathfindFlagsTaxiDefaults(),
+                        m_SecondaryIgnoredRules = VehicleUtils.GetIgnoredPathfindRulesTaxiDefaults(),
                         m_MaxCost = CitizenBehaviorSystem.kMaxPathfindCost
                     };
                     if (this.m_PropertyRenters.HasComponent(household))
@@ -941,15 +806,15 @@ namespace Time2Work
                         Entity car = this.m_CarKeepers[citizen].m_Car;
                         if (this.m_ParkedCarData.HasComponent(car))
                         {
-                            PrefabRef prefab = this.m_Prefabs[car];
+                            PrefabRef prefabRef = this.m_PrefabRefs[car];
                             ParkedCar parkedCar = this.m_ParkedCarData[car];
-                            CarData carData = this.m_PrefabCarData[prefab.m_Prefab];
+                            CarData carData = this.m_PrefabCarData[prefabRef.m_Prefab];
                             parameters.m_MaxSpeed.x = carData.m_MaxSpeed;
                             parameters.m_ParkingTarget = parkedCar.m_Lane;
                             parameters.m_ParkingDelta = parkedCar.m_CurvePosition;
-                            parameters.m_ParkingLength = VehicleUtils.GetParkingLength(car, ref this.m_Prefabs, ref this.m_ObjectGeometryData);
+                            parameters.m_ParkingLength = VehicleUtils.GetParkingLength(car, ref this.m_PrefabRefs, ref this.m_ObjectGeometryData);
                             parameters.m_Methods |= PathMethod.Road | PathMethod.Parking;
-                            parameters.m_IgnoredFlags = VehicleUtils.GetIgnoredPathfindFlags(carData);
+                            parameters.m_IgnoredRules = VehicleUtils.GetIgnoredPathfindRules(carData);
                             Game.Vehicles.PersonalCar componentData;
                             if (this.m_PersonalCarData.TryGetComponent(car, out componentData) && (componentData.m_State & PersonalCarFlags.HomeTarget) == (PersonalCarFlags)0)
                                 parameters.m_PathfindFlags |= PathfindFlags.ParkingReset;
@@ -1027,10 +892,6 @@ namespace Time2Work
             public BufferLookup<Game.Economy.Resources> __Game_Economy_Resources_RO_BufferLookup;
             public ComponentLookup<Citizen> __Game_Citizens_Citizen_RW_ComponentLookup;
             [ReadOnly]
-            public ComponentLookup<ResourceData> __Game_Prefabs_ResourceData_RO_ComponentLookup;
-            [ReadOnly]
-            public ComponentLookup<HealthProblem> __Game_Citizens_HealthProblem_RO_ComponentLookup;
-            [ReadOnly]
             public ComponentLookup<CarData> __Game_Prefabs_CarData_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<ObjectGeometryData> __Game_Prefabs_ObjectGeometryData_RO_ComponentLookup;
@@ -1050,33 +911,19 @@ namespace Time2Work
             public ComponentLookup<Population> __Game_City_Population_RO_ComponentLookup;
             [ReadOnly]
             public BufferLookup<HouseholdCitizen> __Game_Citizens_HouseholdCitizen_RO_BufferLookup;
+            [ReadOnly]
+            public BufferLookup<Renter> __Game_Buildings_Renter_RO_BufferLookup;
+            [ReadOnly]
+            public ComponentLookup<ConsumptionData> __Game_Prefabs_ConsumptionData_RO_ComponentLookup;
             public ComponentLookup<ServiceAvailable> __Game_Companies_ServiceAvailable_RW_ComponentLookup;
             public BufferLookup<Game.Economy.Resources> __Game_Economy_Resources_RW_BufferLookup;
             public ComponentLookup<TaxPayer> __Game_Agents_TaxPayer_RW_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<HouseholdMember> __Game_Citizens_HouseholdMember_RO_ComponentLookup;
             [ReadOnly]
+            public ComponentLookup<ResourceData> __Game_Prefabs_ResourceData_RO_ComponentLookup;
+            [ReadOnly]
             public ComponentLookup<ServiceCompanyData> __Game_Companies_ServiceCompanyData_RO_ComponentLookup;
-            [ReadOnly]
-            public ComponentLookup<Game.Prefabs.BuildingData> __Game_Prefabs_BuildingData_RO_ComponentLookup;
-            [ReadOnly]
-            public BufferLookup<Efficiency> __Game_Buildings_Efficiency_RO_BufferLookup;
-            [ReadOnly]
-            public BufferLookup<DistrictModifier> __Game_Areas_DistrictModifier_RO_BufferLookup;
-            [ReadOnly]
-            public ComponentLookup<CurrentDistrict> __Game_Areas_CurrentDistrict_RO_ComponentLookup;
-            [ReadOnly]
-            public BufferLookup<Employee> __Game_Companies_Employee_RO_BufferLookup;
-            [ReadOnly]
-            public ComponentLookup<Game.Objects.OutsideConnection> __Game_Objects_OutsideConnection_RO_ComponentLookup;
-            [ReadOnly]
-            public ComponentLookup<SpawnableBuildingData> __Game_Prefabs_SpawnableBuildingData_RO_ComponentLookup;
-            [ReadOnly]
-            public BufferLookup<TradeCost> __Game_Companies_TradeCost_RO_BufferLookup;
-            [ReadOnly]
-            public ComponentLookup<WorkplaceData> __Game_Prefabs_WorkplaceData_RO_ComponentLookup;
-            [ReadOnly]
-            public ComponentLookup<WorkProvider> __Game_Companies_WorkProvider_RO_ComponentLookup;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void __AssignHandles(ref SystemState state)
@@ -1103,8 +950,6 @@ namespace Time2Work
                 this.__Game_Citizens_Household_RO_ComponentLookup = state.GetComponentLookup<Household>(true);
                 this.__Game_Economy_Resources_RO_BufferLookup = state.GetBufferLookup<Game.Economy.Resources>(true);
                 this.__Game_Citizens_Citizen_RW_ComponentLookup = state.GetComponentLookup<Citizen>();
-                this.__Game_Prefabs_ResourceData_RO_ComponentLookup = state.GetComponentLookup<ResourceData>(true);
-                this.__Game_Citizens_HealthProblem_RO_ComponentLookup = state.GetComponentLookup<HealthProblem>(true);
                 this.__Game_Prefabs_CarData_RO_ComponentLookup = state.GetComponentLookup<CarData>(true);
                 this.__Game_Prefabs_ObjectGeometryData_RO_ComponentLookup = state.GetComponentLookup<ObjectGeometryData>(true);
                 this.__Game_Prefabs_HumanData_RO_ComponentLookup = state.GetComponentLookup<HumanData>(true);
@@ -1117,19 +962,12 @@ namespace Time2Work
                 this.__Game_Citizens_HouseholdCitizen_RO_BufferLookup = state.GetBufferLookup<HouseholdCitizen>(true);
                 this.__Game_Companies_ServiceAvailable_RW_ComponentLookup = state.GetComponentLookup<ServiceAvailable>();
                 this.__Game_Economy_Resources_RW_BufferLookup = state.GetBufferLookup<Game.Economy.Resources>();
-                this.__Game_Agents_TaxPayer_RW_ComponentLookup = state.GetComponentLookup<TaxPayer>();
                 this.__Game_Citizens_HouseholdMember_RO_ComponentLookup = state.GetComponentLookup<HouseholdMember>(true);
                 this.__Game_Companies_ServiceCompanyData_RO_ComponentLookup = state.GetComponentLookup<ServiceCompanyData>(true);
-                this.__Game_Prefabs_BuildingData_RO_ComponentLookup = state.GetComponentLookup<Game.Prefabs.BuildingData>(true);
-                this.__Game_Buildings_Efficiency_RO_BufferLookup = state.GetBufferLookup<Efficiency>(true);
-                this.__Game_Areas_DistrictModifier_RO_BufferLookup = state.GetBufferLookup<DistrictModifier>(true);
-                this.__Game_Areas_CurrentDistrict_RO_ComponentLookup = state.GetComponentLookup<CurrentDistrict>(true);
-                this.__Game_Companies_Employee_RO_BufferLookup = state.GetBufferLookup<Employee>(true);
-                this.__Game_Objects_OutsideConnection_RO_ComponentLookup = state.GetComponentLookup<Game.Objects.OutsideConnection>(true);
-                this.__Game_Prefabs_SpawnableBuildingData_RO_ComponentLookup = state.GetComponentLookup<SpawnableBuildingData>(true);
-                this.__Game_Companies_TradeCost_RO_BufferLookup = state.GetBufferLookup<TradeCost>(true);
-                this.__Game_Prefabs_WorkplaceData_RO_ComponentLookup = state.GetComponentLookup<WorkplaceData>(true);
-                this.__Game_Companies_WorkProvider_RO_ComponentLookup = state.GetComponentLookup<WorkProvider>(true);
+                this.__Game_Buildings_Renter_RO_BufferLookup = state.GetBufferLookup<Renter>(true);
+                this.__Game_Prefabs_ConsumptionData_RO_ComponentLookup = state.GetComponentLookup<ConsumptionData>(true);
+                this.__Game_Prefabs_ResourceData_RO_ComponentLookup = state.GetComponentLookup<ResourceData>(true);
+                this.__Game_Companies_ServiceCompanyData_RO_ComponentLookup = state.GetComponentLookup<ServiceCompanyData>(true);
             }
         }
     }

@@ -72,7 +72,7 @@ namespace Time2Work
 
         public float GetTimeOfDay(TimeSettingsData settings, TimeData data, double renderingFrame)
         {
-            int num = kTicksPerDay * settings.m_DaysPerYear;
+            int num = kTicksPerDay;
             return (float)(this.GetTimeWithOffset(settings, data, renderingFrame) % (double)num / (float)num);
         }
 

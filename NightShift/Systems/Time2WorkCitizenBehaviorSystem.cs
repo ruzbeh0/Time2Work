@@ -903,7 +903,7 @@ namespace Time2Work
                 {
                     Entity household = nativeArray3[index].m_Household;
                     Entity entity1 = nativeArray1[index];
-                    bool flag2 = this.m_TouristHouseholds.HasComponent(household);
+                    bool tourist_flag = this.m_TouristHouseholds.HasComponent(household);
                     DynamicBuffer<TripNeeded> trips = bufferAccessor[index];
                     if (household == Entity.Null)
                     {
@@ -929,9 +929,9 @@ namespace Time2Work
                             if (this.m_Transforms.HasComponent(currentBuilding) && (!this.m_InDangerData.HasComponent(currentBuilding) || (this.m_InDangerData[currentBuilding].m_Flags & DangerFlags.StayIndoors) == (DangerFlags)0))
                             {
                                 Citizen citizen = nativeArray2[index];
-                                bool flag3 = (citizen.m_State & CitizenFlags.Commuter) != 0;
+                                bool commuter = (citizen.m_State & CitizenFlags.Commuter) != 0;
                                 CitizenAge age = citizen.GetAge();
-                                if (flag3 && (age == CitizenAge.Elderly || age == CitizenAge.Child))
+                                if (commuter && (age == CitizenAge.Elderly || age == CitizenAge.Child))
                                 {
                                     this.m_CommandBuffer.AddComponent<Deleted>(unfilteredChunkIndex, entity1, new Deleted());
                                 }
@@ -969,7 +969,7 @@ namespace Time2Work
                                         {
                                             entity3 = this.m_Properties[household].m_Property;
                                         }
-                                        else if (flag2)
+                                        else if (tourist_flag)
                                         {
                                             Entity hotel = this.m_TouristHouseholds[household].m_Hotel;
                                             if (this.m_Properties.HasComponent(hotel))
@@ -977,7 +977,7 @@ namespace Time2Work
                                                 entity3 = this.m_Properties[hotel].m_Property;
                                             }
                                         }
-                                        else if (flag3)
+                                        else if (commuter)
                                         {
                                             if (this.m_OutsideConnections.HasComponent(currentBuilding))
                                             {
