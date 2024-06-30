@@ -25,7 +25,9 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
-            if(hour > 23 || hour < 6)
+            DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
+            hour = currentDateTime.Hour;
+            if (hour > 23 || hour < 6)
             {
                 World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.ServiceCompanySystem>().Enabled = false;
                 World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.RentAdjustSystem>().Enabled = false;

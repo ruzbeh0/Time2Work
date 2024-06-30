@@ -142,7 +142,13 @@ namespace Time2Work.Systems
 
             if ((hour == 0 && minute < 4 && !updated) || dayOfWeekTemp < 0)
             {
-                dayOfWeekTemp = (DayOfWeek)((dayOfYear + 12 * (year - 2023)) % 7);
+                int dow = ((dayOfYear + 12 * (year - 2023)) % 7);
+
+                if (dow < 0)
+                {
+                    dow *= -1;
+                }
+                dayOfWeekTemp = (DayOfWeek)dow;
                 if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.AverageDay))
                 {
                     dayOfWeekTemp = DayOfWeek.Friday;
@@ -164,7 +170,14 @@ namespace Time2Work.Systems
             {
                 if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.sevendayweek))
                 {
-                    dayOfWeek = (DayOfWeek)((dayOfYear + 12 * (year - 2023)) % 7);
+                    int dow = ((dayOfYear + 12 * (year - 2023)) % 7);
+                    
+                    if(dow < 0)
+                    {
+                        dow *= -1;
+                    }
+
+                    dayOfWeek = (DayOfWeek)dow;
 
                     if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
                     {

@@ -8,93 +8,93 @@
 	<!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
 	<!--LongDescription Value="This is a long description" /-->
 	<LongDescription>
-		This mod has several options to configure the travel behavior of the population. There is also a feature to change the simulation to function either as an Average Day, a Weekday, a Weekend or for it to follow a Weekly pattern. And there is another option to slow down time and make the day longer - without changing the simulation speed.
+This mod has several options to configure the travel behavior of the population. There is also a feature to change the simulation to function either as an Average Day, a Weekday, a Weekend or for it to follow a Weekly pattern. And there is another option to slow down time and make the day longer - without changing the simulation speed.
 
-		## Settings
+## Settings
 
-		The main settings menu allows the user to select predefined settings - which will change all the options of this mod. They are:
+The main settings menu allows the user to select predefined settings - which will change all the options of this mod. They are:
 
-		* **Performance:** This is option is similar to the Vanilla behavior (but not equal), it will spread trips throughout the day and night and doesn't have a big impact on performance.
-		* **Balanced:** This is the default setting, it has several of the realistic options, but without the features that cause a big impact on performance.
-		* **Realistic:** This feature will make travel behavior more realistic when compared to the real world. It has a higher impact on the performance. The values for several of the options where taken from different surveys in the US and by evaluating trips data in different test cities (using the TripsData mod).
+* **Performance:** This is option is similar to the Vanilla behavior (but not equal), it will spread trips throughout the day and night and doesn't have a big impact on performance.
+* **Balanced:** This is the default setting, it has several of the realistic options, but without the features that cause a big impact on performance.
+* **Realistic:** This feature will make travel behavior more realistic when compared to the real world. It has a higher impact on the performance. The values for several of the options where taken from different surveys in the US and by evaluating trips data in different test cities (using the TripsData mod).
 
-		If more control over the simulation is desired, the user can adjust the settings in the other sections defined below.
+If more control over the simulation is desired, the user can adjust the settings in the other sections defined below.
 
-		## Work
+## Work
 
-		This section has several options to configure work travel behavior.
+This section has several options to configure work travel behavior.
 
-		* **Work Arrival / Departure:** The "Delay/Early factor" adds greater variation to cims work arrival and departure times. The arrival/departure times are implemented using a normal distribution and it works differently in the morning and evening commutes to reflect the real world. In real cities, the evening commute tends to be more spread out than the morning commute, this happens because although most workers have a set time to arrive at work, when it is time to leave work the departure time is not as strict, with a few workers working a few extra minutes or hours. This feature is also implemented differently for each shift. The Evening and Night shifts have even greater variation, spreading out the start and end work times for the cims that work during those shifts.
-		* **Peak Spreading:** If this option is enabled, cims that have a very long commute will go to work earlier to try to avoid traffic. This is calculated by getting the commute time distribution of the population and selecting the 10% that has the highest travel time. Those cims, will leave to work 20% earlier.
-		* **Work Shifts:** Cims go to work based on three shifts: Day, Evening and Night. This mod allows you to configure the percentage of each of those work shifts, the base game has around 20-25% of work trips being at either the Evening or at Night. The mod options menu will allow you to set the percentage for Evening and Night shifts. Day shift percentage will correspond to the remaining percentage points. The default values of the mod are set for 6% for Evening shifts and 4% for Night shifts. These values come from a US Survey which can be found in this link: https://redline.digital/shift-work-statistics/
-		* **Lunch Break:** The lunch break option will add the possibility of some cims to leave work around noon for either Leisure or Shopping. The break lasts around an hour, after that, they will return to work. The lunch break can be configured by setting the lunch break probability in the mod's menu. Also, cims that take a lunch break, might leave work a little later (to compensate for the time that they weren't working).
-		* **Work Start/End Time Settings:** This option allows the user to change work start and end times for the day shift.
-		* **Part Time Settings:** This setting only applies to the day shift. The workers that are part time will either work in the morning or afternoon. Since their shift is shorter, they will not take a lunch break.
-		* **Remote Work Settings:** The portion of citizens that work remotely will stay at home and not go to work. They might still go out for a lunch break and then come back to work at home. Only workers with at least level 3 of education will work remotely.
+* **Work Arrival / Departure:** The "Delay/Early factor" adds greater variation to cims work arrival and departure times. The arrival/departure times are implemented using a normal distribution and it works differently in the morning and evening commutes to reflect the real world. In real cities, the evening commute tends to be more spread out than the morning commute, this happens because although most workers have a set time to arrive at work, when it is time to leave work the departure time is not as strict, with a few workers working a few extra minutes or hours. This feature is also implemented differently for each shift. The Evening and Night shifts have even greater variation, spreading out the start and end work times for the cims that work during those shifts.
+* **Peak Spreading:** If this option is enabled, cims that have a very long commute will go to work earlier to try to avoid traffic. This is calculated by getting the commute time distribution of the population and selecting the 10% that has the highest travel time. Those cims, will leave to work 20% earlier.
+* **Work Shifts:** Cims go to work based on three shifts: Day, Evening and Night. This mod allows you to configure the percentage of each of those work shifts, the base game has around 20-25% of work trips being at either the Evening or at Night. The mod options menu will allow you to set the percentage for Evening and Night shifts. Day shift percentage will correspond to the remaining percentage points. The default values of the mod are set for 6% for Evening shifts and 4% for Night shifts. These values come from a US Survey which can be found in this link: https://redline.digital/shift-work-statistics/
+* **Lunch Break:** The lunch break option will add the possibility of some cims to leave work around noon for either Leisure or Shopping. The break lasts around an hour, after that, they will return to work. The lunch break can be configured by setting the lunch break probability in the mod's menu. Also, cims that take a lunch break, might leave work a little later (to compensate for the time that they weren't working).
+* **Work Start/End Time Settings:** This option allows the user to change work start and end times for the day shift.
+* **Part Time Settings:** This setting only applies to the day shift. The workers that are part time will either work in the morning or afternoon. Since their shift is shorter, they will not take a lunch break.
+* **Remote Work Settings:** The portion of citizens that work remotely will stay at home and not go to work. They might still go out for a lunch break and then come back to work at home. Only workers with at least level 3 of education will work remotely.
 
-		## Shopping and Leisure
+## Shopping and Leisure
 
-		This section has some options to configure shopping and leisure behavior.
+This section has some options to configure shopping and leisure behavior.
 
-		* **Disable Early Shopping or Leisure:** This option will significantly reduce shopping and leisure trips happening between Midnight and 6 AM. With this option, those trips will mostly start between 8 to 10 AM.
-		* **Vacation and Holiday System:** The vanilla game simulation works as a combination of a Weekday and a Weekend, with work and schools trips having a certain probability of not happening assuming that that cim is taking a day off. The vanilla probability is around 60% of not going to work or school. With vacation and holidays default settings, that probability will be around 30% for work trips.
+* **Disable Early Shopping or Leisure:** This option will significantly reduce shopping and leisure trips happening between Midnight and 6 AM. With this option, those trips will mostly start between 8 to 10 AM.
+* **Vacation and Holiday System:** The vanilla game simulation works as a combination of a Weekday and a Weekend, with work and schools trips having a certain probability of not happening assuming that that cim is taking a day off. The vanilla probability is around 60% of not going to work or school. With vacation and holidays default settings, that probability will be around 30% for work trips.
 
-		## School
+## School
 
-		This section has some options to configure school trips behavior.
+This section has some options to configure school trips behavior.
 
-		* **School Vacation System** This feature works similar to the vacation and holiday system for work, with the difference that on Weekends schools are assumed to be closed.
-		* **School Start/End Time Settings:** This option allows the user to change school start and end times.
+* **School Vacation System** This feature works similar to the vacation and holiday system for work, with the difference that on Weekends schools are assumed to be closed.
+* **School Start/End Time Settings:** This option allows the user to change school start and end times.
 
-		## Simulation
+## Simulation
 
-		This section has some options to configure the game simulation.
+This section has some options to configure the game simulation.
 
-		* **Day Type Simulation** The options in this menu will allow you to change the simulation from an Average Day, a Weekday, a Weekend or simulate a 7 Day Week. With the 7 Day Week option, each day will be a different day of the week, Monday to Thursday will function as a Weekday, Friday as an Average Day, and Saturday and Sunday as a Weekend. The current day of the week will be shown in the UI in the bottom left corner.
+* **Day Type Simulation** The options in this menu will allow you to change the simulation from an Average Day, a Weekday, a Weekend or simulate a 7 Day Week. With the 7 Day Week option, each day will be a different day of the week, Monday to Thursday will function as a Weekday, Friday as an Average Day, and Saturday and Sunday as a Weekend. The current day of the week will be shown in the UI in the bottom left corner.
 
-		An Average Day, is similar to the vanilla default setting. It consists of a combination of Weekday and Weekends behavior, with around 30% of cims behaving as on a weekend and the rest as on a weekday.
+An Average Day, is similar to the vanilla default setting. It consists of a combination of Weekday and Weekends behavior, with around 30% of cims behaving as on a weekend and the rest as on a weekday.
 
-		On a Weekday, most of the trips will be work or school related. On a Weekend, there will be more Leisure and Shopping trips. Schools are closed on Weekends.
+On a Weekday, most of the trips will be work or school related. On a Weekend, there will be more Leisure and Shopping trips. Schools are closed on Weekends.
 
-		* **Slow Time and Increase Day Length** If enabled, this option will make the day longer - while keeping the simulation speed the same. The day length of the vanilla game when compared to the cim's travel times is not reasonable. It is commom to find cims that take around 2 in game hours to get from home to work and this is not realistic. Most major cities in the world have an average commute of 25 to 30 minutes, in my test city the average commute was around 1 hour and 40 minutes. Based on this, if this option is enabled I recommend that the reduction factor be set to 3.5.
-		* **Days per Month** Default value is 1, if increased the number of days per month and year will change. This does affect the simulation, if with the default values it took 1 year (12 days) for a cim do age 1 year, with 2 days per month it will still take 1 year (24 days) for a cim to age 1 year.
+* **Slow Time and Increase Day Length** If enabled, this option will make the day longer - while keeping the simulation speed the same. The day length of the vanilla game when compared to the cim's travel times is not reasonable. It is commom to find cims that take around 2 in game hours to get from home to work and this is not realistic. Most major cities in the world have an average commute of 25 to 30 minutes, in my test city the average commute was around 1 hour and 40 minutes. Based on this, if this option is enabled I recommend that the reduction factor be set to 3.5.
+* **Days per Month** Default value is 1, if increased the number of days per month and year will change. This does affect the simulation, if with the default values it took 1 year (12 days) for a cim do age 1 year, with 2 days per month it will still take 1 year (24 days) for a cim to age 1 year.
 
-		## External Trips
+## External Trips
 
-		This section has some options to configure external trips for tourists and commuters.
+This section has some options to configure external trips for tourists and commuters.
 
-		* **Tourism variation by day of the week** If enabled, there will be more tourists on the weekend and less tourists on weekdays. On Fridays (an Average Day) the number of tourists won't change.
-		* **Commuter variation by day of the week** If enabled, there will be more commuters on the weekend and less tourists weekdays. On Fridays (an Average Day) the number of commuters won't change. Commuters are workers that spawn from outside connections, in the vanilla game they can come into your city by car or train. This option also addes the possibility of them arriving by plane - which you can interpret as business travelers from other cities going into your city for business meetings.
+* **Tourism variation by day of the week** If enabled, there will be more tourists on the weekend and less tourists on weekdays. On Fridays (an Average Day) the number of tourists won't change.
+* **Commuter variation by day of the week** If enabled, there will be more commuters on the weekend and less tourists weekdays. On Fridays (an Average Day) the number of commuters won't change. Commuters are workers that spawn from outside connections, in the vanilla game they can come into your city by car or train. This option also addes the possibility of them arriving by plane - which you can interpret as business travelers from other cities going into your city for business meetings.
 
-		## Performance Impacts
-		This mods can have a significant impact on the game's performance - specially in big cities. If you have issues with performance, I would recommend reducing the lunch break percentage, using "Average Day" setting and disabling the Vacation and Holiday features for work and school. The lunch break feature has a significant impact on performance during the middle of the day and it is recommended to keep that percentage with a lower value.
+## Performance Impacts
+This mods can have a significant impact on the game's performance - specially in big cities. If you have issues with performance, I would recommend reducing the lunch break percentage, using "Average Day" setting and disabling the Vacation and Holiday features for work and school. The lunch break feature has a significant impact on performance during the middle of the day and it is recommended to keep that percentage with a lower value.
 
-		This mod is compatible with the Traffic Simulation Adjuster mod. However, both of them together will have performance impacts and you could adjust that mod's settings to try to improve performance as well.
+This mod is compatible with the Traffic Simulation Adjuster mod. However, both of them together will have performance impacts and you could adjust that mod's settings to try to improve performance as well.
 
-		## Mod Effects
-		You should expect to see less trips at night and a significant increase in rush hour traffic.
+## Mod Effects
+You should expect to see less trips at night and a significant increase in rush hour traffic.
 
-		If you enable this mod in an existing city it will take a day or two for you to notice a change in the time of day activity.
+If you enable this mod in an existing city it will take a day or two for you to notice a change in the time of day activity.
 
-		## Compatibility with other Mods
+## Compatibility with other Mods
 
-		The slower time feature is currently not compatible with:
+The slower time feature is currently not compatible with:
 
-		* Info Loom
-		* Population Rebalance
+* Info Loom
+* Population Rebalance
 
-		If that feature is not used, there should be no conflict. The compatability issues will be greater in an existing city, a new city with these mods will probably function correctly, but I have not tested it.s
+If that feature is not used, there should be no conflict. The compatability issues will be greater in an existing city, a new city with these mods will probably function correctly, but I have not tested it.s
 
-		## Explaining the Plots
+## Explaining the Plots
 
-		In one of the screenshots above there are four plots comparing the mod in its default settings with the vanilla game in a test city with a population of 20,000. In those plots, trips are classified based on their origin and destination and below is a brief explanation of what each one of them mean. The plots were done using data from the TripsData mod.
+In one of the screenshots above there are four plots comparing the mod in its default settings with the vanilla game in a test city with a population of 20,000. In those plots, trips are classified based on their origin and destination and below is a brief explanation of what each one of them mean. The plots were done using data from the TripsData mod.
 
-		* **Home Based Work:** This include trips from Home to Work and from Work to Home.
-		* **Home Based School:** This include trips from Home to School and School to Home.
-		* **Home Based Other:** This consists of trips that start or end at home and go to or are from anyplace that is **not** work or school. This will include trips from home to shopping or leisure, for example. This plot shows the significant reduction of shopping and leisure trips from midnight to 6 AM with the "Disable Early Shopping/Leisure" feature.
-		* **Non Home Based:** All trips that don't have home as the origin or destination. In this plot you will notice a peak between noon and 2 PM, which consists of the lunch break - which are trips from work to shopping or leisure and back to work.
+* **Home Based Work:** This include trips from Home to Work and from Work to Home.
+* **Home Based School:** This include trips from Home to School and School to Home.
+* **Home Based Other:** This consists of trips that start or end at home and go to or are from anyplace that is **not** work or school. This will include trips from home to shopping or leisure, for example. This plot shows the significant reduction of shopping and leisure trips from midnight to 6 AM with the "Disable Early Shopping/Leisure" feature.
+* **Non Home Based:** All trips that don't have home as the origin or destination. In this plot you will notice a peak between noon and 2 PM, which consists of the lunch break - which are trips from work to shopping or leisure and back to work.
 
-		There are also other four plots comparing the three day types: Weekday, Average Day and Weekend.
+There are also other four plots comparing the three day types: Weekday, Average Day and Weekend.
 	</LongDescription>
 	<!--Thumbnail-->
 	<Thumbnail Value="Properties/Thumbnail2.jpg" />
@@ -113,14 +113,13 @@
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.9" />
+	<ModVersion Value="0.9.2" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.1.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="75426" />
 	<ChangeLog>
-* Fixed bug that was showing not enough customers notification on commercial buildings at night
-* Added options to configure external trips for tourists and commuters
+* Fixed bug that was causing the day of the week calculation to fail for cities that are in a year before 2023.
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />
