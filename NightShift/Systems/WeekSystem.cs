@@ -1,14 +1,6 @@
 ﻿using Game;
-using Game.Prefabs;
-using Game.Simulation;
 using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Unity.Entities;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Time2Work.Systems
 {
@@ -35,7 +27,14 @@ namespace Time2Work.Systems
             dayOfYear = currentDateTime.DayOfYear;
             year = currentDateTime.Year;
 
-            dayOfWeekTemp = (DayOfWeek)((dayOfYear + 12 * (year - 2023)) % 7);
+            int dow = ((dayOfYear + 12 * (year - 2023)) % 7);
+
+            if (dow < 0)
+            {
+                dow += 7;
+            }
+            dayOfWeekTemp = (DayOfWeek)dow;
+
             if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.AverageDay))
             {
                 dayOfWeekTemp = DayOfWeek.Friday;
@@ -146,7 +145,7 @@ namespace Time2Work.Systems
 
                 if (dow < 0)
                 {
-                    dow *= -1;
+                    dow += 7;
                 }
                 dayOfWeekTemp = (DayOfWeek)dow;
                 if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.AverageDay))
@@ -174,7 +173,7 @@ namespace Time2Work.Systems
                     
                     if(dow < 0)
                     {
-                        dow *= -1;
+                        dow += 7;
                     }
 
                     dayOfWeek = (DayOfWeek)dow;
