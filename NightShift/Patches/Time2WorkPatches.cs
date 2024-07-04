@@ -1,4 +1,5 @@
 ﻿using Game.Citizens;
+using Game.City;
 using Game.Common;
 using Game.Companies;
 using Game.Prefabs;
@@ -10,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Burst.Intrinsics;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -21,6 +23,33 @@ namespace Time2Work.Patches
     [HarmonyPatch]
     public class Time2WorkPatches
     {
+        [HarmonyPatch(typeof(CityServiceBudgetSystem), "GetExpense", new Type[] { typeof(ExpenseSource), typeof(NativeArray<int>)})]
+        [HarmonyPostfix]
+        public static void CityServiceBudgetSystemPatches_GetExpense_Postfix(ExpenseSource source, NativeArray<int> expenses, ref int __result)
+        {
+            DateTime currentDateTime = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
+            int hour = currentDateTime.Hour;
+            if(hour >= 23 || hour <= 6)
+            {
+                float r = (float)__result;
+                __result = (int)(r * ((float)(100 - Mod.m_Setting.service_expenses_night_reduction)/100f));
+            }           
+        }
+
+        [HarmonyPatch(typeof(CityServiceBudgetSystem), "GetTotalExpenses", new Type[] { typeof(NativeArray<int>) })]
+        [HarmonyPostfix]
+        public static void CityServiceBudgetSystemPatches_GetTotalExpenses_Postfix(NativeArray<int> expenses, ref int __result)
+        {
+            DateTime currentDateTime = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
+            int hour = currentDateTime.Hour;
+            if (hour >= 23 || hour <= 6)
+            {
+                float r = (float)__result;
+                __result = (int)(r * ((float)(100 - Mod.m_Setting.service_expenses_night_reduction) / 100f));
+            }
+        }
+
+
         [HarmonyPatch(typeof(TimeSystem), "OnUpdate")]
         [HarmonyPostfix]
         public static void TimeSystemPatches_OnUpdate_Postfix(TimeSystem __instance)

@@ -14,8 +14,8 @@ namespace Time2Work
 {
     //[FileLocation(nameof(Time2Work))]
     [FileLocation($"ModsSettings\\{nameof(Time2Work)}\\{nameof(Time2Work)}")]
-    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, ExternalGroup, TrucksGroup, DTSimulationGroup, SlowerTimeGroup)]
-    [SettingsUIShowGroupName(WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, TrucksGroup, ExternalGroup)]
+    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, ExternalGroup, ExpensesGroup, TrucksGroup, DTSimulationGroup, SlowerTimeGroup)]
+    [SettingsUIShowGroupName(WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, TrucksGroup, ExternalGroup, ExpensesGroup)]
     public class Setting : ModSetting
     {
         public const string SettingsSection = "Settings";
@@ -38,6 +38,7 @@ namespace Time2Work
         public const string DTSimulationGroup = "DTSimulationGroup";
         public const string SlowerTimeGroup = "SlowerTimeGroup";
         public const string ExternalGroup = "ExternalGroup";
+        public const string ExpensesGroup = "ExpensesGroup";
 
         public Setting(IMod mod) : base(mod)
         {
@@ -60,14 +61,14 @@ namespace Time2Work
             work_start_time = timeEnum.t900;
             work_end_time = timeEnum.t1700;
             dt_simulation = DTSimulationEnum.AverageDay;
-            slow_time_factor = 3.5f;
-            enable_slower_time = false;
+            slow_time_factor = 1f;
             part_time_percentage = 22;
             remote_percentage = 14;
             night_trucks = true;
             peak_spread = true;
             tourism_trips = true;
             commuter_trips = true;
+            service_expenses_night_reduction = 30;
         }
 
         private void setPerformance()
@@ -88,12 +89,12 @@ namespace Time2Work
             work_end_time = timeEnum.t1700;
             dt_simulation = DTSimulationEnum.AverageDay;
             slow_time_factor = 3.5f;
-            enable_slower_time = false;
             part_time_percentage = 22;
             remote_percentage = 20;
             night_trucks = true;
             tourism_trips = false;
             commuter_trips = false;
+            service_expenses_night_reduction = 0;
         }
 
         private void setRealistic()
@@ -114,12 +115,12 @@ namespace Time2Work
             work_end_time = timeEnum.t1700;
             dt_simulation = DTSimulationEnum.sevendayweek;
             slow_time_factor = 3.5f;
-            enable_slower_time = true;
             part_time_percentage = 22;
             remote_percentage = 14;
             night_trucks = true;
             tourism_trips = true;
             commuter_trips = true;
+            service_expenses_night_reduction = 30;
         }
 
         public override void Apply()
@@ -159,9 +160,9 @@ namespace Time2Work
 
         }
 
-        [SettingsUISection(SettingsSection, SettingsGroup)]
-        [SettingsUIMultilineText]
-        public string MultilineText => string.Empty;
+        //[SettingsUISection(SettingsSection, SettingsGroup)]
+        //[SettingsUIMultilineText]
+        //public string MultilineText => string.Empty;
 
         [SettingsUISlider(min = 1, max = 25, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
         [SettingsUISection(WorkSection, WorkPlaceShiftGroup)]
@@ -230,15 +231,12 @@ namespace Time2Work
         [SettingsUISection(OtherSection, TrucksGroup)]
         public bool night_trucks { get; set; }
 
-        [SettingsUISection(OtherSection, DTSimulationGroup)]
+        [SettingsUISection(OtherSection, SlowerTimeGroup)]
         public DTSimulationEnum dt_simulation { get; set; } = DTSimulationEnum.AverageDay;
 
         [SettingsUISection(OtherSection, SlowerTimeGroup)]
         [SettingsUIMultilineText]
         public string DTText => string.Empty;
-
-        [SettingsUISection(OtherSection, SlowerTimeGroup)]
-        public bool enable_slower_time { get; set; }
 
         [SettingsUISection(OtherSection, ExternalGroup)]
         public bool tourism_trips { get; set; }
@@ -246,14 +244,12 @@ namespace Time2Work
         [SettingsUISection(OtherSection, ExternalGroup)]
         public bool commuter_trips { get; set; }
 
-        private bool disableSlowerTime()
-        {
-            return !enable_slower_time;
-        }
+        [SettingsUISlider(min = 1, max = 25, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(OtherSection, ExpensesGroup)]
+        public int service_expenses_night_reduction { get; set; }
 
-        [SettingsUISlider(min = 1.1f, max = 5, step = 0.1f, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
+        [SettingsUISlider(min = 1f, max = 5, step = 0.1f, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
         [SettingsUISection(OtherSection, SlowerTimeGroup)]
-        [SettingsUIHideByCondition(typeof(Setting), nameof(disableSlowerTime))]
         public float slow_time_factor { get; set; }
 
         [SettingsUISlider(min = 1, max = 30, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
@@ -312,13 +308,13 @@ namespace Time2Work
             March = 3,
             April = 4,
             May = 5,
-            June = 6, 
+            June = 6,
             July = 7,
-            August = 8, 
-            Septermber = 9, 
+            August = 8,
+            Septermber = 9,
             October = 10,
             November = 11,
-            December= 12
+            December = 12
         }
 
         public enum dayOfWeek
@@ -360,9 +356,10 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.DTSimulationGroup), "Day Type Simulation" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TrucksGroup), "Trucks" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.ExternalGroup), "External Trips" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.ExpensesGroup), "Service Expenses" },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DTText)), $"Changing the parameters below require restarting the game." },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.MultilineText)), $"WARNING: Slower Time feature can cause issues with Population Rebalance and Info Loom mods - in an existing city. A new city will probably not have problems with those mods." },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.MultilineText)), $"WARNING: Slower Time feature can cause issues with Population Rebalance and Info Loom mods - in an existing city. A new city will probably not have problems with those mods." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.settings_choice)), "Mod settings" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.settings_choice)), $"Change all mod settings. Performance: will update the settings to improve performance, this is similar to the Vanilla game. Balanced: has most of the features from this mod enabled, but a few of them that have high impact on performance are disabled. Realistic: all features are enabled and set to values that would make the simulation more realistic" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Button)), "Confirm" },
@@ -406,8 +403,6 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_start_time)), $"Start time for work day shift." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.work_end_time)), "Work Day Shift End Time" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_end_time)), $"End time for work day shift." },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.enable_slower_time)), "Enable Slower Time" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.enable_slower_time)), $"Slower time without changing the simulation speed." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.slow_time_factor)), "Slower Time Factor" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.slow_time_factor)), $"This factor will slow down time and increase the length of the day. A factor of 1 will have no effect. A factor of 2, for example, will make the day last twice as long. Note that the simulation speed does not change, and other systems not affected by this mod will update based on the simulation speed and not on the length of the day." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.daysPerMonth)), "Days per Month" },
@@ -416,6 +411,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.tourism_trips)), $"Increases tourists on weekends and reduces them on weekdays." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.commuter_trips)), "Commuter  variation by day of the week" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.commuter_trips)), $"Increases outside connection commuters on weekdays and reduces them on weekends. Also increases the probability of them arriving by plane." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.service_expenses_night_reduction)), "Night Cost Reduction" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.service_expenses_night_reduction)), $"Reduce the cost of services from 11 PM to 6 AM." },
 
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Average Day" },
@@ -512,9 +509,10 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.DTSimulationGroup), "Tipo de Simulação Diária" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TrucksGroup), "Caminhões" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.ExternalGroup), "Viagens Externas" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.ExpensesGroup), "Gastos com Serviços" },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DTText)), $"Alterar os parametros abaixo requer reinício do jogo." },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.MultilineText)), $"AVISO: O recurso de Tempo mais Lento pode causar problemas com os mods Population Rebalance e Info Loom - em uma cidade existente. Uma nova cidade provavelmente não terá problemas com esses mods." },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.MultilineText)), $"AVISO: O recurso de Tempo mais Lento pode causar problemas com os mods Population Rebalance e Info Loom - em uma cidade existente. Uma nova cidade provavelmente não terá problemas com esses mods." },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.settings_choice)), $"Alterar as configurações do mod" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.settings_choice)), $"Alterar todas as configurações. Desempenho: irá atualizar as configurações para melhorar o desempenho, isso é semelhante ao jogo Vanilla. Balanceado: tem a maioria dos recursos deste mod habilitados, mas alguns deles que têm alto impacto no desempenho estão desabilitadas. Realista: todos os recursos estão habilitados e definidos com valores que tornarão a simulação mais realista" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Button)), "Confirmar" },
@@ -558,8 +556,6 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_start_time)), $"Horário de início do turno diurno de trabalho." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.work_end_time)), "Horário de término do turno diurno" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_end_time)), $"Horário de término do turno diurno de trabalho." },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.enable_slower_time)), "Ativer tempo mais lento" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.enable_slower_time)), $"Reduz a velocidade do tempo sem mudar a velocidade da simulação." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.slow_time_factor)), "Fator de redução da velocidade do tempo" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.slow_time_factor)), $"Esse fator vai reduzir a velocidade do tempo e aumentar a duração do dia. Um fator de valor 1 não vai ter efeito. Um fator de valor 2, por exemplo, vai dobrar a duração do dia. Observe que a velocidade da simulação não será alterada. Outros sistemas que não usados neste mod serão atualizados baseados na velocidade da simulação e não na duração do dia." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.daysPerMonth)), "Dias por mês" },
@@ -568,7 +564,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.tourism_trips)), $"Aumenta o número de turistas no fim de semana e reduz nos dias de semana." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.commuter_trips)), "Variação de trabalhadores externos por dia da semana." },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.commuter_trips)), $"Aumenta o número de trabalhadores de conexões externas nos dias de semana e reduz nos fim de semana. Também aumenta a probabilidade de eles chegarem de avião." },
-
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.service_expenses_night_reduction)), "Redução de Custo Noturno" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.service_expenses_night_reduction)), $"Reduz os custos de serviços das 23h ate as 6h." },
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Dia Padrão" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Dia da Semana" },

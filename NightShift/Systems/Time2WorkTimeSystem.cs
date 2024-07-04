@@ -39,7 +39,7 @@ namespace Time2Work
             this.RequireForUpdate(this.m_TimeSettingGroup);
             this.RequireForUpdate(this.m_TimeDataQuery);
 
-            if(Mod.m_Setting.enable_slower_time)
+            if(Mod.m_Setting.slow_time_factor != 1f)
             {
                 timeReductionFactor = Mod.m_Setting.slow_time_factor;
                 kTicksPerDay = (int)Math.Floor(timeReductionFactor * TimeSystem.kTicksPerDay);
@@ -194,7 +194,7 @@ namespace Time2Work
             this.m_Year = this.GetYear(singleton1, singleton2);
             this.m_DaysPerYear = singleton1.m_DaysPerYear;
 
-            if (Mod.m_Setting.enable_slower_time)
+            if (Mod.m_Setting.slow_time_factor != 1f)
             {
                 timeReductionFactor = Mod.m_Setting.slow_time_factor;
                 kTicksPerDay = (int)Math.Floor(timeReductionFactor * TimeSystem.kTicksPerDay);

@@ -27,12 +27,8 @@ namespace Time2Work.Systems
             dayOfYear = currentDateTime.DayOfYear;
             year = currentDateTime.Year;
 
-            int dow = ((dayOfYear + 12 * (year - 2023)) % 7);
+            int dow = ((dayOfYear + 12 * (year - 1953)) % 7);
 
-            if (dow < 0)
-            {
-                dow += 7;
-            }
             dayOfWeekTemp = (DayOfWeek)dow;
 
             if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.AverageDay))
@@ -141,12 +137,8 @@ namespace Time2Work.Systems
 
             if ((hour == 0 && minute < 4 && !updated) || dayOfWeekTemp < 0)
             {
-                int dow = ((dayOfYear + 12 * (year - 2023)) % 7);
+                int dow = ((dayOfYear + 12 * (year - 1953)) % 7);
 
-                if (dow < 0)
-                {
-                    dow += 7;
-                }
                 dayOfWeekTemp = (DayOfWeek)dow;
                 if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.AverageDay))
                 {
@@ -169,12 +161,7 @@ namespace Time2Work.Systems
             {
                 if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.sevendayweek))
                 {
-                    int dow = ((dayOfYear + 12 * (year - 2023)) % 7);
-                    
-                    if(dow < 0)
-                    {
-                        dow += 7;
-                    }
+                    int dow = ((dayOfYear + 12 * (year - 1953)) % 7);                 
 
                     dayOfWeek = (DayOfWeek)dow;
 
