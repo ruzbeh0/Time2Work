@@ -14,7 +14,7 @@
 		<!--The file should contain 2 lines:-->
 		<!--Your.PDX@Account.login-->
 		<!--Your-PDX-Account-Pa$$word-->
-		<PDXAccountDataPath>C:\Users\ruzbe\OneDrive\Desktop\pdx_account.txt</PDXAccountDataPath>
+		<PDXAccountDataPath>C:\Users\12249\Documents\pdx_account.txt</PDXAccountDataPath>
 		
 		<!--The file where mod information which is required for publishing mod on PDX mods are stored-->
 		<PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>
@@ -26,16 +26,13 @@
 
 	<ItemGroup>
 		<Reference Include="Colossal.Collections">
-		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Collections.dll</HintPath>
-			<Private>true</Private>
+			<Private>false</Private>
 		</Reference>
 		<Reference Include="Colossal.Mathematics">
-		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Mathematics.dll</HintPath>
-			<Private>true</Private>
+			<Private>false</Private>
 		</Reference>
 		<Reference Include="Colossal.PSI.Common">
-		  <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.PSI.Common.dll</HintPath>
-			<Private>true</Private>
+			<Private>false</Private>
 		</Reference>
 		<Reference Include="Game">
 			<Private>false</Private>
@@ -93,11 +90,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Lib.Harmony" Version="2.2.2" />
+	  <Folder Include="Time2WorkUI\src\utils\" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Time2WorkUI\src\utils\" />
+	  <PackageReference Include="Lib.Harmony" Version="2.2.2" />
 	</ItemGroup>
 
 	<Target Name="BuildUI" AfterTargets="AfterBuild">

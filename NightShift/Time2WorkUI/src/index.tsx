@@ -107,6 +107,12 @@ function TimeControlsPortal(props: { children: ReactElement }): ReactElement {
         dateLabelEl.vanilla.style.display = isDayDisplayed ? 'none' : 'block';
         dateLabelEl.modded.style.display = isDayDisplayed ? 'block' : 'none';
 
+        if (dateLabelEl.timeControls.style.width = 'undefined') {
+            dateLabelEl.timeControls.style.width = `calc(3.5em + 300px)`;
+        } else {
+            dateLabelEl.timeControls.style.width = '';
+        }
+        //dateLabelEl.timeControls.style.width = `calc(3.5em + 300px)`;
         //if (isDayDisplayed && !dateLabelEl.timeControls.style.width) {
         //    dateLabelEl.timeControls.style.width = `calc(3.5em + ${dateLabelEl.timeControls.offsetWidth}px)`;
         //} else {

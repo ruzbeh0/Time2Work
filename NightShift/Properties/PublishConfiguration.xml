@@ -113,16 +113,20 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="1.0.2" />
+	<ModVersion Value="1.0.3" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.1.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="75426" />
 	<ChangeLog>
-* Fixed bug that was causing slow time factor not to appear
+* Adjusted csproj file to avoid copying game dlls
+* Increased slow time factor from 5 to 10
+* Increased service expense night reduction to 50
+* Fixed temperature bug when days per months is more than 1
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />
 	<ExternalLink Type="discord" Url="https://discord.com/channels/1024242828114673724/1224077120641302558" />
 	<ExternalLink Type="paypal" Url="https://www.paypal.com/paypalme/ruzbeh0" />	
+	<ExternalLink Type="ko-fi" Url="https://ko-fi.com/ruzbeh0" />
 </Publish>

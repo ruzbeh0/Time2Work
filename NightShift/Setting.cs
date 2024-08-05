@@ -244,11 +244,11 @@ namespace Time2Work
         [SettingsUISection(OtherSection, ExternalGroup)]
         public bool commuter_trips { get; set; }
 
-        [SettingsUISlider(min = 1, max = 25, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISlider(min = 1, max = 50, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
         [SettingsUISection(OtherSection, ExpensesGroup)]
         public int service_expenses_night_reduction { get; set; }
 
-        [SettingsUISlider(min = 1f, max = 5, step = 0.1f, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
+        [SettingsUISlider(min = 1f, max = 10, step = 0.1f, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
         [SettingsUISection(OtherSection, SlowerTimeGroup)]
         public float slow_time_factor { get; set; }
 
