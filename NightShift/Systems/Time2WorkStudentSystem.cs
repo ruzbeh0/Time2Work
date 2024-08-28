@@ -230,12 +230,12 @@ namespace Time2Work
                     Entity entity1 = nativeArray1[index];
                     Citizen citizen = nativeArray2[index];
 
-                    //Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + Time2WorkTimeSystem.GetDay(this.m_Frame, this.m_TimeData, ticksPerDay)));
-                    //int simulate_prob = rand.NextInt(100);
-                    //if (simulate_prob > (100 - Mod.simulation_reduction))
-                    //{
-                    //    continue;
-                    //}
+                    Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + Time2WorkTimeSystem.GetDay(this.m_Frame, this.m_TimeData, ticksPerDay)));
+                    int simulate_prob = rand.NextInt(100);
+                    if (simulate_prob > (100 - Mod.simulation_reduction))
+                    {
+                        continue;
+                    }
 
                     if (Time2WorkStudentSystem.IsTimeToStudy(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_Frame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay))
                     {

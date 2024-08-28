@@ -514,14 +514,14 @@ namespace Time2Work
                                     {
                                         home = this.m_Properties[household].m_Property;
                                     }
-                                    //if (nativeArray4[index].m_CurrentBuilding == home)
-                                    //{
-                                    //    int simulate_prob = random.NextInt(100);
-                                    //    if (simulate_prob > (100 - Mod.simulation_reduction))
-                                    //    {
-                                    //        continue;
-                                    //    }
-                                    //}
+                                    if (nativeArray4[index].m_CurrentBuilding == home)
+                                    {
+                                        int simulate_prob = random.NextInt(100);
+                                        if (simulate_prob > (100 - Mod.simulation_reduction))
+                                        {
+                                            continue;
+                                        }
+                                    }
                                     if (threshold_start_work <= 0.03 ||
                                         threshold_resume_work <= 0.03)
                                     {

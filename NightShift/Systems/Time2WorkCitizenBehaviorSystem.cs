@@ -1003,19 +1003,19 @@ namespace Time2Work
                                         }
                                         else
                                         {
-                                            //if (currentBuilding == entity3)
-                                            //{
-                                            //    Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, this.m_TimeData, ticksPerDay)));
-                                            //    int simulate_prob = rand.NextInt(100);
-                                            //    if(simulate_prob > (100-Mod.simulation_reduction))
-                                            //    {
-                                            //        if (chunk.Has<Leisure>(ref this.m_LeisureType))
-                                            //        {
-                                            //            this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
-                                            //        }
-                                            //        continue;
-                                            //    }
-                                            //}
+                                            if (currentBuilding == entity3)
+                                            {
+                                                Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, this.m_TimeData, ticksPerDay)));
+                                                int simulate_prob = rand.NextInt(100);
+                                                if(simulate_prob > (100-Mod.simulation_reduction))
+                                                {
+                                                    if (chunk.Has<Leisure>(ref this.m_LeisureType))
+                                                    {
+                                                        this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
+                                                    }
+                                                    continue;
+                                                }
+                                            }
                                             if (!this.m_AttendingMeetings.HasComponent(entity1) || !this.AttendMeeting(unfilteredChunkIndex, entity1, ref citizen, household, currentBuilding, trips, ref random))
                                             {
                                                 if (this.m_Workers.HasComponent(entity1) && !Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob,ticksPerDay) 

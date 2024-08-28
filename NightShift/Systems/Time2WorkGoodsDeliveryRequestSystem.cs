@@ -1,9 +1,4 @@
-﻿// Decompiled with JetBrains decompiler
-// Type: Game.Simulation.Time4DeliveryGoodsDeliveryRequestSystem
-// Assembly: Game, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-// MVID: 3C8C3C1D-D7EB-4536-8BE0-6F4028D2725F
-// Assembly location: C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Game.dll
-
+﻿
 using Game;
 using Game.Citizens;
 using Game.City;
