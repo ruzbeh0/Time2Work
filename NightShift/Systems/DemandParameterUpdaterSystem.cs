@@ -59,7 +59,8 @@ namespace Time2Work.Systems
                 if (((int)this.m_daytype) == (int)Setting.DTSimulationEnum.AverageDay)
                 {
                     data.m_CommuterWorkerRatioLimit = 8;
-                } else if (((int)this.m_daytype) == (int)Setting.DTSimulationEnum.Weekend)
+                } else if (((int)this.m_daytype) == (int)Setting.DTSimulationEnum.Saturday ||
+                    ((int)this.m_daytype) == (int)Setting.DTSimulationEnum.Sunday)
                 {
                     data.m_CommuterWorkerRatioLimit = 9;
                 } else

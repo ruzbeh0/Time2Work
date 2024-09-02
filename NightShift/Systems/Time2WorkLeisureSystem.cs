@@ -162,6 +162,11 @@ namespace Time2Work
                 m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                 m_SimulationFrame = this.m_SimulationSystem.frameIndex,
                 m_TimeOfDay = this.m_TimeSystem.normalizedTime,
+                CommercialPropertyLookup = this.__TypeHandle.CommercialPropertyLookup,
+                IndustrialPropertyLookup = this.__TypeHandle.IndustrialPropertyLookup,
+                OfficePropertyLookup = this.__TypeHandle.OfficePropertyLookup,
+                PropertyRenterLookup = this.__TypeHandle.PropertyRenterLookup,
+                PrefabRefLookup = this.__TypeHandle.PrefabRefLookup,
                 m_UpdateFrameIndex = frameWithInterval,
                 m_Weather = num,
                 m_Temperature = ((float)this.m_ClimateSystem.temperature),
@@ -175,7 +180,10 @@ namespace Time2Work
                 m_TimeData = this.m_TimeDataQuery.GetSingleton<TimeData>(),
                 m_PopulationEntity = this.m_PopulationQuery.GetSingletonEntity(),
                 lunch_break_pct = Mod.m_Setting.lunch_break_percentage,
-                offdayprob  = WeekSystem.getOffDayProb(),
+                office_offdayprob = WeekSystem.getOfficeOffDayProb(),
+                commercial_offdayprob = WeekSystem.getCommercialOffDayProb(),
+                industry_offdayprob = WeekSystem.getIndustryOffDayProb(),
+                cityservices_offdayprob = WeekSystem.getCityServicesOffDayProb(),
                 school_start_time = (int)Mod.m_Setting.school_start_time,
                 school_end_time = (int)Mod.m_Setting.school_end_time,
                 work_start_time = (float)Mod.m_Setting.work_start_time,
@@ -184,7 +192,8 @@ namespace Time2Work
                 school_offdayprob = WeekSystem.getSchoolOffDayProb(),
                 ticksPerDay = Time2WorkTimeSystem.kTicksPerDay,
                 part_time_prob = Mod.m_Setting.part_time_percentage,
-                commute_top10 = Mod.m_ModData.commute_top10per
+                commute_top10 = Mod.m_ModData.commute_top10per,
+                dow = this.m_daytype
             }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobHandle.CombineDependencies(this.Dependency, JobHandle.CombineDependencies(outJobHandle, deps)));
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle);
             this.m_PathFindSetupSystem.AddQueueWriter(jobHandle);
@@ -377,6 +386,16 @@ namespace Time2Work
             public ComponentTypeSet m_PathfindTypes;
             [ReadOnly]
             public NativeList<ArchetypeChunk> m_HumanChunks;
+            [ReadOnly]
+            public ComponentLookup<CommercialProperty> CommercialPropertyLookup;
+            [ReadOnly]
+            public ComponentLookup<IndustrialProperty> IndustrialPropertyLookup;
+            [ReadOnly]
+            public ComponentLookup<OfficeProperty> OfficePropertyLookup;
+            [ReadOnly]
+            public ComponentLookup<PropertyRenter> PropertyRenterLookup;
+            [ReadOnly]
+            public ComponentLookup<PrefabRef> PrefabRefLookup;
             public EconomyParameterData m_EconomyParameters;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
             public NativeQueue<SetupQueueItem>.ParallelWriter m_PathfindQueue;
@@ -390,16 +409,20 @@ namespace Time2Work
             public Entity m_PopulationEntity;
             public TimeData m_TimeData;
             public int lunch_break_pct;
-            public float offdayprob;
+            public float4 office_offdayprob;
+            public float4 commercial_offdayprob;
+            public float4 industry_offdayprob;
+            public float4 cityservices_offdayprob;
             public int school_start_time;
             public int school_end_time;
             public float work_start_time;
             public float work_end_time;
             public float delayFactor;
-            public float school_offdayprob;
+            public float3 school_offdayprob;
             public int ticksPerDay;
             public int part_time_prob;
             public float commute_top10;
+            public Setting.DTSimulationEnum dow;
 
             private void SpendLeisure(
               int index,
@@ -531,8 +554,107 @@ namespace Time2Work
                                 Entity destination = pathInfo.m_Destination;
                                 if ((this.m_PropertyRenters.HasComponent(destination) || this.m_PrefabRefs.HasComponent(destination)) && !this.m_Targets.HasComponent(entity1))
                                 {
-                                    if ((!this.m_Workers.HasComponent(entity1) || Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) || !Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10) ||
-                                        (!Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) && Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10) && Time2WorkWorkerSystem.IsLunchTime(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))) && (!this.m_Students.HasComponent(entity1) || Time2WorkStudentSystem.IsTimeToStudy(citizenData, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay)))
+                                    float offdayprob = 60f;
+                                    int parttime_prob = part_time_prob;
+                                    if (m_Workers.TryGetComponent(entity1, out var worker))
+                                    {
+                                        if (PrefabRefLookup.TryGetComponent(worker.m_Workplace, out var prefab1))
+                                        {
+                                            if (PropertyRenterLookup.TryGetComponent(worker.m_Workplace, out var propertyRenter))
+                                            {
+                                                //x = weekday, y = friday, z = saturday, w = sunday
+                                                if (CommercialPropertyLookup.HasComponent(propertyRenter.m_Property))
+                                                {
+                                                    //Mod.log.Info($"Commercial Property");
+                                                    if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                                    {
+                                                        offdayprob = commercial_offdayprob.x;
+                                                    }
+                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                                    {
+                                                        offdayprob = commercial_offdayprob.y;
+                                                    }
+                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                                    {
+                                                        offdayprob = commercial_offdayprob.z;
+                                                        parttime_prob = 100;
+                                                    }
+                                                    else
+                                                    {
+                                                        offdayprob = commercial_offdayprob.w;
+                                                        parttime_prob = 100;
+                                                    }
+                                                }
+                                                if (IndustrialPropertyLookup.HasComponent(propertyRenter.m_Property))
+                                                {
+                                                    if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                                    {
+                                                        offdayprob = industry_offdayprob.x;
+                                                    }
+                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                                    {
+                                                        offdayprob = industry_offdayprob.y;
+                                                    }
+                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                                    {
+                                                        offdayprob = industry_offdayprob.z;
+                                                        parttime_prob = 100;
+                                                    }
+                                                    else
+                                                    {
+                                                        offdayprob = industry_offdayprob.w;
+                                                        parttime_prob = 100;
+                                                    }
+                                                }
+                                                if (OfficePropertyLookup.HasComponent(propertyRenter.m_Property))
+                                                {
+                                                    if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                                    {
+                                                        offdayprob = office_offdayprob.x;
+                                                    }
+                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                                    {
+                                                        offdayprob = office_offdayprob.y;
+                                                    }
+                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                                    {
+                                                        offdayprob = office_offdayprob.z;
+                                                        parttime_prob = 100;
+                                                    }
+                                                    else
+                                                    {
+                                                        offdayprob = office_offdayprob.w;
+                                                        parttime_prob = 100;
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                                    {
+                                                        offdayprob = cityservices_offdayprob.x;
+                                                    }
+                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                                    {
+                                                        offdayprob = cityservices_offdayprob.y;
+                                                    }
+                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                                    {
+                                                        offdayprob = cityservices_offdayprob.z;
+                                                        parttime_prob = 100;
+                                                    }
+                                                    else
+                                                    {
+                                                        offdayprob = cityservices_offdayprob.w;
+                                                        parttime_prob = 100;
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                    }
+
+                                    if ((!this.m_Workers.HasComponent(entity1) || Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) || !Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10) ||
+                                        (!Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) && Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10) && Time2WorkWorkerSystem.IsLunchTime(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))) && (!this.m_Students.HasComponent(entity1) || Time2WorkStudentSystem.IsTimeToStudy(citizenData, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay)))
                                     {
                                         if (this.m_LeisureProviderDatas[this.m_PrefabRefs[destination].m_Prefab].m_Efficiency == 0)
                                             UnityEngine.Debug.LogWarning((object)string.Format("Warning: Leisure provider {0} has zero efficiency", (object)destination.Index));
@@ -924,6 +1046,16 @@ namespace Time2Work
             public ComponentLookup<ResourceData> __Game_Prefabs_ResourceData_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<ServiceCompanyData> __Game_Companies_ServiceCompanyData_RO_ComponentLookup;
+            [ReadOnly]
+            public ComponentLookup<CommercialProperty> CommercialPropertyLookup;
+            [ReadOnly]
+            public ComponentLookup<IndustrialProperty> IndustrialPropertyLookup;
+            [ReadOnly]
+            public ComponentLookup<OfficeProperty> OfficePropertyLookup;
+            [ReadOnly]
+            public ComponentLookup<PropertyRenter> PropertyRenterLookup;
+            [ReadOnly]
+            public ComponentLookup<PrefabRef> PrefabRefLookup;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void __AssignHandles(ref SystemState state)
@@ -968,6 +1100,11 @@ namespace Time2Work
                 this.__Game_Prefabs_ConsumptionData_RO_ComponentLookup = state.GetComponentLookup<ConsumptionData>(true);
                 this.__Game_Prefabs_ResourceData_RO_ComponentLookup = state.GetComponentLookup<ResourceData>(true);
                 this.__Game_Companies_ServiceCompanyData_RO_ComponentLookup = state.GetComponentLookup<ServiceCompanyData>(true);
+                this.CommercialPropertyLookup = state.GetComponentLookup<CommercialProperty>(true);
+                this.IndustrialPropertyLookup = state.GetComponentLookup<IndustrialProperty>(true);
+                this.OfficePropertyLookup = state.GetComponentLookup<OfficeProperty>(true);
+                this.PropertyRenterLookup = state.GetComponentLookup<PropertyRenter>(true);
+                this.PrefabRefLookup = state.GetComponentLookup<PrefabRef>(true);
             }
         }
     }

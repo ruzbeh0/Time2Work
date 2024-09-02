@@ -204,6 +204,8 @@ namespace Time2Work
                 kTicksPerDay = TimeSystem.kTicksPerDay;
                 timeReductionFactor = 1f;
             }
+
+            //Mod.log.Info($"Update Time: time:{this.m_Time}, date:{this.m_Date}, year:{this.m_Year}");
         }
 
         [Preserve]

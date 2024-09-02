@@ -61,7 +61,10 @@ namespace Time2Work.Systems
             if(((int)dayType) == (int)Setting.DTSimulationEnum.Weekday)
             {
                 prob *= weekdayTourismFactor;
-            } else if (((int)dayType) == (int)Setting.DTSimulationEnum.Weekday)
+            } else if (((int)dayType) == (int)Setting.DTSimulationEnum.AverageDay)
+            {
+                prob *= (weekendTourismFactor+ weekdayTourismFactor)/2;
+            } else
             {
                 prob *= weekendTourismFactor;
             }

@@ -14,14 +14,15 @@ namespace Time2Work
 {
     //[FileLocation(nameof(Time2Work))]
     [FileLocation($"ModsSettings\\{nameof(Time2Work)}\\{nameof(Time2Work)}")]
-    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, ExternalGroup, ExpensesGroup, TrucksGroup, DTSimulationGroup, SlowerTimeGroup)]
-    [SettingsUIShowGroupName(WorkPlaceShiftGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, TrucksGroup, ExternalGroup, ExpensesGroup)]
+    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup)]
+    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, ExternalGroup, ExpensesGroup)]
     public class Setting : ModSetting
     {
         public const string SettingsSection = "Settings";
         public const string WorkSection = "Work";
         public const string ShopLeisureSection = "Shopping and Leisure";
         public const string SchoolSection = "School";
+        public const string Weeksection = "Week";
         public const string OtherSection = "Other";
         public const string ResetGroup = "Reset";
         public const string ShopLeisureGroup = "ShopLeisureGroup";
@@ -31,14 +32,23 @@ namespace Time2Work
         public const string DelayGroup = "DelayGroup";
         public const string RemoteGroup = "RemoteGroup";
         public const string DayShiftGroup = "DayShiftGroup";
+        public const string NonDayShiftByWorkTypeGroup = "NonDayShiftByWorkTypeGroup";
         public const string TimeOffGroup = "TimeOffGroup";
         public const string SchoolTimeOffGroup = "SchoolTimeOffGroup";
         public const string SchoolTimeGroup = "SchoolTimeGroup";
+        public const string School1WeekGroup = "School1WeekGroup";
+        public const string School2WeekGroup = "School2WeekGroup";
+        public const string School34WeekGroup = "School34WeekGroup";
         public const string TrucksGroup = "TrucksGroup";
         public const string DTSimulationGroup = "DTSimulationGroup";
         public const string SlowerTimeGroup = "SlowerTimeGroup";
         public const string ExternalGroup = "ExternalGroup";
         public const string ExpensesGroup = "ExpensesGroup";
+        public const string WeekGroup = "WeekGroup";
+        public const string OfficeGroup = "OfficeGroup";
+        public const string CommercialGroup = "CommercialGroup";
+        public const string IndustryGroup = "IndustryGroup";
+        public const string CityServicesGroup = "CityServicesGroup";
 
         public Setting(IMod mod) : base(mod)
         {
@@ -46,13 +56,13 @@ namespace Time2Work
         }
         public override void SetDefaults()
         {
-            evening_share = 6;
-            night_share = 4;
+            evening_share = 10;
+            night_share = 8;
             delay_factor = 2;
             lunch_break_percentage = 20;
             holidays_per_year = 11;
             vacation_per_year = 22;
-            school_vacation_per_year = 55;
+            //school_vacation_per_year = 55;
             disable_early_shop_leisure = true;
             use_vanilla_timeoff = true;
             use_school_vanilla_timeoff = true;
@@ -63,12 +73,44 @@ namespace Time2Work
             dt_simulation = DTSimulationEnum.AverageDay;
             slow_time_factor = 1f;
             part_time_percentage = 22;
-            remote_percentage = 14;
+            remote_percentage = 20;
             night_trucks = true;
             peak_spread = true;
             tourism_trips = true;
             commuter_trips = true;
             service_expenses_night_reduction = 30;
+            office_weekday_pct = 90;
+            office_avgday_pct = 88;
+            office_sat_pct = 12;
+            office_sun_pct = 6;
+            commercial_weekday_pct = 64;
+            commercial_avgday_pct = 68;
+            commercial_sat_pct = 37;
+            commercial_sun_pct = 26;
+            industry_weekday_pct = 90;
+            industry_avgday_pct = 86;
+            industry_sat_pct = 24;
+            industry_sun_pct = 11;
+            cityServices_weekday_pct = 80;
+            cityServices_avgday_pct = 78;
+            cityServices_sat_pct = 17;
+            cityServices_sun_pct = 12;
+            nonday_office_share = 7;
+            nonday_commercial_share = 31;
+            nonday_industry_share = 14;
+            nonday_cityservices_share = 18;
+            school_lv1_weekday_pct = 93;
+            school_lv1_avgday_pct = 92;
+            school_lv1_saturday_pct = 0;
+            school_lv1_sunday_pct = 0;
+            school_lv2_weekday_pct = 90;
+            school_lv2_avgday_pct = 88;
+            school_lv2_saturday_pct = 0;
+            school_lv2_sunday_pct = 0;
+            school_lv34_weekday_pct = 80;
+            school_lv34_avgday_pct = 70;
+            school_lv34_saturday_pct = 5;
+            school_lv34_sunday_pct = 0;
         }
 
         private void setPerformance()
@@ -79,7 +121,7 @@ namespace Time2Work
             lunch_break_percentage = 10;
             holidays_per_year = 11;
             vacation_per_year = 22;
-            school_vacation_per_year = 55;
+            //school_vacation_per_year = 55;
             disable_early_shop_leisure = false;
             use_vanilla_timeoff = true;
             use_school_vanilla_timeoff = true;
@@ -95,17 +137,49 @@ namespace Time2Work
             tourism_trips = false;
             commuter_trips = false;
             service_expenses_night_reduction = 0;
+            office_weekday_pct = 90;
+            office_avgday_pct = 88;
+            office_sat_pct = 12;
+            office_sun_pct = 6;
+            commercial_weekday_pct = 64;
+            commercial_avgday_pct = 68;
+            commercial_sat_pct = 37;
+            commercial_sun_pct = 26;
+            industry_weekday_pct = 90;
+            industry_avgday_pct = 86;
+            industry_sat_pct = 24;
+            industry_sun_pct = 11;
+            cityServices_weekday_pct = 80;
+            cityServices_avgday_pct = 78;
+            cityServices_sat_pct = 17;
+            cityServices_sun_pct = 12;
+            nonday_office_share = 7;
+            nonday_commercial_share = 31;
+            nonday_industry_share = 14;
+            nonday_cityservices_share = 18;
+            school_lv1_weekday_pct = 93;
+            school_lv1_avgday_pct = 92;
+            school_lv1_saturday_pct = 0;
+            school_lv1_sunday_pct = 0;
+            school_lv2_weekday_pct = 90;
+            school_lv2_avgday_pct = 88;
+            school_lv2_saturday_pct = 0;
+            school_lv2_sunday_pct = 0;
+            school_lv34_weekday_pct = 80;
+            school_lv34_avgday_pct = 70;
+            school_lv34_saturday_pct = 5;
+            school_lv34_sunday_pct = 0;
         }
 
         private void setRealistic()
         {
-            evening_share = 6;
+            evening_share = 8;
             night_share = 4;
             delay_factor = 2;
             lunch_break_percentage = 30;
             holidays_per_year = 11;
             vacation_per_year = 22;
-            school_vacation_per_year = 55;
+            //school_vacation_per_year = 55;
             disable_early_shop_leisure = true;
             use_vanilla_timeoff = false;
             use_school_vanilla_timeoff = false;
@@ -115,12 +189,45 @@ namespace Time2Work
             work_end_time = timeEnum.t1700;
             dt_simulation = DTSimulationEnum.sevendayweek;
             slow_time_factor = 3.5f;
-            part_time_percentage = 22;
+            part_time_percentage = 17;
             remote_percentage = 14;
             night_trucks = true;
             tourism_trips = true;
             commuter_trips = true;
             service_expenses_night_reduction = 30;
+            office_weekday_pct = 90;
+            office_avgday_pct = 88;
+            office_sat_pct = 12;
+            office_sun_pct = 6;
+            commercial_weekday_pct = 64;
+            commercial_avgday_pct = 68;
+            commercial_sat_pct = 37;
+            commercial_sun_pct = 26;
+            industry_weekday_pct = 90;
+            industry_avgday_pct = 86;
+            industry_sat_pct = 24;
+            industry_sun_pct = 11;
+            cityServices_weekday_pct = 80;
+            cityServices_avgday_pct = 78;
+            cityServices_sat_pct = 17;
+            cityServices_sun_pct = 12;
+            nonday_office_share = 7;
+            nonday_commercial_share = 31;
+            nonday_industry_share = 14;
+            nonday_cityservices_share = 18;
+            school_lv1_weekday_pct = 93;
+            school_lv1_avgday_pct = 92;
+            school_lv1_saturday_pct = 0;
+            school_lv1_sunday_pct = 0;
+            school_lv2_weekday_pct = 90;
+            school_lv2_avgday_pct = 88;
+            school_lv2_saturday_pct = 0;
+            school_lv2_sunday_pct = 0;
+            school_lv34_weekday_pct = 80;
+            school_lv34_avgday_pct = 70;
+            school_lv34_saturday_pct = 5;
+            school_lv34_sunday_pct = 0;
+
         }
 
         public override void Apply()
@@ -168,6 +275,22 @@ namespace Time2Work
         [SettingsUISection(WorkSection, WorkPlaceShiftGroup)]
         public int evening_share { get; set; }
 
+        [SettingsUISlider(min = 1, max = 50, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(WorkSection, NonDayShiftByWorkTypeGroup)]
+        public int nonday_office_share { get; set; }
+
+        [SettingsUISlider(min = 1, max = 50, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(WorkSection, NonDayShiftByWorkTypeGroup)]
+        public int nonday_commercial_share { get; set; }
+
+        [SettingsUISlider(min = 1, max = 50, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(WorkSection, NonDayShiftByWorkTypeGroup)]
+        public int nonday_industry_share { get; set; }
+
+        [SettingsUISlider(min = 1, max = 50, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(WorkSection, NonDayShiftByWorkTypeGroup)]
+        public int nonday_cityservices_share { get; set; }
+
         [SettingsUISlider(min = 1, max = 25, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
         [SettingsUISection(WorkSection, WorkPlaceShiftGroup)]
         public int night_share { get; set; }
@@ -207,16 +330,68 @@ namespace Time2Work
         [SettingsUISection(SchoolSection, SchoolTimeOffGroup)]
         public bool use_school_vanilla_timeoff { get; set; }
 
-        [SettingsUISlider(min = 0, max = 120, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
         [SettingsUISection(SchoolSection, SchoolTimeOffGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(use_school_vanilla_timeoff))]
-        public float school_vacation_per_year { get; set; }
+        //public float school_vacation_per_year { get; set; }
+        public months school_vacation_month1 { get; set; } = months.July;
+
+        [SettingsUISection(SchoolSection, SchoolTimeOffGroup)]
+        [SettingsUIHideByCondition(typeof(Setting), nameof(use_school_vanilla_timeoff))]
+        public months school_vacation_month2 { get; set; } = months.January;
 
         [SettingsUISection(SchoolSection, SchoolTimeGroup)]
         public timeEnum school_start_time { get; set; } = timeEnum.t900;
 
         [SettingsUISection(SchoolSection, SchoolTimeGroup)]
         public timeEnum school_end_time { get; set; } = timeEnum.t1700;
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(SchoolSection, School1WeekGroup)]
+        public int school_lv1_weekday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(SchoolSection, School1WeekGroup)]
+        public int school_lv1_avgday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(SchoolSection, School1WeekGroup)]
+        public int school_lv1_saturday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(SchoolSection, School1WeekGroup)]
+        public int school_lv1_sunday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(SchoolSection, School2WeekGroup)]
+        public int school_lv2_weekday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(SchoolSection, School2WeekGroup)]
+        public int school_lv2_avgday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(SchoolSection, School2WeekGroup)]
+        public int school_lv2_saturday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(SchoolSection, School2WeekGroup)]
+        public int school_lv2_sunday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(SchoolSection, School34WeekGroup)]
+        public int school_lv34_weekday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(SchoolSection, School34WeekGroup)]
+        public int school_lv34_avgday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(SchoolSection, School34WeekGroup)]
+        public int school_lv34_saturday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(SchoolSection, School34WeekGroup)]
+        public int school_lv34_sunday_pct { get; set; }
 
         [SettingsUISection(WorkSection, DayShiftGroup)]
         public timeEnum work_start_time { get; set; } = timeEnum.t900;
@@ -228,15 +403,91 @@ namespace Time2Work
         [SettingsUISection(WorkSection, DayShiftGroup)]
         public int part_time_percentage { get; set; }
 
-        [SettingsUISection(OtherSection, TrucksGroup)]
-        public bool night_trucks { get; set; }
-
-        [SettingsUISection(OtherSection, SlowerTimeGroup)]
-        public DTSimulationEnum dt_simulation { get; set; } = DTSimulationEnum.AverageDay;
-
-        [SettingsUISection(OtherSection, SlowerTimeGroup)]
+        [SettingsUISection(Weeksection, SlowerTimeGroup)]
         [SettingsUIMultilineText]
         public string DTText => string.Empty;
+
+        [SettingsUISection(Weeksection, SlowerTimeGroup)]
+        public DTSimulationEnum dt_simulation { get; set; } = DTSimulationEnum.AverageDay;
+
+        [SettingsUISlider(min = 1f, max = 10, step = 0.1f, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
+        [SettingsUISection(Weeksection, SlowerTimeGroup)]
+        public float slow_time_factor { get; set; }
+
+        [SettingsUISlider(min = 1, max = 30, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(Weeksection, SlowerTimeGroup)]
+        public int daysPerMonth { get; set; } = 1;
+
+        //[SettingsUISection(Weeksection, WeekGroup)]
+        //[SettingsUIMultilineText]
+        //public string WeekText => string.Empty;
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, OfficeGroup)]
+        public int office_weekday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, OfficeGroup)]
+        public int office_avgday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, OfficeGroup)]
+        public int office_sat_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, OfficeGroup)]
+        public int office_sun_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, CommercialGroup)]
+        public int commercial_weekday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, CommercialGroup)]
+        public int commercial_avgday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, CommercialGroup)]
+        public int commercial_sat_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, CommercialGroup)]
+        public int commercial_sun_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, IndustryGroup)]
+        public int industry_weekday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, IndustryGroup)]
+        public int industry_avgday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, IndustryGroup)]
+        public int industry_sat_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, IndustryGroup)]
+        public int industry_sun_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, CityServicesGroup)]
+        public int cityServices_weekday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, CityServicesGroup)]
+        public int cityServices_avgday_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, CityServicesGroup)]
+        public int cityServices_sat_pct { get; set; }
+
+        [SettingsUISlider(min = 1, max = 100, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
+        [SettingsUISection(Weeksection, CityServicesGroup)]
+        public int cityServices_sun_pct { get; set; }
+
+        [SettingsUISection(OtherSection, TrucksGroup)]
+        public bool night_trucks { get; set; }
 
         [SettingsUISection(OtherSection, ExternalGroup)]
         public bool tourism_trips { get; set; }
@@ -248,19 +499,13 @@ namespace Time2Work
         [SettingsUISection(OtherSection, ExpensesGroup)]
         public int service_expenses_night_reduction { get; set; }
 
-        [SettingsUISlider(min = 1f, max = 10, step = 0.1f, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
-        [SettingsUISection(OtherSection, SlowerTimeGroup)]
-        public float slow_time_factor { get; set; }
-
-        [SettingsUISlider(min = 1, max = 30, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
-        [SettingsUISection(OtherSection, SlowerTimeGroup)]
-        public int daysPerMonth { get; set; } = 1;
 
         public enum DTSimulationEnum
         {
             AverageDay,
             Weekday,
-            Weekend,
+            Saturday,
+            Sunday,
             sevendayweek
         }
         public enum SettingsEnum
@@ -342,22 +587,33 @@ namespace Time2Work
                 { m_Setting.GetSettingsLocaleID(), "Realistic Trips" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SettingsSection), "Settings" },
                 { m_Setting.GetOptionTabLocaleID(Setting.WorkSection), "Work" },
-                { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Shopping and Leisure" },
+                { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Leisure" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SchoolSection), "School" },
+                { m_Setting.GetOptionTabLocaleID(Setting.Weeksection), "Week" },
                 { m_Setting.GetOptionTabLocaleID(Setting.OtherSection), "Other" },
 
                 { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceShiftGroup), "Modify the share of evening and night work shifts" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.NonDayShiftByWorkTypeGroup), "Modify the share of non-day shifts by work type" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.RemoteGroup), "Remote Work Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TimeOffGroup), "Vacation and Holiday Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.DayShiftGroup), "Day Shift Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeOffGroup), "School Vacation Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeGroup), "School Start/End Time Settings" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.School1WeekGroup), "Elementary School Attendance by Day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.School2WeekGroup), "High School Attendance by Day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.School34WeekGroup), "College and University Attendance by Day" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SlowerTimeGroup), "Day and Time Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.DTSimulationGroup), "Day Type Simulation" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TrucksGroup), "Trucks" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.ExternalGroup), "External Trips" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.ExpensesGroup), "Service Expenses" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.WeekGroup), "Percentage of Workers per Day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.OfficeGroup), "Office - Percentage of Workers per Day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.CommercialGroup), "Commercial - Percentage of Workers per Day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.IndustryGroup), "Industry - Percentage of Workers per Day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.CityServicesGroup), "City Services - Percentage of Workers per Day" },
 
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.WeekText)), $"Percentage of Workers per Day" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DTText)), $"Changing the parameters below require restarting the game." },
                 //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.MultilineText)), $"WARNING: Slower Time feature can cause issues with Population Rebalance and Info Loom mods - in an existing city. A new city will probably not have problems with those mods." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.settings_choice)), "Mod settings" },
@@ -365,14 +621,80 @@ namespace Time2Work
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Button)), "Confirm" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Button)), $"Confirm new settings" },
 
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv1_weekday_pct)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv1_weekday_pct)), $"Percentage of students that go to School on Monday to Thursday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv1_avgday_pct)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv1_avgday_pct)), $"Percentage of students that go to School on Friday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv1_saturday_pct)), "Saturday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv1_saturday_pct)), $"Percentage of students that go to School on Saturday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv1_sunday_pct)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv1_sunday_pct)), $"Percentage of students that go to School on Sunday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv2_weekday_pct)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv2_weekday_pct)), $"Percentage of students that go to School on Monday to Thursday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv2_avgday_pct)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv2_avgday_pct)), $"Percentage of students that go to School on Friday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv2_saturday_pct)), "Saturday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv2_saturday_pct)), $"Percentage of students that go to School on Saturday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv2_sunday_pct)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv2_sunday_pct)), $"Percentage of students that go to School on Sunday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv34_weekday_pct)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv34_weekday_pct)), $"Percentage of students that go to College or University on Monday to Thursday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv34_avgday_pct)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv34_avgday_pct)), $"Percentage of students that go to College or University on Friday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv34_saturday_pct)), "Saturday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv34_saturday_pct)), $"Percentage of students that go to College or University on Saturday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv34_sunday_pct)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv34_sunday_pct)), $"Percentage of students that go to College or University on Sunday" },
+                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.office_weekday_pct)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.office_weekday_pct)), $"Percentage of workers that work on Monday to Thursday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.office_avgday_pct)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.office_avgday_pct)), $"Percentage of workers that work on Friday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.office_sat_pct)), "Saturday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.office_sat_pct)), $"Percentage of workers that work on Saturday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.office_sun_pct)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.office_sun_pct)), $"Percentage of workers that work on Sunday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.industry_weekday_pct)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.industry_weekday_pct)), $"Percentage of workers that work on Monday to Thursday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.industry_avgday_pct)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.industry_avgday_pct)), $"Percentage of workers that work on Friday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.industry_sat_pct)), "Saturday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.industry_sat_pct)), $"Percentage of workers that work on Saturday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.industry_sun_pct)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.industry_sun_pct)), $"Percentage of workers that work on Sunday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.commercial_weekday_pct)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.commercial_weekday_pct)), $"Percentage of workers that work on Monday to Thursday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.commercial_avgday_pct)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.commercial_avgday_pct)), $"Percentage of workers that work on Friday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.commercial_sat_pct)), "Saturday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.commercial_sat_pct)), $"Percentage of workers that work on Saturday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.commercial_sun_pct)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.commercial_sun_pct)), $"Percentage of workers that work on Sunday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.cityServices_weekday_pct)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.cityServices_weekday_pct)), $"Percentage of workers that work on Monday to Thursday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.cityServices_avgday_pct)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.cityServices_avgday_pct)), $"Percentage of workers that work on Friday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.cityServices_sat_pct)), "Saturday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.cityServices_sat_pct)), $"Percentage of workers that work on Saturday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.cityServices_sun_pct)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.cityServices_sun_pct)), $"Percentage of workers that work on Sunday" },
+
+
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.evening_share)), "Evening" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.evening_share)), $"Percentage for evening workplaces" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.night_share)), "Night" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.night_share)), $"Percentage for night workplaces" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.nonday_office_share)), "Office" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.nonday_office_share)), $"Percentage for evening and night workplaces" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.nonday_commercial_share)), "Commercial" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.nonday_commercial_share)), $"Percentage for evening and night workplaces" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.nonday_industry_share)), "Industry" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.nonday_industry_share)), $"Percentage for evening and night workplaces" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.nonday_cityservices_share)), "City Services" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.nonday_cityservices_share)), $"Percentage for evening and night workplaces" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.part_time_percentage)), "Part Time Percentage" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.part_time_percentage)), $"Percentage of day shift workers that work part time. These workers will work either in the morning or in the afternoon. They do not take lunch break, and a higher value will increase trips in the middle of the day and reduce the rush hour peaks." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.remote_percentage)), "Percentage of Remote Workers" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.remote_percentage)), $"Percentage of workers that work from home. These workers can still go out for a lunch break." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.remote_percentage)), $"Percentage of workers that work from home. These workers can still go out for a lunch break. Remote work only apply to offices and city services." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.delay_factor)), "Delay/Early Factor" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.delay_factor)), $"This factor will adjust the variation in arrival and departure times from work. A higher factor will increase the variation on work arrival and departure - meaning more cims will not arrive to work on time or work for longer hours. A value of zero will disable this feature. Note that the effects of this feature in the morning and evening peak hours is different: in the morning there is an equal probabilty of early or late arrival, however, in the evening the probability of leaving late is higher than of leaving early. This was implemented this way to simulate better the differences of morning and evening commute from the real world." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.peak_spread)), "Peak Spreading" },
@@ -389,8 +711,12 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.holidays_per_year)), $"Most countries should have a value between 10 and 15. The default value is reasonable for most countries." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.vacation_per_year)), "Number of vacation days per year" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.vacation_per_year)), $"Number of vacation days per year - not including weekends. For countries with a month of vacation, use 22. For the US, a value of 11 is more realistic." },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_vacation_per_year)), "Number of vacation days per year" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_per_year)), $"Number of vacation days per year for schools, colleges and universities. Does not include weekends." },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_vacation_per_year)), "Number of vacation days per year" },
+                //{ m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_per_year)), $"Number of vacation days per year for schools, colleges and universities. Does not include weekends." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_vacation_month1)), "Vacation Month 1:" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_month1)), $"Month in which schools will be closed for vacation." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_vacation_month2)), "Vacation Month 2:" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_month2)), $"Month in which schools will be closed for vacation." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.dt_simulation)), "Select day type simulation behaviour" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.dt_simulation)), $"This option changes how the simulation works during a day. Average Day corresponds to the Vanilla behavior, which is a combination of weekday and weekend behaviors. With the default vacation/holiday settings (defined in the Shopping and Leisure tab), in an Average Day, around 30% of cims will behave as on the weekend, doing more leisure and shopping activities, while the rest will work or study. The Weekday option will increase work and study activities and lower leisure and shopping. Weekend will do the opposite. On Weekends, schools are closed. The 7 Days Week will rotate through weekdays and weekends, going from Monday to Sunday." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.night_trucks)), "More realist truck traffic" },
@@ -417,7 +743,8 @@ namespace Time2Work
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Average Day" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Weekday" },
-                { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekend), "Weekend" },
+                { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Saturday), "Saturday" },
+                { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Sunday), "Sunday" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.sevendayweek), "7 Days Week (Monday to Sunday)" },
 
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Performance), "Performance" },
@@ -495,22 +822,35 @@ namespace Time2Work
                 { m_Setting.GetSettingsLocaleID(), "Time2Work" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SettingsSection), "Configurações" },
                 { m_Setting.GetOptionTabLocaleID(Setting.WorkSection), "Emprego" },
-                { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Compras e Lazer" },
+                { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Lazer" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SchoolSection), "Escola" },
+                { m_Setting.GetOptionTabLocaleID(Setting.Weeksection), "Semana" },
                 { m_Setting.GetOptionTabLocaleID(Setting.OtherSection), "Outros" },
+                
 
                 { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceShiftGroup), "Alterar a porcentagem de turnos vespertinos e noturnos." },
+                { m_Setting.GetOptionGroupLocaleID(Setting.NonDayShiftByWorkTypeGroup), "Alterar a porcentagem de turnos vespertinos e noturnos por tipo de empregos." },
                 { m_Setting.GetOptionGroupLocaleID(Setting.RemoteGroup), "Configurações de Home Office" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TimeOffGroup), "Configurações de férias e feriados" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.DayShiftGroup), "Configurações do turno diurno."},
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeOffGroup), "Configurações de férias escolares" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeGroup), "Configurações de horário de início/término das aulas nas escolas" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.School1WeekGroup), "Frequência escolar elementar por dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.School2WeekGroup), "Frequência do ensino médio por dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.School34WeekGroup), "Frequência da faculade e universidade por dia" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SlowerTimeGroup), "Configurações do Dia e do Tempo" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.DTSimulationGroup), "Tipo de Simulação Diária" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TrucksGroup), "Caminhões" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.ExternalGroup), "Viagens Externas" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.ExpensesGroup), "Gastos com Serviços" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.WeekGroup), "Porcentagem de Trabalhadores por Dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.OfficeGroup), "Escritório - Porcentagem de Trabalhadores por Dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.CommercialGroup), "Comércio - Porcentagem de Trabalhadores por Dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.IndustryGroup), "Indústria - Porcentagem de Trabalhadores por Dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.CityServicesGroup), "Serviços Públicos - Porcentagem de Trabalhadores por Dia" },
 
+
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.WeekText)), $"Porcentagem de Trabalhadores por Dia" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DTText)), $"Alterar os parametros abaixo requer reinício do jogo." },
                 //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.MultilineText)), $"AVISO: O recurso de Tempo mais Lento pode causar problemas com os mods Population Rebalance e Info Loom - em uma cidade existente. Uma nova cidade provavelmente não terá problemas com esses mods." },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.settings_choice)), $"Alterar as configurações do mod" },
@@ -518,12 +858,77 @@ namespace Time2Work
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Button)), "Confirmar" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Button)), $"Confirmar novas configurações" },
 
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv1_weekday_pct)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv1_weekday_pct)), $"Porcentagem de alunos que vão à escola de segunda a quinta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv1_avgday_pct)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv1_avgday_pct)), $"Porcentagem de alunos que vão à escola na sexta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv1_saturday_pct)), "Sábado" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv1_saturday_pct)), $"Porcentagem de alunos que vão à escola no sábado" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv1_sunday_pct)), "Domingo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv1_sunday_pct)), $"Porcentagem de alunos que vão à escola no domingo" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv2_weekday_pct)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv2_weekday_pct)), $"Porcentagem de alunos que vão à escola de segunda a quinta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv2_avgday_pct)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv2_avgday_pct)), $"Porcentagem de alunos que vão à escola na sexta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv2_saturday_pct)), "Sábado" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv2_saturday_pct)), $"Porcentagem de alunos que vão à escola no sábado" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv2_sunday_pct)), "Domingo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv2_sunday_pct)), $"Porcentagem de alunos que vão à escola no domingo" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv34_weekday_pct)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv34_weekday_pct)), $"Porcentagem de alunos que vão à Faculdade ou Universidade de segunda a quinta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv34_avgday_pct)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv34_avgday_pct)), $"Porcentagem de alunos que vão à Faculdade ou Universidade  na sexta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv34_saturday_pct)), "Sábado" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv34_saturday_pct)), $"Porcentagem de alunos que vão à Faculdade ou Universidade  no sábado" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv34_sunday_pct)), "Domingo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv34_sunday_pct)), $"Porcentagem de alunos que vão à Faculdade ou Universidade  no domingo" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.office_weekday_pct)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.office_weekday_pct)), $"Porcentagem dos trabalhadores que trabalham de segunda a quinta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.office_avgday_pct)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.office_avgday_pct)), $"Porcentagem dos trabalhadores que trabalham na sexta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.office_sat_pct)), "Sábado" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.office_sat_pct)), $"Porcentagem dos trabalhadores que trabalham no sábado" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.office_sun_pct)), "Domingo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.office_sun_pct)), $"Porcentagem dos trabalhadores que trabalham no domingo" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.industry_weekday_pct)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.industry_weekday_pct)), $"Porcentagem dos trabalhadores que trabalham de segunda a quinta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.industry_avgday_pct)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.industry_avgday_pct)), $"Porcentagem dos trabalhadores que trabalham na sexta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.industry_sat_pct)), "Sábado" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.industry_sat_pct)), $"Porcentagem dos trabalhadores que trabalham  no sábado" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.industry_sun_pct)), "Domingo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.industry_sun_pct)), $"Porcentagem dos trabalhadores que trabalham no domingo" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.commercial_weekday_pct)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.commercial_weekday_pct)), $"Porcentagem dos trabalhadores que trabalham de segunda a quinta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.commercial_avgday_pct)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.commercial_avgday_pct)), $"Porcentagem dos trabalhadores que trabalham na sexta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.commercial_sat_pct)), "Sábado" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.commercial_sat_pct)), $"Porcentagem dos trabalhadores que trabalham no sábado" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.commercial_sun_pct)), "Domingo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.commercial_sun_pct)), $"Porcentagem dos trabalhadores que trabalham no domingo" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.cityServices_weekday_pct)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.cityServices_weekday_pct)), $"Porcentagem dos trabalhadores que trabalham de segunda a quinta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.cityServices_avgday_pct)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.cityServices_avgday_pct)), $"Porcentagem dos trabalhadores que trabalham na sexta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.cityServices_sat_pct)), "Sábado" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.cityServices_sat_pct)), $"Porcentagem dos trabalhadores que trabalham no sábado" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.cityServices_sun_pct)), "Domingo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.cityServices_sun_pct)), $"Porcentagem dos trabalhadores que trabalham no domingo" },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.nonday_office_share)), "Escritório" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.nonday_office_share)), $"Porcentagem para locais de trabalho vespertinos e noturno." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.nonday_commercial_share)), "Comércio" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.nonday_commercial_share)), $"Porcentagem para locais de trabalho vespertinos e noturno." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.nonday_industry_share)), "Indústria" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.nonday_industry_share)), $"Porcentagem para locais de trabalho vespertinos e noturno." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.nonday_cityservices_share)), "Serviços Públicos" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.nonday_cityservices_share)), $"Porcentagem para locais de trabalho vespertinos e noturno." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.evening_share)), "Tarde" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.evening_share)), $"Porcentagem para locais de trabalho vespertinos" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.night_share)), "Noite" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.night_share)), $"Porcentagem para locais de trabalho noturnos" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.remote_percentage)), "Porcentagem de trabalhadores que fazem Home Office" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.remote_percentage)), $"Porcentagem de trabalhadores que trabalham em casa. Estes funcionários também tem intervalo para almoço." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.remote_percentage)), $"Porcentagem de trabalhadores que trabalham em casa. Estes funcionários também tem intervalo para almoço. Apenas se aplica a trabalhadores de escritório e serviços públicos" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.part_time_percentage)), "Porcentagem de trabalhadores de meio período" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.part_time_percentage)), $"Porcentagem de trabalhadores do turno diurno que trabalham meio período. Estes funcionários trabalham ou de manhã ou de tarde. Eles não tem horário de almoço e um valor mais alto vai aumentar as viagens durante o meio do dia e diminuir os picos dos horários de rush." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.delay_factor)), "Fator de chegada/saída atrasada ou antecipada" },
@@ -542,8 +947,12 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.holidays_per_year)), $"A maioria dos países devem ter um valor entre 10 e 15. O valor padrão é razoável para a maioria dos países." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.vacation_per_year)), "Número de dias de férias por ano" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.vacation_per_year)), $"Número de dias de férias por ano – sem incluir finais de semana. Para países com um mês de férias, como no Brasil, utilize 22. Para os EUA, um valor de 11 é mais realista." },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_vacation_per_year)), "Número de dias de férias por ano" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_per_year)), $"Número de dias de férias por ano para escolas, faculdades e universidades. Não inclui finais de semana." },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_vacation_per_year)), "Número de dias de férias por ano" },
+                //{ m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_per_year)), $"Número de dias de férias por ano para escolas, faculdades e universidades. Não inclui finais de semana." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_vacation_month1)), "Mês de férias 1:" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_month1)), $"Mês de férias. As escolas estarão fechadas." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_vacation_month2)), "Mês de férias 2:" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_month2)), $"Mês de férias. As escolas estarão fechadas." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.dt_simulation)), "Selecione o comportamento da Simulação Diária" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.dt_simulation)), $"Esta opção altera o funcionamento da simulação durante um dia. O Dia Padrão corresponde ao comportamento Vanilla, que é uma combinação de dias da semana e finais de semana. Com as configurações padrão de férias/feriados (definidas na aba Compras e Lazer), em um Dia Padrão, cerca de 30% dos cims se comportarão como no fim de semana, realizando mais atividades de lazer e compras, enquanto o restante trabalhará ou estudará. A opção Dia de Semana aumentará as atividades de trabalho e estudo e diminuirá o lazer e as compras. O fim de semana fará o oposto. Nos fins de semana, as escolas estão fechadas. A Semana de 7 Dias irá alternar entre dias de semana e finais de semana, indo de segunda a domingo." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.night_trucks)), "Tráfego de caminhões mais realista" },
@@ -569,7 +978,8 @@ namespace Time2Work
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Dia Padrão" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Dia da Semana" },
-                { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekend), "Fim de Semana" },
+                { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Saturday), "Sábado" },
+                { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Sunday), "Sunday" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.sevendayweek), "Semana (Segunda a Domingo)" },
 
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Performance), "Desempenho" },

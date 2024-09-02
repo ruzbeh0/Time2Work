@@ -194,6 +194,14 @@ namespace Time2Work
                 if (part_time_rand < part_time_prob && !lunch)
                 {
                     double shift_duration = Math.Abs(economyParameters.m_WorkDayEnd + workOffset + endOnTime - (economyParameters.m_WorkDayStart + workOffset + startOnTime));
+                    //Shift duration varies by education level
+                    if(worker.m_Level <= 1)
+                    {
+                        shift_duration *= 1.05f;
+                    } else if (worker.m_Level > 2)
+                    {
+                        shift_duration /= 1.1f;
+                    }
                     if (part_time_rand < part_time_prob/2)
                     {
                         //startOnTime += shift_duration * (Math.Abs(GaussianRandom.NextGaussianDouble(random) * 0.2f) + 0.35f);
@@ -283,7 +291,11 @@ namespace Time2Work
         {
             double delayFactor = (float)(Mod.m_Setting.delay_factor) / 100;
 
-            float offdayprob = WeekSystem.getOffDayProb();
+            float4 office_offdayprob = WeekSystem.getOfficeOffDayProb();
+            float4 commercial_offdayprob = WeekSystem.getCommercialOffDayProb();
+            float4 industry_offdayprob = WeekSystem.getIndustryOffDayProb();
+            float4 cityservices_offdayprob = WeekSystem.getCityServicesOffDayProb();
+
 
             uint frameWithInterval = SimulationUtils.GetUpdateFrameWithInterval(this.m_SimulationSystem.frameIndex, (uint)this.GetUpdateInterval(SystemUpdatePhase.GameSimulation), 16);
             this.__TypeHandle.__Game_City_Population_RO_ComponentLookup.Update(ref this.CheckedStateRef);
@@ -319,6 +331,12 @@ namespace Time2Work
                 m_Purposes = this.__TypeHandle.__Game_Citizens_TravelPurpose_RO_ComponentLookup,
                 m_Attendings = this.__TypeHandle.__Game_Citizens_AttendingMeeting_RO_ComponentLookup,
                 m_PopulationData = this.__TypeHandle.__Game_City_Population_RO_ComponentLookup,
+                WorkplaceDataLookup = this.__TypeHandle.WorkplaceDataLookup,
+                CommercialPropertyLookup = this.__TypeHandle.CommercialPropertyLookup,
+                IndustrialPropertyLookup = this.__TypeHandle.IndustrialPropertyLookup,
+                OfficePropertyLookup = this.__TypeHandle.OfficePropertyLookup,
+                PropertyRenterLookup = this.__TypeHandle.PropertyRenterLookup,
+                PrefabRefLookup = this.__TypeHandle.PrefabRefLookup,
                 m_TriggerBuffer = this.m_TriggerSystem.CreateActionBuffer().AsParallelWriter(),
                 m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                 m_TimeOfDay = this.m_TimeSystem.normalizedTime,
@@ -332,7 +350,11 @@ namespace Time2Work
                 vacation = Mod.m_Setting.vacation_per_year,
                 holidays = Mod.m_Setting.holidays_per_year,
                 vanilla_timeoff = Mod.m_Setting.use_school_vanilla_timeoff,
-                offdayprob = offdayprob,
+                office_offdayprob = WeekSystem.getOfficeOffDayProb(),
+                commercial_offdayprob = WeekSystem.getCommercialOffDayProb(),
+                industry_offdayprob = WeekSystem.getIndustryOffDayProb(),
+                cityservices_offdayprob = WeekSystem.getCityServicesOffDayProb(),
+                dow = this.m_daytype,
                 work_start_time = (float)Mod.m_Setting.work_start_time,
                 work_end_time = (float)Mod.m_Setting.work_end_time,
                 delayFactor = (float)(Mod.m_Setting.delay_factor) / 100,
@@ -425,6 +447,18 @@ namespace Time2Work
             public ComponentLookup<AttendingMeeting> m_Attendings;
             [ReadOnly]
             public ComponentLookup<Population> m_PopulationData;
+            [ReadOnly]
+            public ComponentLookup<WorkplaceData> WorkplaceDataLookup;
+            [ReadOnly]
+            public ComponentLookup<CommercialProperty> CommercialPropertyLookup;
+            [ReadOnly]
+            public ComponentLookup<IndustrialProperty> IndustrialPropertyLookup;
+            [ReadOnly]
+            public ComponentLookup<OfficeProperty> OfficePropertyLookup;
+            [ReadOnly]
+            public ComponentLookup<PropertyRenter> PropertyRenterLookup;
+            [ReadOnly]
+            public ComponentLookup<PrefabRef> PrefabRefLookup;
             public NativeQueue<TriggerAction>.ParallelWriter m_TriggerBuffer;
             public uint m_Frame;
             public Game.Common.TimeData m_TimeData;
@@ -438,7 +472,10 @@ namespace Time2Work
             public float vacation;
             public float holidays;
             public bool vanilla_timeoff;
-            public float offdayprob;
+            public float4 office_offdayprob;
+            public float4 commercial_offdayprob;
+            public float4 industry_offdayprob;
+            public float4 cityservices_offdayprob;
             public float work_start_time;
             public float work_end_time;
             public float delayFactor;
@@ -446,6 +483,7 @@ namespace Time2Work
             public int part_time_prob;
             public int remote_work_prob;
             public float commute_top10;
+            public Setting.DTSimulationEnum dow;
 
             public void Execute(
               in ArchetypeChunk chunk,
@@ -468,9 +506,107 @@ namespace Time2Work
                 {
                     Entity entity1 = nativeArray1[index];
                     Citizen citizen = nativeArray2[index];
+                    Worker worker = nativeArray3[index];
+                    float offdayprob = 60f;
+                    int remote_work_probability = remote_work_prob;
+                    int parttime_prob = part_time_prob;
+
+                    if (PrefabRefLookup.TryGetComponent(worker.m_Workplace, out var prefab1))
+                    {
+                        if (PropertyRenterLookup.TryGetComponent(worker.m_Workplace, out var propertyRenter))
+                        {
+                            //x = weekday, y = friday, z = saturday, w = sunday
+                            if (CommercialPropertyLookup.HasComponent(propertyRenter.m_Property))
+                            {
+                                
+                                if((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                {
+                                    offdayprob = commercial_offdayprob.x;
+                                } else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                {
+                                    offdayprob = commercial_offdayprob.y;
+                                }
+                                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                {
+                                    offdayprob = commercial_offdayprob.z;
+                                    parttime_prob = 100;
+                                } else
+                                {
+                                    offdayprob = commercial_offdayprob.w;
+                                    parttime_prob = 100;
+                                }
+                                //No remote work for commercial
+                                remote_work_probability = 0;
+                            }
+                            if (IndustrialPropertyLookup.HasComponent(propertyRenter.m_Property))
+                            {
+                                if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                {
+                                    offdayprob = industry_offdayprob.x;
+                                }
+                                else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                {
+                                    offdayprob = industry_offdayprob.y;
+                                }
+                                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                {
+                                    offdayprob = industry_offdayprob.z;
+                                    parttime_prob = 100;
+                                }
+                                else
+                                {
+                                    offdayprob = industry_offdayprob.w;
+                                    parttime_prob = 100;
+                                }
+                                //No remote work for industry
+                                remote_work_probability = 0;
+                            }
+                            if (OfficePropertyLookup.HasComponent(propertyRenter.m_Property))
+                            {
+                                if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                {
+                                    offdayprob = office_offdayprob.x;
+                                }
+                                else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                {
+                                    offdayprob = office_offdayprob.y;
+                                }
+                                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                {
+                                    offdayprob = office_offdayprob.z;
+                                    parttime_prob = 100;
+                                }
+                                else
+                                {
+                                    offdayprob = office_offdayprob.w;
+                                    parttime_prob = 100;
+                                }
+                            } else
+                            {
+                                if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                {
+                                    offdayprob = cityservices_offdayprob.x;
+                                }
+                                else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                {
+                                    offdayprob = cityservices_offdayprob.y;
+                                }
+                                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                {
+                                    offdayprob = cityservices_offdayprob.z;
+                                    parttime_prob = 100;
+                                }
+                                else
+                                {
+                                    offdayprob = cityservices_offdayprob.w;
+                                    parttime_prob = 100;
+                                }
+                            }
+                        }
+                    }
 
                     if (!Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_Frame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) 
-                        && !Time2WorkWorkerSystem.IsLunchTime(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_Frame,this.m_TimeData, ticksPerDay) && Time2WorkWorkerSystem.IsTimeToWork(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10))
+                        && !Time2WorkWorkerSystem.IsLunchTime(citizen, worker, ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_Frame,this.m_TimeData, ticksPerDay) && Time2WorkWorkerSystem.IsTimeToWork(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10))
                     {
                         DynamicBuffer<TripNeeded> dynamicBuffer = bufferAccessor[index];
                         if (!this.m_Attendings.HasComponent(entity1) && (citizen.m_State & CitizenFlags.MovingAway) == CitizenFlags.None)
@@ -501,7 +637,7 @@ namespace Time2Work
                                     {
                                         this.m_CarReserverQueue.Enqueue(entity1);
                                     }
-                                    float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, nativeArray3[index], ref this.m_EconomyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10);
+                                    float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, nativeArray3[index], ref this.m_EconomyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10);
                                     float2 timeToLunch = Time2WorkWorkerSystem.GetLunchTime(citizen, nativeArray3[index], ref this.m_EconomyParameters);
                                     //If too much time has passed since work start time, not go to work
                                     double threshold_start_work = Math.Min(Math.Abs(timeToWork.x - this.m_TimeOfDay), Math.Abs(1 - (timeToWork.x - this.m_TimeOfDay)));
@@ -530,7 +666,7 @@ namespace Time2Work
                                         {
                                             continue;
                                         }
-                                        if(Time2WorkWorkerSystem.IsTodayWorkFromHome(citizen, this.m_Frame, this.m_TimeData, ticksPerDay, remote_work_prob) && nativeArray3[index].m_Level >= 3)
+                                        if(Time2WorkWorkerSystem.IsTodayWorkFromHome(citizen, this.m_Frame, this.m_TimeData, ticksPerDay, remote_work_probability) && nativeArray3[index].m_Level >= 3)
                                         {
                                             if (nativeArray4[index].m_CurrentBuilding == home)
                                             {
@@ -697,6 +833,18 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<HouseholdMember> __Game_Citizens_HouseholdMember_RO_ComponentLookup;
             [ReadOnly]
+            public ComponentLookup<WorkplaceData> WorkplaceDataLookup;
+            [ReadOnly]
+            public ComponentLookup<CommercialProperty> CommercialPropertyLookup;
+            [ReadOnly]
+            public ComponentLookup<IndustrialProperty> IndustrialPropertyLookup;
+            [ReadOnly]
+            public ComponentLookup<OfficeProperty> OfficePropertyLookup;
+            [ReadOnly]
+            public ComponentLookup<PropertyRenter> PropertyRenterLookup;
+            [ReadOnly]
+            public ComponentLookup<PrefabRef> PrefabRefLookup;
+            [ReadOnly]
             public ComponentTypeHandle<HouseholdMember> __Game_Citizens_HouseholdMember_RO_ComponentTypeHandle;
 
 
@@ -720,6 +868,12 @@ namespace Time2Work
                 this.__Game_Companies_WorkProvider_RO_ComponentLookup = state.GetComponentLookup<WorkProvider>(true);
                 this.__Game_Citizens_HouseholdMember_RO_ComponentLookup = state.GetComponentLookup<HouseholdMember>(true);
                 this.__Game_Citizens_HouseholdMember_RO_ComponentTypeHandle = state.GetComponentTypeHandle<HouseholdMember>(true);
+                this.WorkplaceDataLookup = state.GetComponentLookup<WorkplaceData>(true);
+                this.CommercialPropertyLookup = state.GetComponentLookup<CommercialProperty>(true);
+                this.IndustrialPropertyLookup = state.GetComponentLookup<IndustrialProperty>(true);
+                this.OfficePropertyLookup = state.GetComponentLookup<OfficeProperty>(true);
+                this.PropertyRenterLookup = state.GetComponentLookup<PropertyRenter>(true);
+                this.PrefabRefLookup = state.GetComponentLookup<PrefabRef>(true);
             }
         }
     }

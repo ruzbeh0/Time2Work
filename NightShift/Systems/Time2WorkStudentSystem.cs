@@ -10,6 +10,7 @@ using Game.Tools;
 using System;
 using System.Runtime.CompilerServices;
 using Time2Work.Systems;
+using Time2Work.Utils;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
@@ -49,13 +50,22 @@ namespace Time2Work
           uint frame,
           TimeData timeData,
           int population,
-          float offdayprob,
+          float3 offdayprob3,
           int school_start_time,
           int school_end_time,
           int ticksPerDay)
         {
-            int num = (int)Math.Round(offdayprob);
-            //int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
+            float offdayprob = offdayprob3.x;
+            if(student.m_Level == 1)
+            {
+                offdayprob = offdayprob3.y;
+            }
+            if (student.m_Level > 2)
+            {
+                offdayprob = offdayprob3.z;
+            }
+            //int num = (int)Math.Round(offdayprob);
+            int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
             int day = Time2WorkTimeSystem.GetDay(frame, timeData, ticksPerDay);
             float2 timeToStudy = Time2WorkStudentSystem.GetTimeToStudy(citizen, student, ref economyParameters, school_start_time, school_end_time, ticksPerDay);
             if (Unity.Mathematics.Random.CreateFromIndex((uint)citizen.m_PseudoRandom + (uint)day).NextInt(100) <= num)
@@ -74,6 +84,19 @@ namespace Time2Work
             float studyOffset = Time2WorkStudentSystem.GetStudyOffset(citizen, ticksPerDay);
             float startTimeOffset = ((float)school_start_time - 4f) * (1 / 48f);
             float endTimeOffset = ((float)school_end_time - 19f) * (1 / 48f);
+
+            //Adding variation on students schedule, the higher the education level, the higher the variation
+            Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom));
+            float startOnTime = (float)GaussianRandom.NextGaussianDouble(random) * (student.m_Level+1)/100f;
+            float endOnTime = ((float)GaussianRandom.NextGaussianDouble(random)) * (student.m_Level+1)/100f;
+            if(startOnTime < 0)
+            {
+                //We don't want students to arrive too early
+                startOnTime /= (student.m_Level + 2);
+            }
+
+            startTimeOffset += startOnTime;
+            endTimeOffset += endOnTime;
 
             float num1 = 60f * student.m_LastCommuteTime;
             if ((double)num1 < 60.0)
@@ -208,7 +231,7 @@ namespace Time2Work
             public EconomyParameterData m_EconomyParameters;
             public NativeQueue<Entity>.ParallelWriter m_CarReserverQueue;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
-            public float school_offdayprob;
+            public float3 school_offdayprob;
             public int school_start_time;
             public int school_end_time;
             public int ticksPerDay;
