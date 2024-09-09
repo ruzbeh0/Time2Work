@@ -121,23 +121,14 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="1.1" />
+	<ModVersion Value="1.2" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.1.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="75426" />
 	<ChangeLog>
-* Split Weekend day type into Saturday and Sunday
-* Added Time Off probabilities by work type and by day type (Office, Commercial, Industry and City Services)
-* Remote work for office and city services only 
-* Implemented night and evening shifts by work type
-* Implemented shift reduction for workers that work on Saturday and Sunday
-* Reworked School vacation system: added choice of vacation months
-* Added variation to student arrival and departure times from school. The variation will increase with the education level
-* Added day of the week attendance settings for schools
-* Adjusted default part time work percentage
-* Adjusted tourism factors for Fridays/Average days
-* Fixed Warning for UI width
+* Fixed data_time2work bug
+* Added options for settings from these countries: Brazil, Canada, Phillipines, Netherlands, USA
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

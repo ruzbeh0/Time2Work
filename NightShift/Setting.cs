@@ -3,12 +3,15 @@ using Colossal.IO.AssetDatabase;
 using Colossal.IO.AssetDatabase.Internal;
 using Game;
 using Game.Modding;
+using Game.Prefabs;
 using Game.Settings;
 using Game.UI;
 using Game.UI.Widgets;
+using System;
 using System.Collections.Generic;
 using Time2Work.Systems;
 using Unity.Entities;
+using Unity.Entities.UniversalDelegates;
 
 namespace Time2Work
 {
@@ -50,184 +53,143 @@ namespace Time2Work
         public const string IndustryGroup = "IndustryGroup";
         public const string CityServicesGroup = "CityServicesGroup";
 
+        Dictionary<int, int> countryIndexLookup = new Dictionary<int, int>();
+        int[] evening_share_ = [10, 17, 8, 13, 31, 13, 5];
+        int[] night_share_ = [8, 8,   4,   7,   8,   7,   2];
+        int[] delay_factor_ = [2,    4,   2,   2,   2,   2,   2];
+        int[] lunch_break_percentage_ = [30, 10,  30,  30,  30,  30,  30];
+        float[] holidays_per_year_ = [11,  11,  11,  13,  7,   40,  10];
+        float[] vacation_per_year_ = [22,   22,  22,  30,  25,  15,  21];
+        bool[] disable_early_shop_leisure_ = [ true,   false,   true,    true,    true,    true,    true];
+        bool[] use_vanilla_timeoff_ = [ false,     true,    false,   false,   false,  false,   false];
+        bool[] use_school_vanilla_timeoff_ = [ false,  true,    false,   false,   false,   false,   false];
+        int[] school_start_time_ = [2,   2,   2,  1,   2,   0,   2];
+        int[] school_end_time_ = [16,   16,  16,  12,  16,  19,  16];
+        int[] work_start_time_ = [4, 4,   4,   4,   4,   4,   3];
+        int[] work_end_time_ = [20,  20,  20,  22,  20,  22,  20];
+        float[] avg_work_hours_ft_wd_ = [8.4f, 8.4f, 8.4f, 8.8f, 8.4f, 9.2f, 7.5f];
+        float[] avg_work_hours_pt_wd_ = [5.3f, 5.3f, 5.3f, 5.3f, 5.3f, 5f, 4f];
+        int[] dt_simulation_ = [0,   0,   4,   4,   4,   4,   4];
+        float[] slow_time_factor_ = [1f,   3.5f,     3.5f,    3.5f,    3.5f,    3.5f,    3.5f];
+        int[] part_time_percentage_ = [22,   22,  17,  8,   48,  60,  18];
+        int[] remote_percentage_ = [20,  20,  14,  10,  32,  55,  20];
+        bool[] night_trucks_ = [ true,     true,    true,    true,    true,    true,    true];
+        bool[] peak_spread_ = [ true,  true,    true,    true,    true,    true,    true];
+        bool[] tourism_trips_ = [ true,    true,    true,    true,    true,    true,    true];
+        bool[] commuter_trips_ = [ true,   true,    true,    true,    true,    true,    true];
+        int[] service_expenses_night_reduction_ = [30,   30,  30,  30,  30,  30,  30];
+        int[] office_weekday_pct_ = [90, 90,  90,  90,  90,  90,  90];
+        int[] office_avgday_pct_ = [88,  88,  88,  88,  88,  88,  88];
+        int[] office_sat_pct_ = [12, 12,  12,  12,  12,  12,  12];
+        int[] office_sun_pct_ = [6,  6,   6,   6,   6,   6,   6];
+        int[] commercial_weekday_pct_ = [64, 64,  64,  64,  64,  64,  64];
+        int[] commercial_avgday_pct_ = [68,  68,  68,  68,  68,  68,  68];
+        int[] commercial_sat_pct_ = [37, 37,  37,  37,  37,  37,  37];
+        int[] commercial_sun_pct_ = [26, 26,  26,  26,  26,  26,  26];
+        int[] industry_weekday_pct_ = [90,   90,  90,  90,  90,  90,  90];
+        int[] industry_avgday_pct_ = [86,    86,  86,  86,  86,  86,  86];
+        int[] industry_sat_pct_ = [24,   24,  24,  24,  24,  24,  24];
+        int[] industry_sun_pct_ = [11,   11,  11,  11,  11,  11,  11];
+        int[] cityServices_weekday_pct_ = [80,   80,  80,  80,  80,  80,  80];
+        int[] cityServices_avgday_pct_ = [78,    78,  78,  78,  78,  78,  78];
+        int[] cityServices_sat_pct_ = [17,   17,  17, 17,  17,  17,  17];
+        int[] cityServices_sun_pct_ = [12,   12,  12,  12,  12,  12,  12];
+        int[] nonday_office_share_ = [7, 7,   7,   7,   7,   7,   7];
+        int[] nonday_commercial_share_ = [31,    31,  31,  31,  31,  31,  31];
+        int[] nonday_industry_share_ = [14,  14,  14,  14,  14,  14,  14];
+        int[] nonday_cityservices_share_ = [18,  18,  18,  18,  18,  18,  18];
+        int[] school_lv1_weekday_pct_ = [93, 93,  93,  84,  93,  98,  93];
+        int[] school_lv1_avgday_pct_ = [92,  92,  92,  83,  92,  97,  92];
+        int[] school_lv1_saturday_pct_ = [0, 0,   0,   0,   0,   2,   0];
+        int[] school_lv1_sunday_pct_ = [0,   0,   0,   0,   0,   0,   0];
+        int[] school_lv2_weekday_pct_ = [90, 90,  90,  81,  90,  97,  90];
+        int[] school_lv2_avgday_pct_ = [88,  88,  88,  79,  88,  95,  88];
+        int[] school_lv2_saturday_pct_ = [0, 0,   0,   0,   0,   2,   0];
+        int[] school_lv2_sunday_pct_ = [0,   0,   0,   0,   0,   0,   0];
+        int[] school_lv34_weekday_pct_ = [80,    80,  80,  72,  80,  90,  80];
+        int[] school_lv34_avgday_pct_ = [70, 70,  70,  63,  70,  80,  70];
+        int[] school_lv34_saturday_pct_ = [5,	5,	5,	5,	5,	15,	5];
+        int[] school_lv34_sunday_pct_ = [0,  0,   0,   0,   0,   5,   0];
+        int[] school_vacation_month1_ = [7,  7,   7,   1,   7,   4,   7];
+        int[] school_vacation_month2_ = [8, 8, 8, 7, 8, 5, 8];
+
+
         public Setting(IMod mod) : base(mod)
         {
+
+            int i = 0;
+            foreach (var value in Enum.GetValues(typeof(SettingsEnum)))
+            {
+                SettingsEnum e = (SettingsEnum)value;
+                countryIndexLookup.Add((int)e, i);
+                i++;
+            }
+
             if (evening_share == 0) SetDefaults();
         }
+
         public override void SetDefaults()
         {
-            evening_share = 10;
-            night_share = 8;
-            delay_factor = 2;
-            lunch_break_percentage = 20;
-            holidays_per_year = 11;
-            vacation_per_year = 22;
-            //school_vacation_per_year = 55;
-            disable_early_shop_leisure = true;
-            use_vanilla_timeoff = true;
-            use_school_vanilla_timeoff = true;
-            school_start_time = timeEnum.t900;
-            school_end_time = timeEnum.t1700;
-            work_start_time = timeEnum.t900;
-            work_end_time = timeEnum.t1700;
-            dt_simulation = DTSimulationEnum.AverageDay;
-            slow_time_factor = 1f;
-            part_time_percentage = 22;
-            remote_percentage = 20;
-            night_trucks = true;
-            peak_spread = true;
-            tourism_trips = true;
-            commuter_trips = true;
-            service_expenses_night_reduction = 30;
-            office_weekday_pct = 90;
-            office_avgday_pct = 88;
-            office_sat_pct = 12;
-            office_sun_pct = 6;
-            commercial_weekday_pct = 64;
-            commercial_avgday_pct = 68;
-            commercial_sat_pct = 37;
-            commercial_sun_pct = 26;
-            industry_weekday_pct = 90;
-            industry_avgday_pct = 86;
-            industry_sat_pct = 24;
-            industry_sun_pct = 11;
-            cityServices_weekday_pct = 80;
-            cityServices_avgday_pct = 78;
-            cityServices_sat_pct = 17;
-            cityServices_sun_pct = 12;
-            nonday_office_share = 7;
-            nonday_commercial_share = 31;
-            nonday_industry_share = 14;
-            nonday_cityservices_share = 18;
-            school_lv1_weekday_pct = 93;
-            school_lv1_avgday_pct = 92;
-            school_lv1_saturday_pct = 0;
-            school_lv1_sunday_pct = 0;
-            school_lv2_weekday_pct = 90;
-            school_lv2_avgday_pct = 88;
-            school_lv2_saturday_pct = 0;
-            school_lv2_sunday_pct = 0;
-            school_lv34_weekday_pct = 80;
-            school_lv34_avgday_pct = 70;
-            school_lv34_saturday_pct = 5;
-            school_lv34_sunday_pct = 0;
+            SetParameters(0);
         }
-
-        private void setPerformance()
+        public void SetParameters(int index)
         {
-            evening_share = 17;
-            night_share = 8;
-            delay_factor = 4;
-            lunch_break_percentage = 10;
-            holidays_per_year = 11;
-            vacation_per_year = 22;
-            //school_vacation_per_year = 55;
-            disable_early_shop_leisure = false;
-            use_vanilla_timeoff = true;
-            use_school_vanilla_timeoff = true;
-            school_start_time = timeEnum.t900;
-            school_end_time = timeEnum.t1700;
-            work_start_time = timeEnum.t900;
-            work_end_time = timeEnum.t1700;
-            dt_simulation = DTSimulationEnum.AverageDay;
-            slow_time_factor = 3.5f;
-            part_time_percentage = 22;
-            remote_percentage = 20;
-            night_trucks = true;
-            tourism_trips = false;
-            commuter_trips = false;
-            service_expenses_night_reduction = 0;
-            office_weekday_pct = 90;
-            office_avgday_pct = 88;
-            office_sat_pct = 12;
-            office_sun_pct = 6;
-            commercial_weekday_pct = 64;
-            commercial_avgday_pct = 68;
-            commercial_sat_pct = 37;
-            commercial_sun_pct = 26;
-            industry_weekday_pct = 90;
-            industry_avgday_pct = 86;
-            industry_sat_pct = 24;
-            industry_sun_pct = 11;
-            cityServices_weekday_pct = 80;
-            cityServices_avgday_pct = 78;
-            cityServices_sat_pct = 17;
-            cityServices_sun_pct = 12;
-            nonday_office_share = 7;
-            nonday_commercial_share = 31;
-            nonday_industry_share = 14;
-            nonday_cityservices_share = 18;
-            school_lv1_weekday_pct = 93;
-            school_lv1_avgday_pct = 92;
-            school_lv1_saturday_pct = 0;
-            school_lv1_sunday_pct = 0;
-            school_lv2_weekday_pct = 90;
-            school_lv2_avgday_pct = 88;
-            school_lv2_saturday_pct = 0;
-            school_lv2_sunday_pct = 0;
-            school_lv34_weekday_pct = 80;
-            school_lv34_avgday_pct = 70;
-            school_lv34_saturday_pct = 5;
-            school_lv34_sunday_pct = 0;
-        }
-
-        private void setRealistic()
-        {
-            evening_share = 8;
-            night_share = 4;
-            delay_factor = 2;
-            lunch_break_percentage = 30;
-            holidays_per_year = 11;
-            vacation_per_year = 22;
-            //school_vacation_per_year = 55;
-            disable_early_shop_leisure = true;
-            use_vanilla_timeoff = false;
-            use_school_vanilla_timeoff = false;
-            school_start_time = timeEnum.t900;
-            school_end_time = timeEnum.t1700;
-            work_start_time = timeEnum.t900;
-            work_end_time = timeEnum.t1700;
-            dt_simulation = DTSimulationEnum.sevendayweek;
-            slow_time_factor = 3.5f;
-            part_time_percentage = 17;
-            remote_percentage = 14;
-            night_trucks = true;
-            tourism_trips = true;
-            commuter_trips = true;
-            service_expenses_night_reduction = 30;
-            office_weekday_pct = 90;
-            office_avgday_pct = 88;
-            office_sat_pct = 12;
-            office_sun_pct = 6;
-            commercial_weekday_pct = 64;
-            commercial_avgday_pct = 68;
-            commercial_sat_pct = 37;
-            commercial_sun_pct = 26;
-            industry_weekday_pct = 90;
-            industry_avgday_pct = 86;
-            industry_sat_pct = 24;
-            industry_sun_pct = 11;
-            cityServices_weekday_pct = 80;
-            cityServices_avgday_pct = 78;
-            cityServices_sat_pct = 17;
-            cityServices_sun_pct = 12;
-            nonday_office_share = 7;
-            nonday_commercial_share = 31;
-            nonday_industry_share = 14;
-            nonday_cityservices_share = 18;
-            school_lv1_weekday_pct = 93;
-            school_lv1_avgday_pct = 92;
-            school_lv1_saturday_pct = 0;
-            school_lv1_sunday_pct = 0;
-            school_lv2_weekday_pct = 90;
-            school_lv2_avgday_pct = 88;
-            school_lv2_saturday_pct = 0;
-            school_lv2_sunday_pct = 0;
-            school_lv34_weekday_pct = 80;
-            school_lv34_avgday_pct = 70;
-            school_lv34_saturday_pct = 5;
-            school_lv34_sunday_pct = 0;
-
+            evening_share = evening_share_[index];
+            night_share = night_share_[index];
+            delay_factor = delay_factor_[index];
+            lunch_break_percentage = lunch_break_percentage_[index];
+            holidays_per_year = holidays_per_year_[index];
+            vacation_per_year = vacation_per_year_[index];
+            disable_early_shop_leisure = disable_early_shop_leisure_[index];
+            use_vanilla_timeoff = use_vanilla_timeoff_[index];
+            use_school_vanilla_timeoff = use_school_vanilla_timeoff_[index];
+            school_start_time = (timeEnum)school_start_time_[index];
+            school_end_time = (timeEnum)school_end_time_[index];
+            work_start_time = (timeEnum)work_start_time_[index];
+            work_end_time = (timeEnum)work_end_time_[index];
+            avg_work_hours_ft_wd = avg_work_hours_ft_wd_[index];
+            avg_work_hours_pt_wd = avg_work_hours_pt_wd_[index];
+            dt_simulation = (DTSimulationEnum)dt_simulation_[index];
+            slow_time_factor = slow_time_factor_[index];
+            part_time_percentage = part_time_percentage_[index];
+            remote_percentage = remote_percentage_[index];
+            night_trucks = night_trucks_[index];
+            peak_spread = peak_spread_[index];
+            tourism_trips = tourism_trips_[index];
+            commuter_trips = commuter_trips_[index];
+            service_expenses_night_reduction = service_expenses_night_reduction_[index];
+            office_weekday_pct = office_weekday_pct_[index];
+            office_avgday_pct = office_avgday_pct_[index];
+            office_sat_pct = office_sat_pct_[index];
+            office_sun_pct = office_sun_pct_[index];
+            commercial_weekday_pct = commercial_weekday_pct_[index];
+            commercial_avgday_pct = commercial_avgday_pct_[index];
+            commercial_sat_pct = commercial_sat_pct_[index];
+            commercial_sun_pct = commercial_sun_pct_[index];
+            industry_weekday_pct = industry_weekday_pct_[index];
+            industry_avgday_pct = industry_avgday_pct_[index];
+            industry_sat_pct = industry_sat_pct_[index];
+            industry_sun_pct = industry_sun_pct_[index];
+            cityServices_weekday_pct = cityServices_weekday_pct_[index];
+            cityServices_avgday_pct = cityServices_avgday_pct_[index];
+            cityServices_sat_pct = cityServices_sat_pct_[index];
+            cityServices_sun_pct = cityServices_sun_pct_[index];
+            nonday_office_share = nonday_office_share_[index];
+            nonday_commercial_share = nonday_commercial_share_[index];
+            nonday_industry_share = nonday_industry_share_[index];
+            nonday_cityservices_share = nonday_cityservices_share_[index];
+            school_lv1_weekday_pct = school_lv1_weekday_pct_[index];
+            school_lv1_avgday_pct = school_lv1_avgday_pct_[index];
+            school_lv1_saturday_pct = school_lv1_saturday_pct_[index];
+            school_lv1_sunday_pct = school_lv1_sunday_pct_[index];
+            school_lv2_weekday_pct = school_lv2_weekday_pct_[index];
+            school_lv2_avgday_pct = school_lv2_avgday_pct_[index];
+            school_lv2_saturday_pct = school_lv2_saturday_pct_[index];
+            school_lv2_sunday_pct = school_lv2_sunday_pct_[index];
+            school_lv34_weekday_pct = school_lv34_weekday_pct_[index];
+            school_lv34_avgday_pct = school_lv34_avgday_pct_[index];
+            school_lv34_saturday_pct = school_lv34_saturday_pct_[index];
+            school_lv34_sunday_pct = school_lv34_sunday_pct_[index];
         }
 
         public override void Apply()
@@ -248,21 +210,8 @@ namespace Time2Work
         {
             set
             {
-                if (settings_choice.Equals(SettingsEnum.Performance))
-                {
-                    setPerformance();
-                }
-                else
-                {
-                    if (settings_choice.Equals(SettingsEnum.Realistic))
-                    {
-                        setRealistic();
-                    }
-                    else
-                    {
-                        SetDefaults();
-                    }
-                }
+                countryIndexLookup.TryGetValue((int)settings_choice, out int selectedSetting);
+                SetParameters(selectedSetting);
             }
 
         }
@@ -399,9 +348,25 @@ namespace Time2Work
         [SettingsUISection(WorkSection, DayShiftGroup)]
         public timeEnum work_end_time { get; set; } = timeEnum.t1700;
 
+        [SettingsUISlider(min = 4, max = 10, step = 1, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
+        [SettingsUISection(WorkSection, DayShiftGroup)]
+        public float avg_work_hours_ft_wd { get; set; }
+
+        //[SettingsUISlider(min = 4, max = 10, step = 1, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
+        //[SettingsUISection(WorkSection, DayShiftGroup)]
+        //public float avg_work_hours_ft_we { get; set; }
+
         [SettingsUISlider(min = 0, max = 40, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
         [SettingsUISection(WorkSection, DayShiftGroup)]
         public int part_time_percentage { get; set; }
+
+        [SettingsUISlider(min = 2, max = 6, step = 1, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
+        [SettingsUISection(WorkSection, DayShiftGroup)]
+        public float avg_work_hours_pt_wd { get; set; }
+
+        //[SettingsUISlider(min = 2, max = 6, step = 1, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
+        //[SettingsUISection(WorkSection, DayShiftGroup)]
+        //public float avg_work_hours_pt_we { get; set; }
 
         [SettingsUISection(Weeksection, SlowerTimeGroup)]
         [SettingsUIMultilineText]
@@ -510,10 +475,15 @@ namespace Time2Work
         }
         public enum SettingsEnum
         {
-            Balanced,
-            Performance,
-            Realistic
+            Balanced = 0,
+            Performance = 1,
+            Brazil = 25,
+            Canada = 34,
+            Netherlands = 124,
+            Phillipines = 140,
+            USA = 188,
         }
+
 
         public enum timeEnum
         {
@@ -719,7 +689,7 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_month2)), $"Month in which schools will be closed for vacation." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.dt_simulation)), "Select day type simulation behaviour" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.dt_simulation)), $"This option changes how the simulation works during a day. Average Day corresponds to the Vanilla behavior, which is a combination of weekday and weekend behaviors. With the default vacation/holiday settings (defined in the Shopping and Leisure tab), in an Average Day, around 30% of cims will behave as on the weekend, doing more leisure and shopping activities, while the rest will work or study. The Weekday option will increase work and study activities and lower leisure and shopping. Weekend will do the opposite. On Weekends, schools are closed. The 7 Days Week will rotate through weekdays and weekends, going from Monday to Sunday." },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.night_trucks)), "More realist truck traffic" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.night_trucks)), "More realistic truck traffic" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.night_trucks)), $"Reduces truck traffic during the day and increases it at night and early morning." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_start_time)), "School Start Time" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_start_time)), $"Start time for schools, colleges, and universities." },
@@ -729,6 +699,14 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_start_time)), $"Start time for work day shift." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.work_end_time)), "Work Day Shift End Time" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_end_time)), $"End time for work day shift." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_work_hours_ft_wd)), "Avg. Hours Worked for Full Time Workers" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_work_hours_ft_wd)), $"The average number of hours that full time workers worked on a weekday" },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_work_hours_ft_we)), "Weekend: Avg. Hours Worked for Full Time Workers" },
+                //{ m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_work_hours_ft_we)), $"The average number of hours that full time workers worked on a weekend" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_work_hours_pt_wd)), "Avg. Hours Worked for Part Time Workers" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_work_hours_pt_wd)), $"The average number of hours that part time workers worked on a weekday" },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_work_hours_pt_we)), "Weekend: Avg. Hours Worked for Part Time Workers" },
+                //{ m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_work_hours_pt_we)), $"The average number of hours that part time workers worked on a weekend" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.slow_time_factor)), "Slower Time Factor" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.slow_time_factor)), $"This factor will slow down time and increase the length of the day. A factor of 1 will have no effect. A factor of 2, for example, will make the day last twice as long. Note that the simulation speed does not change, and other systems not affected by this mod will update based on the simulation speed and not on the length of the day." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.daysPerMonth)), "Days per Month" },
@@ -749,7 +727,11 @@ namespace Time2Work
 
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Performance), "Performance" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Balanced), "Balanced" },
-                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Realistic), "Realistic" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.USA), "USA" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Brazil), "Brazil" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Canada), "Canada" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Phillipines), "Phillipines" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Netherlands), "Netherlands" },
 
                 { m_Setting.GetEnumValueLocaleID(Setting.timeEnum.t700), "7:00 AM" },
                 { m_Setting.GetEnumValueLocaleID(Setting.timeEnum.t730), "7:30 AM" },
@@ -965,6 +947,14 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_start_time)), $"Horário de início do turno diurno de trabalho." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.work_end_time)), "Horário de término do turno diurno" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.work_end_time)), $"Horário de término do turno diurno de trabalho." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_work_hours_ft_wd)), "Média de horas trabalhadas para trabalhadores em tempo integral" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_work_hours_ft_wd)), $"The average number of hours that full time workers worked on a weekday" },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_work_hours_ft_we)), "O número médio de horas que os trabalhadores em tempo integral trabalharam em um dia de semana" },
+                //{ m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_work_hours_ft_we)), $"The average number of hours that full time workers worked on a weekend" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_work_hours_pt_wd)), "Média de horas trabalhadas para trabalhadores em meio período" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_work_hours_pt_wd)), $"O número médio de horas que os trabalhadores de meio período trabalharam em um dia de semana" },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_work_hours_pt_we)), "Fim de semana: Média de horas trabalhadas para trabalhadores de meio período" },
+                //{ m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_work_hours_pt_we)), $"O número médio de horas que os trabalhadores de meio período trabalharam em um fim de semana" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.slow_time_factor)), "Fator de redução da velocidade do tempo" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.slow_time_factor)), $"Esse fator vai reduzir a velocidade do tempo e aumentar a duração do dia. Um fator de valor 1 não vai ter efeito. Um fator de valor 2, por exemplo, vai dobrar a duração do dia. Observe que a velocidade da simulação não será alterada. Outros sistemas que não usados neste mod serão atualizados baseados na velocidade da simulação e não na duração do dia." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.daysPerMonth)), "Dias por mês" },
@@ -984,7 +974,11 @@ namespace Time2Work
 
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Performance), "Desempenho" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Balanced), "Balanceada" },
-                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Realistic), "Realista" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.USA), "EUA" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Brazil), "Brasil" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Canada), "Canadá" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Phillipines), "Filipinas" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Netherlands), "Paises Baíxos" },
 
                 { m_Setting.GetEnumValueLocaleID(Setting.timeEnum.t700), "7:00" },
                 { m_Setting.GetEnumValueLocaleID(Setting.timeEnum.t730), "7:30" },

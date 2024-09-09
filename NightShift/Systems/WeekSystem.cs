@@ -257,7 +257,6 @@ namespace Time2Work.Systems
             if ((hour == 0 && minute < 4 && !updated) || dayOfWeekTemp < 0)
             {
                 int dow = ((dayOfYear + 12 * (year - 1953)) % 7);
-                Mod.log.Info($"Date ONUpdate:{currentDateTime}");
                 dayOfWeekTemp = (DayOfWeek)dow;
                 if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.AverageDay))
                 {

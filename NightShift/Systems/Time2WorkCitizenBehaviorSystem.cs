@@ -64,7 +64,9 @@ namespace Time2Work
           float delayFactor,
           int ticksPerDay,
           int part_time_prob,
-          float commute_top10)
+          float commute_top10,
+          float overtime,
+          float part_time_reduction)
         {
             int age = (int)citizen.GetAge();
             float2 float2_1 = new float2(0.875f, 0.21f);
@@ -82,7 +84,7 @@ namespace Time2Work
             float2 float2_2;
             if (workers.HasComponent(entity))
             {
-                float2_2 = Time2WorkWorkerSystem.GetTimeToWork(citizen, workers[entity], ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10);
+                float2_2 = Time2WorkWorkerSystem.GetTimeToWork(citizen, workers[entity], ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction);
             }
             else
             {
@@ -118,9 +120,11 @@ namespace Time2Work
           float delayFactor,
           int ticksPerDay,
           int part_time_prob,
-          float commute_top10)
+          float commute_top10,
+          float overtime,
+          float part_time_reduction)
         {
-            float2 sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref workers, ref students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10);
+            float2 sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref workers, ref students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction);
             return (double)sleepTime.y < (double)sleepTime.x ? (double)normalizedTime > (double)sleepTime.x || (double)normalizedTime < (double)sleepTime.y : (double)normalizedTime > (double)sleepTime.x && (double)normalizedTime < (double)sleepTime.y;
         }
 
@@ -271,6 +275,8 @@ namespace Time2Work
                 part_time_prob = Mod.m_Setting.part_time_percentage,
                 commute_top10 = Mod.m_ModData.commute_top10per,
                 dow = this.m_daytype,
+                part_time_reduction = Mod.m_Setting.avg_work_hours_pt_wd / Mod.m_Setting.avg_work_hours_ft_wd,
+                overtime = Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2
             };
             JobHandle jobHandle1 = jobData.ScheduleParallel<Time2WorkCitizenBehaviorSystem.CitizenAITickJob>(this.m_CitizenQuery, JobHandle.CombineDependencies(this.m_CarReserveWriters, JobHandle.CombineDependencies(this.Dependency, outJobHandle)));
             jobData.m_OutsideConnectionEntities.Dispose(jobHandle1);
@@ -598,6 +604,8 @@ namespace Time2Work
             public int part_time_prob;
             public float commute_top10;
             public Setting.DTSimulationEnum dow;
+            public float overtime;
+            public float part_time_reduction;
 
             private bool CheckSleep(
               int index,
@@ -613,9 +621,11 @@ namespace Time2Work
               int school_start_time,
               int school_end_time,
               float work_start_time,
-              float work_end_time)
+              float work_end_time,
+              float overtime,
+              float part_time_reduction)
             {
-                if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref economyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10))
+                if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref economyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction))
                     return false;
                 if (home != Entity.Null && currentBuilding == home)
                 {
@@ -630,7 +640,7 @@ namespace Time2Work
                 else
                 {
                     //If too much time has passed since sleep start time, stay where you are
-                    float2 sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10);
+                    float2 sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction);
                     double threshold_go_home = Math.Min(Math.Abs(sleepTime.x - this.m_NormalizedTime), Math.Abs(1 - (sleepTime.x - this.m_NormalizedTime)));
 
                     if (threshold_go_home <= 0.03)
@@ -669,13 +679,14 @@ namespace Time2Work
             }
 
             private void GoToOutsideConnection(
-              Entity entity,
-              Entity household,
-              Entity currentBuilding,
-              ref Citizen citizen,
-              DynamicBuffer<TripNeeded> trips,
-              Game.Citizens.Purpose purpose,
-              ref Unity.Mathematics.Random random)
+        Entity entity,
+        Entity household,
+        Entity currentBuilding,
+        Entity targetBuilding,
+        ref Citizen citizen,
+        DynamicBuffer<TripNeeded> trips,
+        Game.Citizens.Purpose purpose,
+        ref Unity.Mathematics.Random random)
             {
                 if (purpose == Game.Citizens.Purpose.MovingAway)
                 {
@@ -692,33 +703,20 @@ namespace Time2Work
                         this.m_CarReserverQueue.Enqueue(entity);
                     }
                     this.m_MailSenderQueue.Enqueue(entity);
-                    DynamicBuffer<OwnedVehicle> ownedVehicle;
-                    Entity result;
-                    if (this.m_OwnedVehicles.HasBuffer(household))
+                    if (targetBuilding == Entity.Null)
                     {
-                        ownedVehicle = this.m_OwnedVehicles[household];
-                        if (ownedVehicle.Length > 0 && purpose == Game.Citizens.Purpose.MovingAway)
-                        {
-                            BuildingUtils.GetRandomOutsideConnectionByTransferType(ref this.m_OutsideConnectionEntities, ref this.m_OutsideConnectionDatas, ref this.m_Prefabs, random, OutsideConnectionTransferType.Road, out result);
-                            goto label_16;
-                        }
-                    }
-                    OutsideConnectionTransferType ocTransferType = OutsideConnectionTransferType.Train | OutsideConnectionTransferType.Air | OutsideConnectionTransferType.Ship;
-                    if (this.m_OwnedVehicles.HasBuffer(household))
-                    {
-                        ownedVehicle = this.m_OwnedVehicles[household];
-                        if (ownedVehicle.Length > 0)
+                        OutsideConnectionTransferType ocTransferType = OutsideConnectionTransferType.Train | OutsideConnectionTransferType.Air | OutsideConnectionTransferType.Ship;
+                        if (this.m_OwnedVehicles.HasBuffer(household) && this.m_OwnedVehicles[household].Length > 0)
                             ocTransferType |= OutsideConnectionTransferType.Road;
+                        BuildingUtils.GetRandomOutsideConnectionByTransferType(ref this.m_OutsideConnectionEntities, ref this.m_OutsideConnectionDatas, ref this.m_Prefabs, random, ocTransferType, out targetBuilding);
                     }
-                    BuildingUtils.GetRandomOutsideConnectionByTransferType(ref this.m_OutsideConnectionEntities, ref this.m_OutsideConnectionDatas, ref this.m_Prefabs, random, ocTransferType, out result);
-                label_16:
-                    if (result == Entity.Null)
+                    if (targetBuilding == Entity.Null && this.m_OutsideConnectionEntities.Length != 0)
                     {
-                        result = this.m_OutsideConnectionEntities[random.NextInt(this.m_OutsideConnectionEntities.Length)];
+                        targetBuilding = this.m_OutsideConnectionEntities[random.NextInt(this.m_OutsideConnectionEntities.Length)];
                     }
                     trips.Add(new TripNeeded()
                     {
-                        m_TargetAgent = result,
+                        m_TargetAgent = targetBuilding,
                         m_Purpose = purpose
                     });
                 }
@@ -729,7 +727,6 @@ namespace Time2Work
                     citizen.m_State |= CitizenFlags.MovingAway;
                 }
             }
-
             private void GoShopping(
               int chunkIndex,
               Entity citizen,
@@ -773,11 +770,11 @@ namespace Time2Work
                     citizen.m_LeisureCounter = byte.MaxValue;
                     return true;
                 }
-                float x = this.GetTimeLeftUntilInterval(Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10));
+                float x = this.GetTimeLeftUntilInterval(Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction));
                 if (this.m_Workers.HasComponent(entity))
                 {
                     Worker worker = this.m_Workers[entity];
-                    float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, worker, ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10);
+                    float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, worker, ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction);
                     float2 timeToLunch = Time2WorkWorkerSystem.GetLunchTime(citizen, worker, ref economyParameters); 
                     if(timeToLunch.x > 0)
                     {
@@ -855,7 +852,7 @@ namespace Time2Work
                                 if (coordinatedMeetingData.m_Purpose.m_Purpose == Game.Citizens.Purpose.Traveling)
                                 {
                                     Citizen citizen1 = new Citizen();
-                                    this.GoToOutsideConnection(entity, household, currentBuilding, ref citizen1, trips, coordinatedMeetingData.m_Purpose.m_Purpose, ref random);
+                                    this.GoToOutsideConnection(entity, household, currentBuilding, Entity.Null, ref citizen1, trips, coordinatedMeetingData.m_Purpose.m_Purpose, ref random);
                                 }
                                 else if (coordinatedMeetingData.m_Purpose.m_Purpose == Game.Citizens.Purpose.GoingHome)
                                 {
@@ -964,9 +961,10 @@ namespace Time2Work
                                 }
                                 else
                                 {
-                                    if (this.m_MovingAway.HasComponent(household))
+                                    MovingAway componentData1;
+                                    if (this.m_MovingAway.TryGetComponent(household, out componentData1))
                                     {
-                                        this.GoToOutsideConnection(entity1, household, currentBuilding, ref citizen, trips, Game.Citizens.Purpose.MovingAway, ref random);
+                                        this.GoToOutsideConnection(entity1, household, currentBuilding, componentData1.m_Target, ref citizen, trips, Game.Citizens.Purpose.MovingAway, ref random);
                                         if (chunk.Has<Leisure>(ref this.m_LeisureType))
                                         {
                                             this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
@@ -1142,7 +1140,7 @@ namespace Time2Work
 
 
                                                 if (this.m_Workers.HasComponent(entity1) && !Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob,ticksPerDay) 
-                                                    && Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10) || this.m_Students.HasComponent(entity1) && Time2WorkStudentSystem.IsTimeToStudy(citizen, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay))
+                                                    && Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction) || this.m_Students.HasComponent(entity1) && Time2WorkStudentSystem.IsTimeToStudy(citizen, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay))
                                                 {
                                                     if(this.m_Workers.HasComponent(entity1) && Time2WorkWorkerSystem.IsLunchTime(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))
                                                     {
@@ -1201,7 +1199,7 @@ namespace Time2Work
                                                 }
                                                 else
                                                 {
-                                                    if (this.CheckSleep(index, entity1, ref citizen, currentBuilding, household, entity3, trips, ref this.m_EconomyParameters, ref random, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time))
+                                                    if (this.CheckSleep(index, entity1, ref citizen, currentBuilding, household, entity3, trips, ref this.m_EconomyParameters, ref random, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, overtime, part_time_reduction))
                                                     {
                                                         if (chunk.Has<Leisure>(ref this.m_LeisureType))
                                                         {
