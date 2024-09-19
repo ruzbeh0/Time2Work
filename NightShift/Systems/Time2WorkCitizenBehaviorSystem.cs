@@ -57,8 +57,8 @@ namespace Time2Work
           ref ComponentLookup<Worker> workers,
           ref ComponentLookup<Game.Citizens.Student> students,
           int lunch_break_pct,
-          int school_start_time,
-          int school_end_time,
+          int3 school_start_time,
+          int3 school_end_time,
           float work_start_time,
           float work_end_time,
           float delayFactor,
@@ -113,8 +113,8 @@ namespace Time2Work
           ref ComponentLookup<Worker> workers,
           ref ComponentLookup<Game.Citizens.Student> students,
           int lunch_break_pct,
-          int school_start_time,
-          int school_end_time,
+          int3 school_start_time,
+          int3 school_end_time,
           float work_start_time,
           float work_end_time,
           float delayFactor,
@@ -263,8 +263,8 @@ namespace Time2Work
                 commercial_offdayprob = WeekSystem.getCommercialOffDayProb(),
                 industry_offdayprob = WeekSystem.getIndustryOffDayProb(),
                 cityservices_offdayprob = WeekSystem.getCityServicesOffDayProb(),
-                school_start_time = (int)Mod.m_Setting.school_start_time,
-                school_end_time = (int)Mod.m_Setting.school_end_time,
+                school_start_time = new int3((int)Mod.m_Setting.school_start_time, (int)Mod.m_Setting.high_school_start_time, (int)Mod.m_Setting.univ_start_time),
+                school_end_time = new int3((int)Mod.m_Setting.school_end_time, (int)Mod.m_Setting.high_school_end_time, (int)Mod.m_Setting.univ_end_time),
                 work_start_time = (float)Mod.m_Setting.work_start_time,
                 work_end_time = (float)Mod.m_Setting.work_end_time,
                 school_vanilla_timeoff = Mod.m_Setting.use_school_vanilla_timeoff,
@@ -276,7 +276,7 @@ namespace Time2Work
                 commute_top10 = Mod.m_ModData.commute_top10per,
                 dow = this.m_daytype,
                 part_time_reduction = Mod.m_Setting.avg_work_hours_pt_wd / Mod.m_Setting.avg_work_hours_ft_wd,
-                overtime = Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2
+                overtime = (Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/2
             };
             JobHandle jobHandle1 = jobData.ScheduleParallel<Time2WorkCitizenBehaviorSystem.CitizenAITickJob>(this.m_CitizenQuery, JobHandle.CombineDependencies(this.m_CarReserveWriters, JobHandle.CombineDependencies(this.Dependency, outJobHandle)));
             jobData.m_OutsideConnectionEntities.Dispose(jobHandle1);
@@ -592,8 +592,8 @@ namespace Time2Work
             public float4 commercial_offdayprob;
             public float4 industry_offdayprob;
             public float4 cityservices_offdayprob;
-            public int school_start_time;
-            public int school_end_time;
+            public int3 school_start_time;
+            public int3 school_end_time;
             public float work_start_time;
             public float work_end_time;
             public bool school_vanilla_timeoff;
@@ -618,8 +618,8 @@ namespace Time2Work
               ref EconomyParameterData economyParameters,
               ref Unity.Mathematics.Random random,
               int lunch_break_pct,
-              int school_start_time,
-              int school_end_time,
+              int3 school_start_time,
+              int3 school_end_time,
               float work_start_time,
               float work_end_time,
               float overtime,

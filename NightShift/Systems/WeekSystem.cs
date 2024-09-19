@@ -39,6 +39,8 @@ namespace Time2Work.Systems
 
             dayOfWeekTemp = (DayOfWeek)dow;
 
+            //Mod.log.Info($"dayOfYear:{dayOfYear},year:{year},dayOfWeekTemp:{dayOfWeekTemp},updated:{updated}");
+
             if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.AverageDay))
             {
                 dayOfWeekTemp = DayOfWeek.Friday;
@@ -254,7 +256,8 @@ namespace Time2Work.Systems
             int day = Mathf.FloorToInt(dayOfYear / (float)Mod.m_Setting.daysPerMonth);
             month = (Setting.months)((day % 12 + 12) % 12 + 1);
 
-            if ((hour == 0 && minute < 4 && !updated) || dayOfWeekTemp < 0)
+
+            if ((hour == 0 && !updated) || dayOfWeekTemp < 0 || currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.sevendayweek))
             {
                 int dow = ((dayOfYear + 12 * (year - 1953)) % 7);
                 dayOfWeekTemp = (DayOfWeek)dow;
@@ -276,6 +279,7 @@ namespace Time2Work.Systems
                         }
                     }
                 }
+                updated = true;
             }
 
             //The day of the week actually changes at 3 AM since this is the hour with least activity
@@ -342,14 +346,8 @@ namespace Time2Work.Systems
                 Mod.log.Info($"Industry Off Day Prob: {industry_offdayprob}");
                 Mod.log.Info($"City Services Day Prob: {cityservices_offdayprob}");
                 Mod.log.Info($"School Off Day Prob: {school_offdayprob}");
-                updated = true;
-            } else
-            {
-                if(hour == 3 && minute < 10)
-                {
-                    updated = false;
-                } 
-            }
+                updated = false;
+            } 
         }
     }
 }

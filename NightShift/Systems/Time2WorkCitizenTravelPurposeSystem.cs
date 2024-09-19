@@ -156,7 +156,7 @@ namespace Time2Work
                 part_time_prob = Mod.m_Setting.part_time_percentage,
                 commute_top10 = Mod.m_ModData.commute_top10per,
                 part_time_reduction = Mod.m_Setting.avg_work_hours_pt_wd / Mod.m_Setting.avg_work_hours_ft_wd,
-                overtime = Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2
+                overtime = (Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/24
             };
             
             this.Dependency = jobData.ScheduleParallel<Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob>(this.m_ArrivedGroup, this.Dependency);

@@ -51,8 +51,8 @@ namespace Time2Work
           TimeData timeData,
           int population,
           float3 offdayprob3,
-          int school_start_time,
-          int school_end_time,
+          int3 school_start_time,
+          int3 school_end_time,
           int ticksPerDay)
         {
             float offdayprob = offdayprob3.x;
@@ -77,11 +77,23 @@ namespace Time2Work
           Citizen citizen,
           Game.Citizens.Student student,
           ref EconomyParameterData economyParameters,
-          int school_start_time,
-          int school_end_time,
+          int3 school_start_time_,
+          int3 school_end_time_,
           int ticksPerDay)
         {
+            //x = elementary schoo, y = high school, z = college and university
+            int school_start_time = school_start_time_.z;
+            int school_end_time = school_end_time_.z;
             float studyOffset = Time2WorkStudentSystem.GetStudyOffset(citizen, ticksPerDay);
+            if (student.m_Level == 0)
+            {
+                school_start_time = school_start_time_.x;
+                school_end_time = school_end_time_.x;
+            } else if((student.m_Level == 1))
+            {
+                school_start_time = school_start_time_.y;
+                school_end_time = school_end_time_.y;
+            } 
             float startTimeOffset = ((float)school_start_time - 4f) * (1 / 48f);
             float endTimeOffset = ((float)school_end_time - 19f) * (1 / 48f);
 
@@ -160,8 +172,8 @@ namespace Time2Work
                 m_CarReserverQueue = this.m_CitizenBehaviorSystem.GetCarReserverQueue(out deps),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 school_offdayprob = WeekSystem.getSchoolOffDayProb(),
-                school_start_time = (int)Mod.m_Setting.school_start_time,
-                school_end_time = (int)Mod.m_Setting.school_end_time,
+                school_start_time = new int3((int)Mod.m_Setting.school_start_time, (int)Mod.m_Setting.high_school_start_time, (int)Mod.m_Setting.univ_start_time),
+                school_end_time = new int3((int)Mod.m_Setting.school_end_time, (int)Mod.m_Setting.high_school_end_time, (int)Mod.m_Setting.univ_end_time),
                 ticksPerDay = Time2WorkTimeSystem.kTicksPerDay
             }.ScheduleParallel<Time2WorkStudentSystem.GoToSchoolJob>(this.m_GotoSchoolQuery, JobHandle.CombineDependencies(this.Dependency, deps));
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle);
@@ -232,8 +244,8 @@ namespace Time2Work
             public NativeQueue<Entity>.ParallelWriter m_CarReserverQueue;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
             public float3 school_offdayprob;
-            public int school_start_time;
-            public int school_end_time;
+            public int3 school_start_time;
+            public int3 school_end_time;
             public int ticksPerDay;
             public void Execute(
               in ArchetypeChunk chunk,
