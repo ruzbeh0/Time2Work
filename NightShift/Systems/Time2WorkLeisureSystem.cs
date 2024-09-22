@@ -192,10 +192,15 @@ namespace Time2Work
                 school_offdayprob = WeekSystem.getSchoolOffDayProb(),
                 ticksPerDay = Time2WorkTimeSystem.kTicksPerDay,
                 part_time_prob = Mod.m_Setting.part_time_percentage,
-                commute_top10 = Mod.m_ModData.commute_top10per,
+                commute_top10 = Mod.m_Setting.commute_top10per,
                 dow = this.m_daytype,
                 part_time_reduction = Mod.m_Setting.avg_work_hours_pt_wd / Mod.m_Setting.avg_work_hours_ft_wd,
-                overtime = (Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/4
+                overtime = (Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/4,
+                meals_leisure = new float4(Mod.m_Setting.meals_weekday, Mod.m_Setting.meals_avgday, Mod.m_Setting.meals_saturday, Mod.m_Setting.meals_sunday),
+                entertainment_leisure = new float4(Mod.m_Setting.entertainment_weekday, Mod.m_Setting.entertainment_avgday, Mod.m_Setting.entertainment_saturday, Mod.m_Setting.entertainment_sunday),
+                shopping_leisure = new float4(Mod.m_Setting.shopping_weekday, Mod.m_Setting.shopping_avgday, Mod.m_Setting.shopping_saturday, Mod.m_Setting.shopping_sunday),
+                park_leisure = new float4(Mod.m_Setting.park_weekday, Mod.m_Setting.park_avgday, Mod.m_Setting.park_saturday, Mod.m_Setting.park_sunday),
+                travel_leisure = new float4(Mod.m_Setting.travel_weekday, Mod.m_Setting.travel_avgday, Mod.m_Setting.travel_saturday, Mod.m_Setting.travel_sunday),
             }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobHandle.CombineDependencies(this.Dependency, JobHandle.CombineDependencies(outJobHandle, deps)));
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle);
             this.m_PathFindSetupSystem.AddQueueWriter(jobHandle);
@@ -427,6 +432,16 @@ namespace Time2Work
             public Setting.DTSimulationEnum dow;
             public float overtime;
             public float part_time_reduction;
+            public float4 meals_leisure;
+            public float4 entertainment_leisure;
+            public float4 shopping_leisure;
+            public float4 park_leisure;
+            public float4 travel_leisure;
+            private float meals_avghour;
+            private float entertainment_avghour;
+            private float shopping_avghour;
+            private float park_avghour;
+            private float travel_avghour;
 
             private void SpendLeisure(
               int index,
@@ -480,6 +495,41 @@ namespace Time2Work
                 BufferAccessor<TripNeeded> bufferAccessor = chunk.GetBufferAccessor<TripNeeded>(ref this.m_TripType);
                 int population = this.m_PopulationData[this.m_PopulationEntity].m_Population;
                 Unity.Mathematics.Random random = this.m_RandomSeed.GetRandom(unfilteredChunkIndex);
+
+                //Select leisure variables based on day of the week
+                if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                {
+                    meals_avghour = meals_leisure.x;
+                    entertainment_avghour = entertainment_leisure.x;
+                    shopping_avghour = shopping_leisure.x;
+                    park_avghour = park_leisure.x;
+                    travel_avghour = travel_leisure.x;
+                }
+                else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                {
+                    meals_avghour = meals_leisure.y;
+                    entertainment_avghour = entertainment_leisure.y;
+                    shopping_avghour = shopping_leisure.y;
+                    park_avghour = park_leisure.y;
+                    travel_avghour = travel_leisure.y;
+                }
+                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                {
+                    meals_avghour = meals_leisure.z;
+                    entertainment_avghour = entertainment_leisure.z;
+                    shopping_avghour = shopping_leisure.z;
+                    park_avghour = park_leisure.z;
+                    travel_avghour = travel_leisure.z;
+                }
+                else
+                {
+                    meals_avghour = meals_leisure.w;
+                    entertainment_avghour = entertainment_leisure.w;
+                    shopping_avghour = shopping_leisure.w;
+                    park_avghour = park_leisure.w;
+                    travel_avghour = travel_leisure.w;
+                }
+
                 for (int index = 0; index < nativeArray1.Length; ++index)
                 {
                     Entity entity1 = nativeArray1[index];
@@ -718,6 +768,12 @@ namespace Time2Work
                 float num2;
                 float a;
                 float num3;
+
+                float factor_meal = 5f*meals_avghour / (meals_avghour + entertainment_avghour + shopping_avghour + park_avghour + travel_avghour);
+                float factor_entertainment = 5f * entertainment_avghour / (meals_avghour + entertainment_avghour + shopping_avghour + park_avghour + travel_avghour);
+                float factor_shopping = 5f * shopping_avghour / (meals_avghour + entertainment_avghour + shopping_avghour + park_avghour + travel_avghour);
+                float factor_park = 5f * park_avghour / (meals_avghour + entertainment_avghour + shopping_avghour + park_avghour + travel_avghour);
+                float factor_travel = 5f * travel_avghour / (meals_avghour + entertainment_avghour + shopping_avghour + park_avghour + travel_avghour);
                 switch (type)
                 {
                     case LeisureType.Meals:
@@ -738,6 +794,7 @@ namespace Time2Work
                                 num3 = 35f;
                                 break;
                         }
+                        num3 *= factor_meal;
                         break;
                     case LeisureType.Entertainment:
                         num2 = 10f;
@@ -757,6 +814,7 @@ namespace Time2Work
                                 num3 = 45f;
                                 break;
                         }
+                        num3 *= factor_entertainment;
                         break;
                     case LeisureType.Commercial:
                         num2 = 10f;
@@ -776,6 +834,7 @@ namespace Time2Work
                                 num3 = 30f;
                                 break;
                         }
+                        num3 *= factor_shopping;
                         break;
                     case LeisureType.CityIndoors:
                     case LeisureType.CityPark:
@@ -809,6 +868,7 @@ namespace Time2Work
                                 num1 = (float)(0.05000000074505806 + 4.0 * (double)math.saturate(0.35f - this.m_Weather) * (double)math.saturate((float)(((double)this.m_Temperature - 20.0) / 30.0)));
                                 break;
                         }
+                        num3 *= factor_park;
                         break;
                     case LeisureType.Travel:
                         num2 = 1f;
@@ -829,6 +889,7 @@ namespace Time2Work
                                 num3 = 40f;
                                 break;
                         }
+                        num3 *= factor_travel;
                         break;
                     default:
                         num2 = 0.0f;

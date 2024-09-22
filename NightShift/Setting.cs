@@ -17,8 +17,8 @@ namespace Time2Work
 {
     //[FileLocation(nameof(Time2Work))]
     [FileLocation($"ModsSettings\\{nameof(Time2Work)}\\{nameof(Time2Work)}")]
-    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup)]
-    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, ExternalGroup, ExpensesGroup)]
+    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup)]
+    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, ExternalGroup, ExpensesGroup)]
     public class Setting : ModSetting
     {
         public const string SettingsSection = "Settings";
@@ -37,6 +37,11 @@ namespace Time2Work
         public const string DayShiftGroup = "DayShiftGroup";
         public const string NonDayShiftByWorkTypeGroup = "NonDayShiftByWorkTypeGroup";
         public const string TimeOffGroup = "TimeOffGroup";
+        public const string LeisureMealsGroup = "LeisureMealsGroup";
+        public const string LeisureEntertainmentGroup = "LeisureEntertainmentGroup";
+        public const string LeisureShoppingGroup = "LeisureShoppingGroup";
+        public const string LeisureParksGroup = "LeisureParksGroup";
+        public const string LeisureTravelGroup = "LeisureTravelGroup";
         public const string SchoolTimeOffGroup = "SchoolTimeOffGroup";
         public const string SchoolTimeGroup = "SchoolTimeGroup";
         public const string School1WeekGroup = "School1WeekGroup";
@@ -54,68 +59,88 @@ namespace Time2Work
         public const string CityServicesGroup = "CityServicesGroup";
 
         Dictionary<int, int> countryIndexLookup = new Dictionary<int, int>();
-        int[] evening_share_ = [10, 17, 13, 5, 19, 15, 31, 13, 16, 8];
-        int[] night_share_ = [8, 8, 7, 2, 12, 5, 8, 7, 11, 4];
-        int[] delay_factor_ = [2, 4, 2, 2, 2, 2, 2, 2, 2, 2];
-        int[] lunch_break_percentage_ = [30, 10, 30, 30, 30, 30, 30, 30, 30, 30];
-        float[] holidays_per_year_ = [11, 11, 13, 10, 11, 11, 7, 40, 13, 11];
-        float[] vacation_per_year_ = [22, 22, 30, 21, 30, 28, 25, 15, 26, 22];
-        bool[] disable_early_shop_leisure_ = [true, false, true, true, true, true, true, true, true, true];
-        bool[] use_vanilla_timeoff_ = [false, true, false, false, false, false, false, false, false, false];
-        bool[] use_school_vanilla_timeoff_ = [false, true, false, false, false, false, false, false, false, false];
-        int[] school_start_time_ = [2, 2, 1, 2, 3, 2, 2, 0, 2, 2];
-        int[] school_end_time_ = [16, 16, 9, 16, 19, 12, 16, 19, 16, 16];
-        int[] high_school_start_time_ = [2, 2, 1, 4, 2, 2, 2, 0, 2, 2];
-        int[] high_school_end_time_ = [16, 16, 12, 18, 20, 16, 16, 21, 16, 16];
-        int[] univ_start_time_ = [2, 2, 2, 2, 4, 2, 2, 1, 2, 2];
-        int[] univ_end_time_ = [20, 20, 21, 22, 22, 22, 20, 26, 18, 20];
-        int[] work_start_time_ = [4, 4, 4, 3, 4, 4, 4, 4, 2, 4];
-        int[] work_end_time_ = [20, 20, 22, 20, 20, 20, 20, 22, 18, 20];
-        int[] dt_simulation_ = [0, 0, 4, 4, 4, 4, 4, 4, 4, 4];
-        float[] avg_work_hours_ft_wd_ = [8.4f, 8.4f, 8.8f, 7.5f, 7.8f, 7.6f, 8.4f, 9.2f, 8f, 8.4f];
-        float[] avg_work_hours_pt_wd_ = [5.3f, 5.3f, 5.3f, 4f, 4.7f, 3.6f, 5.3f, 5f, 6f, 5.3f];
-        float[] slow_time_factor_ = [1f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f];
-        int[] part_time_percentage_ = [22, 22, 8, 18, 18, 30, 48, 60, 6, 17];
-        int[] remote_percentage_ = [20, 20, 10, 20, 15, 13, 32, 55, 8, 14];
-        bool[] night_trucks_ = [true, true, true, true, true, true, true, true, true, true];
-        bool[] peak_spread_ = [true, true, true, true, true, true, true, true, true, true];
-        bool[] tourism_trips_ = [true, true, true, true, true, true, true, true, true, true];
-        bool[] commuter_trips_ = [true, true, true, true, true, true, true, true, true, true];
-        int[] service_expenses_night_reduction_ = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30];
-        int[] office_weekday_pct_ = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90];
-        int[] office_avgday_pct_ = [88, 88, 88, 88, 88, 88, 88, 88, 88, 88];
-        int[] office_sat_pct_ = [12, 12, 12, 12, 12, 12, 12, 12, 12, 12];
-        int[] office_sun_pct_ = [6, 6, 6, 6, 6, 6, 6, 6, 6, 6];
-        int[] commercial_weekday_pct_ = [64, 64, 64, 64, 64, 64, 64, 64, 64, 64];
-        int[] commercial_avgday_pct_ = [68, 68, 68, 68, 68, 68, 68, 68, 68, 68];
-        int[] commercial_sat_pct_ = [37, 37, 37, 37, 37, 37, 37, 37, 37, 37];
-        int[] commercial_sun_pct_ = [26, 26, 26, 26, 26, 26, 26, 26, 26, 26];
-        int[] industry_weekday_pct_ = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90];
-        int[] industry_avgday_pct_ = [86, 86, 86, 86, 86, 86, 86, 86, 86, 86];
-        int[] industry_sat_pct_ = [24, 24, 24, 24, 24, 24, 24, 24, 24, 24];
-        int[] industry_sun_pct_ = [11, 11, 11, 11, 11, 11, 11, 11, 11, 11];
-        int[] cityServices_weekday_pct_ = [80, 80, 80, 80, 80, 80, 80, 80, 80, 80];
-        int[] cityServices_avgday_pct_ = [78, 78, 78, 78, 78, 78, 78, 78, 78, 78];
-        int[] cityServices_sat_pct_ = [17, 17, 17, 17, 17, 17, 17, 17, 17, 17];
-        int[] cityServices_sun_pct_ = [12, 12, 12, 12, 12, 12, 12, 12, 12, 12];
-        int[] nonday_office_share_ = [7, 7, 7, 13, 7, 7, 7, 7, 7, 7];
-        int[] nonday_commercial_share_ = [31, 31, 31, 24, 31, 31, 31, 31, 31, 31];
-        int[] nonday_industry_share_ = [14, 14, 14, 14, 14, 14, 14, 14, 14, 14];
-        int[] nonday_cityservices_share_ = [18, 18, 18, 7, 18, 18, 18, 18, 18, 18];
-        int[] school_lv1_weekday_pct_ = [93, 93, 84, 98, 98, 98, 93, 98, 98, 93];
-        int[] school_lv1_avgday_pct_ = [92, 92, 83, 97, 97, 97, 92, 97, 97, 92];
-        int[] school_lv1_saturday_pct_ = [0, 0, 0, 1, 0, 0, 0, 2, 0, 0];
-        int[] school_lv1_sunday_pct_ = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        int[] school_lv2_weekday_pct_ = [90, 90, 81, 93, 98, 98, 90, 97, 98, 90];
-        int[] school_lv2_avgday_pct_ = [88, 88, 79, 88, 97, 97, 88, 95, 97, 88];
-        int[] school_lv2_saturday_pct_ = [0, 0, 0, 2, 0, 0, 0, 2, 0, 0];
-        int[] school_lv2_sunday_pct_ = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        int[] school_lv34_weekday_pct_ = [80, 80, 72, 85, 90, 90, 80, 90, 90, 80];
-        int[] school_lv34_avgday_pct_ = [70, 70, 63, 70, 80, 80, 70, 80, 80, 70];
-        int[] school_lv34_saturday_pct_ = [5, 5, 5, 10, 5, 5, 5, 15, 5, 5];
-        int[] school_lv34_sunday_pct_ = [0, 0, 0, 4, 0, 0, 0, 5, 0, 0];
-        int[] school_vacation_month1_ = [7, 7, 1, 7, 7, 7, 7, 4, 6, 7];
-        int[] school_vacation_month2_ = [8, 8, 7, 8, 8, 8, 8, 5, 7, 8];
+        int[] evening_share_ = [10, 17, 13, 5, 19, 15, 31, 13, 16, 17, 8];
+        int[] night_share_ = [8, 8, 7, 2, 12, 5, 8, 7, 11, 9, 4];
+        int[] delay_factor_ = [2, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2];
+        int[] lunch_break_percentage_ = [30, 10, 30, 30, 30, 30, 30, 30, 30, 30, 30];
+        float[] holidays_per_year_ = [11, 11, 13, 10, 11, 11, 7, 40, 13, 8, 11];
+        float[] vacation_per_year_ = [22, 22, 30, 21, 30, 28, 25, 15, 26, 39, 22];
+        bool[] disable_early_shop_leisure_ = [true, false, true, true, true, true, true, true, true, true, true];
+        bool[] use_vanilla_timeoff_ = [false, true, false, false, false, false, false, false, false, false, false];
+        bool[] use_school_vanilla_timeoff_ = [false, true, false, false, false, false, false, false, false, false, false];
+        int[] school_start_time_ = [2, 2, 1, 2, 3, 2, 2, 0, 2, 3, 2];
+        int[] school_end_time_ = [16, 16, 9, 16, 19, 12, 16, 19, 16, 16, 16];
+        int[] high_school_start_time_ = [2, 2, 1, 4, 2, 2, 2, 0, 2, 3, 2];
+        int[] high_school_end_time_ = [16, 16, 12, 18, 20, 16, 16, 21, 16, 16, 16];
+        int[] univ_start_time_ = [2, 2, 2, 2, 4, 2, 2, 1, 2, 2, 2];
+        int[] univ_end_time_ = [20, 20, 21, 22, 22, 22, 20, 26, 18, 20, 20];
+        int[] work_start_time_ = [4, 4, 4, 3, 4, 4, 4, 4, 2, 3, 4];
+        int[] work_end_time_ = [20, 20, 22, 20, 20, 20, 20, 22, 18, 19, 20];
+        int[] dt_simulation_ = [0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+        float[] avg_work_hours_ft_wd_ = [8.4f, 8.4f, 8.8f, 7.5f, 7.8f, 7.6f, 8.4f, 9.2f, 8f, 7.3f, 8.4f];
+        float[] avg_work_hours_pt_wd_ = [5.3f, 5.3f, 5.3f, 4f, 4.7f, 3.6f, 5.3f, 5f, 6f, 3.3f, 5.3f];
+        float[] slow_time_factor_ = [1f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f];
+        int[] part_time_percentage_ = [22, 22, 8, 18, 18, 30, 48, 60, 6, 24, 17];
+        int[] remote_percentage_ = [20, 20, 10, 20, 15, 13, 32, 55, 8, 27, 14];
+        bool[] night_trucks_ = [true, true, true, true, true, true, true, true, true, true, true];
+        bool[] peak_spread_ = [true, true, true, true, true, true, true, true, true, true, true];
+        bool[] tourism_trips_ = [true, true, true, true, true, true, true, true, true, true, true];
+        bool[] commuter_trips_ = [true, true, true, true, true, true, true, true, true, true, true];
+        int[] service_expenses_night_reduction_ = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30];
+        int[] office_weekday_pct_ = [90, 90, 90, 90, 90, 90, 90, 90, 95, 90, 90];
+        int[] office_avgday_pct_ = [88, 88, 88, 88, 88, 88, 88, 88, 90, 88, 88];
+        int[] office_sat_pct_ = [12, 12, 12, 12, 12, 12, 12, 12, 10, 12, 12];
+        int[] office_sun_pct_ = [6, 6, 6, 6, 6, 6, 6, 6, 2, 6, 6];
+        int[] commercial_weekday_pct_ = [64, 64, 64, 64, 64, 64, 64, 64, 90, 64, 64];
+        int[] commercial_avgday_pct_ = [68, 68, 68, 68, 68, 68, 68, 68, 85, 68, 68];
+        int[] commercial_sat_pct_ = [37, 37, 37, 37, 37, 37, 37, 37, 70, 37, 37];
+        int[] commercial_sun_pct_ = [26, 26, 26, 26, 26, 26, 26, 26, 15, 26, 26];
+        int[] industry_weekday_pct_ = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90];
+        int[] industry_avgday_pct_ = [86, 86, 86, 86, 86, 86, 86, 86, 80, 86, 86];
+        int[] industry_sat_pct_ = [24, 24, 24, 24, 24, 24, 24, 24, 30, 24, 24];
+        int[] industry_sun_pct_ = [11, 11, 11, 11, 11, 11, 11, 11, 10, 11, 11];
+        int[] cityServices_weekday_pct_ = [80, 80, 80, 80, 80, 80, 80, 80, 95, 80, 80];
+        int[] cityServices_avgday_pct_ = [78, 78, 78, 78, 78, 78, 78, 78, 90, 78, 78];
+        int[] cityServices_sat_pct_ = [17, 17, 17, 17, 17, 17, 17, 17, 60, 17, 17];
+        int[] cityServices_sun_pct_ = [12, 12, 12, 12, 12, 12, 12, 12, 40, 12, 12];
+        int[] nonday_office_share_ = [7, 7, 7, 13, 7, 7, 7, 7, 5, 3, 7];
+        int[] nonday_commercial_share_ = [31, 31, 31, 24, 31, 31, 31, 31, 15, 8, 31];
+        int[] nonday_industry_share_ = [14, 14, 14, 14, 14, 14, 14, 14, 25, 15, 14];
+        int[] nonday_cityservices_share_ = [18, 18, 18, 7, 18, 18, 18, 18, 50, 8, 18];
+        int[] school_lv1_weekday_pct_ = [93, 93, 84, 98, 98, 98, 93, 98, 97, 93, 93];
+        int[] school_lv1_avgday_pct_ = [92, 92, 83, 97, 97, 97, 92, 97, 95, 92, 92];
+        int[] school_lv1_saturday_pct_ = [0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0];
+        int[] school_lv1_sunday_pct_ = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        int[] school_lv2_weekday_pct_ = [90, 90, 81, 93, 98, 98, 90, 97, 90, 90, 90];
+        int[] school_lv2_avgday_pct_ = [88, 88, 79, 88, 97, 97, 88, 95, 85, 88, 88];
+        int[] school_lv2_saturday_pct_ = [0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0];
+        int[] school_lv2_sunday_pct_ = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        int[] school_lv34_weekday_pct_ = [80, 80, 72, 85, 90, 90, 80, 90, 80, 80, 80];
+        int[] school_lv34_avgday_pct_ = [70, 70, 63, 70, 80, 80, 70, 80, 70, 70, 70];
+        int[] school_lv34_saturday_pct_ = [5, 5, 5, 10, 5, 5, 5, 15, 20, 5, 5];
+        int[] school_lv34_sunday_pct_ = [0, 0, 0, 4, 0, 0, 0, 5, 10, 0, 0];
+        int[] school_vacation_month1_ = [7, 7, 1, 7, 7, 7, 7, 4, 6, 7, 7];
+        int[] school_vacation_month2_ = [8, 8, 7, 8, 8, 8, 8, 5, 7, 8, 8];
+        float[] meals_weekday_ = [1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f];
+        float[] meals_avgday_ = [1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f];
+        float[] meals_saturday_ = [1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f];
+        float[] meals_sunday_ = [1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f];
+        float[] entertainment_weekday_ = [0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f];
+        float[] entertainment_avgday_ = [0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f];
+        float[] entertainment_saturday_ = [1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f];
+        float[] entertainment_sunday_ = [1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f];
+        float[] shopping_weekday_ = [0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f];
+        float[] shopping_avgday_ = [1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f];
+        float[] shopping_saturday_ = [1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f];
+        float[] shopping_sunday_ = [0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f];
+        float[] park_weekday_ = [0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f];
+        float[] park_avgday_ = [0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f];
+        float[] park_saturday_ = [0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f];
+        float[] park_sunday_ = [0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f];
+        float[] travel_weekday_ = [0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f];
+        float[] travel_avgday_ = [0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f];
+        float[] travel_saturday_ = [0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f];
+        float[] travel_sunday_ = [0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f];
 
 
         public Setting(IMod mod) : base(mod)
@@ -200,6 +225,26 @@ namespace Time2Work
             school_lv34_sunday_pct = school_lv34_sunday_pct_[index];
             school_vacation_month1 = (months)school_vacation_month1_[index];
             school_vacation_month2 = (months)school_vacation_month2_[index];
+            meals_weekday = meals_weekday_[index];
+            meals_avgday = meals_avgday_[index];
+            meals_saturday = meals_saturday_[index];
+            meals_sunday = meals_sunday_[index];
+            entertainment_weekday = entertainment_weekday_[index];
+            entertainment_avgday = entertainment_avgday_[index];
+            entertainment_saturday = entertainment_saturday_[index];
+            entertainment_sunday = entertainment_sunday_[index];
+            shopping_weekday = shopping_weekday_[index];
+            shopping_avgday = shopping_avgday_[index];
+            shopping_saturday = shopping_saturday_[index];
+            shopping_sunday = shopping_sunday_[index];
+            park_weekday = park_weekday_[index];
+            park_avgday = park_avgday_[index];
+            park_saturday = park_saturday_[index];
+            park_sunday = park_sunday_[index];
+            travel_weekday = travel_weekday_[index];
+            travel_avgday = travel_avgday_[index];
+            travel_saturday = travel_saturday_[index];
+            travel_sunday = travel_sunday_[index];
         }
 
         public override void Apply()
@@ -229,6 +274,9 @@ namespace Time2Work
         //[SettingsUISection(SettingsSection, SettingsGroup)]
         //[SettingsUIMultilineText]
         //public string MultilineText => string.Empty;
+
+        public float average_commute { get; set; } = 0f;
+        public float commute_top10per { get; set; } = 0f;
 
         [SettingsUISlider(min = 1, max = 25, step = 1, scalarMultiplier = 1, unit = Unit.kPercentage)]
         [SettingsUISection(WorkSection, WorkPlaceShiftGroup)]
@@ -285,6 +333,87 @@ namespace Time2Work
         [SettingsUISection(ShopLeisureSection, TimeOffGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(use_vanilla_timeoff))]
         public float vacation_per_year { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureMealsGroup)]
+        public float meals_weekday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureMealsGroup)]
+        public float meals_avgday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureMealsGroup)]
+        public float meals_saturday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureMealsGroup)]
+        public float meals_sunday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureEntertainmentGroup)]
+        public float entertainment_weekday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureEntertainmentGroup)]
+        public float entertainment_avgday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureEntertainmentGroup)]
+        public float entertainment_saturday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureEntertainmentGroup)]
+        public float entertainment_sunday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureShoppingGroup)]
+        public float shopping_weekday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureShoppingGroup)]
+        public float shopping_avgday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureShoppingGroup)]
+        public float shopping_saturday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureShoppingGroup)]
+        public float shopping_sunday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureParksGroup)]
+        public float park_weekday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureParksGroup)]
+        public float park_avgday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureParksGroup)]
+        public float park_saturday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureParksGroup)]
+        public float park_sunday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureTravelGroup)]
+        public float travel_weekday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureTravelGroup)]
+        public float travel_avgday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureTravelGroup)]
+        public float travel_saturday { get; set; }
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kFloatTwoFractions)]
+        [SettingsUISection(ShopLeisureSection, LeisureTravelGroup)]
+        public float travel_sunday { get; set; }
+
 
         [SettingsUISection(SchoolSection, SchoolTimeOffGroup)]
         public bool use_school_vanilla_timeoff { get; set; }
@@ -506,6 +635,7 @@ namespace Time2Work
             Netherlands = 124,
             Phillipines = 140,
             Poland = 141,
+            UK = 187,
             USA = 188
         }
 
@@ -592,6 +722,11 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.RemoteGroup), "Remote Work Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TimeOffGroup), "Vacation and Holiday Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.DayShiftGroup), "Day Shift Settings" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.LeisureMealsGroup), "Meals: Avg. Hours for for Leisure per day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.LeisureEntertainmentGroup), "Entertainment: Avg. Hours for for Leisure per day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.LeisureShoppingGroup), "Shopping: Avg. Hours for for Leisure per day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.LeisureParksGroup), "Parks: Avg. Hours for for Leisure per day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.LeisureTravelGroup), "Travel: Avg. Hours for for Leisure per day" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeOffGroup), "School Vacation Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeGroup), "School Start/End Time Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.School1WeekGroup), "Elementary School Attendance by Day" },
@@ -616,6 +751,46 @@ namespace Time2Work
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Button)), "Confirm" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Button)), $"Confirm new settings" },
 
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_weekday)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.meals_weekday)), $"Average hours that a person spends going out for a meal per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_avgday)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.meals_avgday)), $"Average hours that a person spends going out for a meal per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_saturday)), "Saturday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.meals_saturday)), $"Average hours that a person spends going out for a meal per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_sunday)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.meals_sunday)), $"Average hours that a person spends going out for a meal per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.entertainment_weekday)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.entertainment_weekday)), $"Average hours that a person spends going out for entertainment per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.entertainment_avgday)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.entertainment_avgday)), $"Average hours that a person spends going out for entertainment per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.entertainment_saturday)), "Saturday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.entertainment_saturday)), $"Average hours that a person spends going out for entertainment per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.entertainment_sunday)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.entertainment_sunday)), $"Average hours that a person spends going out for entertainment per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.shopping_weekday)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.shopping_weekday)), $"Average hours that a person spends going out for shopping per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.shopping_avgday)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.shopping_avgday)), $"Average hours that a person spends going out for shopping per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.shopping_saturday)), "Saturday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.shopping_saturday)), $"Average hours that a person spends going out for shopping per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.shopping_sunday)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.shopping_sunday)), $"Average hours that a person spends going out for shopping per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.park_weekday)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.park_weekday)), $"Average hours that a person spends going to parks per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.park_avgday)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.park_avgday)), $"Average hours that a person spends going to parks per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.park_saturday)), "Saturday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.park_saturday)), $"Average hours that a person spends going to parks per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.park_sunday)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.park_sunday)), $"Average hours that a person spends going to parks per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.travel_weekday)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.travel_weekday)), $"Average hours that a person spends travelling per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.travel_avgday)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.travel_avgday)), $"Average hours that a person spends travelling per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.travel_saturday)), "Saturday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.travel_saturday)), $"Average hours that a person spends travelling per day." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.travel_sunday)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.travel_sunday)), $"Average hours that a person spends travelling per day." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv1_weekday_pct)), "Monday to Thursday" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_lv1_weekday_pct)), $"Percentage of students that go to School on Monday to Thursday" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_lv1_avgday_pct)), "Friday" },
@@ -760,7 +935,8 @@ namespace Time2Work
 
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Performance), "Performance" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Balanced), "Balanced" },
-                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.USA), "USA" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.USA), "United States of America" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.UK), "United Kingdom" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Brazil), "Brazil" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Canada), "Canada" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Phillipines), "Phillipines" },
@@ -851,6 +1027,11 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.RemoteGroup), "Configurações de Home Office" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TimeOffGroup), "Configurações de férias e feriados" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.DayShiftGroup), "Configurações do turno diurno."},
+                { m_Setting.GetOptionGroupLocaleID(Setting.LeisureMealsGroup), "Refeições: Média de horas de lazer por dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.LeisureEntertainmentGroup), "Entretenimento: Avg. Hours for for Leisure per day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.LeisureShoppingGroup), "Compras: de horas de lazer por dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.LeisureParksGroup), "Parques: Média de horas de lazer por dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.LeisureTravelGroup), "Viagens: Média de horas de lazer por dia" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeOffGroup), "Configurações de férias escolares" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeGroup), "Configurações de horário de início/término das aulas nas escolas" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.School1WeekGroup), "Frequência escolar elementar por dia" },
@@ -868,6 +1049,46 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.CityServicesGroup), "Serviços Públicos - Porcentagem de Trabalhadores por Dia" },
 
 
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_weekday)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.meals_weekday)), $"Média de horas que uma pessoa gasta saindo para comer por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_avgday)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.meals_avgday)), $"Média de horas que uma pessoa gasta saindo para comer por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_saturday)), "Sábado" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.meals_saturday)), $"Média de horas que uma pessoa gasta saindo para comer por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_sunday)), "Domingo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.meals_sunday)), $"Média de horas que uma pessoa gasta saindo para comer por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.entertainment_weekday)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.entertainment_weekday)), $"Média de horas que uma pessoa gasta saindo para se divertir por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.entertainment_avgday)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.entertainment_avgday)), $"Média de horas que uma pessoa gasta saindo para se divertir por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.entertainment_saturday)), "Sábado" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.entertainment_saturday)), $"Média de horas que uma pessoa gasta saindo para se divertir por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.entertainment_sunday)), "Domingo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.entertainment_sunday)), $"Média de horas que uma pessoa gasta saindo para se divertir por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.shopping_weekday)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.shopping_weekday)), $"Média de horas que uma pessoa gasta saindo para fazer compras por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.shopping_avgday)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.shopping_avgday)), $"Média de horas que uma pessoa gasta saindo para fazer compras por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.shopping_saturday)), "Sábado" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.shopping_saturday)), $"Média de horas que uma pessoa gasta saindo para fazer compras por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.shopping_sunday)), "Domingo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.shopping_sunday)), $"Média de horas que uma pessoa gasta saindo para fazer compras por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.park_weekday)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.park_weekday)), $"Média de horas que uma pessoa gasta indo a parques por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.park_avgday)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.park_avgday)), $"Média de horas que uma pessoa gasta indo a parques por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.park_saturday)), "Sábado" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.park_saturday)), $"Média de horas que uma pessoa gasta indo a parques por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.park_sunday)), "Domingo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.park_sunday)), $"Média de horas que uma pessoa gasta indo a parques por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.travel_weekday)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.travel_weekday)), $"Média de horas que uma pessoa gasta viajando por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.travel_avgday)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.travel_avgday)), $"Média de horas que uma pessoa gasta viajando por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.travel_saturday)), "Sábado" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.travel_saturday)), $"Média de horas que uma pessoa gasta viajando por dia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.travel_sunday)), "Sunday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.travel_sunday)), $"Média de horas que uma pessoa gasta viajando por dia." },
                 //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.WeekText)), $"Porcentagem de Trabalhadores por Dia" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DTText)), $"Alterar os parametros abaixo requer reinício do jogo." },
                 //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.MultilineText)), $"AVISO: O recurso de Tempo mais Lento pode causar problemas com os mods Population Rebalance e Info Loom - em uma cidade existente. Uma nova cidade provavelmente não terá problemas com esses mods." },
@@ -1018,7 +1239,8 @@ namespace Time2Work
 
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Performance), "Desempenho" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Balanced), "Balanceada" },
-                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.USA), "EUA" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.USA), "Estados Unidos da América" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.UK), "Reino Unido" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Brazil), "Brasil" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Canada), "Canadá" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Phillipines), "Filipinas" },

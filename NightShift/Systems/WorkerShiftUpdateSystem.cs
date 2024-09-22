@@ -212,15 +212,15 @@ namespace Time2Work.Systems
                         Mod.log.Info($"Commercial Non Day Workers %: {100 * current_commercial_nonday_prob}");
                         Mod.log.Info($"Industry Non Day Workers %: {100 * current_industry_nonday_prob}");
                         Mod.log.Info($"City Services Non Day Workers %: {100 * current_industry_nonday_prob}");
-                        Mod.m_ModData.average_commute = sum_last_commute * 24f / count;
-                        Mod.m_ModData.commute_top10per = (i * bin_min_size) / 60f;
-                        Mod.log.Info($"Average Commute Time (hours): {Mod.m_ModData.average_commute}");
-                        Mod.log.Info($"Commute Time Top 10% (hours): {Mod.m_ModData.commute_top10per}");
+                        Mod.m_Setting.average_commute = sum_last_commute * 24f / count;
+                        Mod.m_Setting.commute_top10per = (i * bin_min_size) / 60f;
+                        Mod.log.Info($"Average Commute Time (hours): {Mod.m_Setting.average_commute}");
+                        Mod.log.Info($"Commute Time Top 10% (hours): {Mod.m_Setting.commute_top10per}");
                     }
 
                     if (!Mod.m_Setting.peak_spread)
                     {
-                        Mod.m_ModData.commute_top10per = 0;
+                        Mod.m_Setting.commute_top10per = 0;
                     }
 
                     float new_sum_day_shift = 0f;

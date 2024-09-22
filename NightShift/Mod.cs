@@ -25,7 +25,7 @@ namespace Time2Work
         public static readonly string harmonyID = "Time2Work";
         public static ILog log = LogManager.GetLogger($"{nameof(Time2Work)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
         public static Setting m_Setting;
-        public static ModData m_ModData;
+        //public static ModData m_ModData;
         public const int simulation_reduction = 10;
 
         // Mods Settings Folder
@@ -51,7 +51,7 @@ namespace Time2Work
                 log.Info($"Current mod asset at {asset.path}");
 
             m_Setting = new Setting(this);
-            m_ModData = new ModData();
+            //m_ModData = new ModData();
 
             foreach (var modInfo in GameManager.instance.modManager)
             {
@@ -66,6 +66,7 @@ namespace Time2Work
             GameManager.instance.localizationManager.AddSource("pt-BR", new LocalePT(m_Setting));
 
             AssetDatabase.global.LoadSettings(nameof(Time2Work), m_Setting, new Setting(this));
+            //AssetDatabase.global.LoadSettings("data_" + nameof(Time2Work), m_ModData, new ModData(this));
 
             // Disable original systems
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.CitizenBehaviorSystem>().Enabled = false;

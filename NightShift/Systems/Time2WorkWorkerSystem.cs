@@ -368,7 +368,7 @@ namespace Time2Work
                 ticksPerDay = Time2WorkTimeSystem.kTicksPerDay,
                 part_time_prob = Mod.m_Setting.part_time_percentage,
                 remote_work_prob = Mod.m_Setting.remote_percentage,
-                commute_top10 = Mod.m_ModData.commute_top10per,
+                commute_top10 = Mod.m_Setting.commute_top10per,
                 part_time_reduction = Mod.m_Setting.avg_work_hours_pt_wd/Mod.m_Setting.avg_work_hours_ft_wd,
                 overtime = (Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time)/2)/24               
             }.ScheduleParallel<Time2WorkWorkerSystem.GoToWorkJob>(this.m_GotoWorkQuery, JobHandle.CombineDependencies(this.Dependency, deps));
@@ -405,7 +405,7 @@ namespace Time2Work
                 delayFactor = (float)(Mod.m_Setting.delay_factor) / 100,
                 ticksPerDay = Time2WorkTimeSystem.kTicksPerDay,
                 part_time_prob = Mod.m_Setting.part_time_percentage,
-                commute_top10 = Mod.m_ModData.commute_top10per,
+                commute_top10 = Mod.m_Setting.commute_top10per,
                 part_time_reduction = Mod.m_Setting.avg_work_hours_pt_wd / Mod.m_Setting.avg_work_hours_ft_wd,
                 overtime = (Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/24
             }.ScheduleParallel<Time2WorkWorkerSystem.WorkJob>(this.m_WorkerQuery, JobHandle.CombineDependencies(this.Dependency, jobHandle1));
