@@ -275,7 +275,7 @@ namespace Time2Work
                     if (Time2WorkStudentSystem.IsTimeToStudy(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_Frame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay))
                     {
                         DynamicBuffer<TripNeeded> dynamicBuffer = bufferAccessor[index];
-                        if (!this.m_Attendings.HasComponent(entity1) && (citizen.m_State & CitizenFlags.MovingAway) == CitizenFlags.None)
+                        if (!this.m_Attendings.HasComponent(entity1) && (citizen.m_State & CitizenFlags.MovingAwayReachOC) == CitizenFlags.None)
                         {
                             Entity school = nativeArray3[index].m_School;
                             Entity entity2 = Entity.Null;

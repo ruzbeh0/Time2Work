@@ -999,7 +999,7 @@ namespace Time2Work
                             parameters.m_MaxSpeed.x = carData.m_MaxSpeed;
                             parameters.m_ParkingTarget = parkedCar.m_Lane;
                             parameters.m_ParkingDelta = parkedCar.m_CurvePosition;
-                            parameters.m_ParkingLength = VehicleUtils.GetParkingLength(car, ref this.m_PrefabRefs, ref this.m_ObjectGeometryData);
+                            parameters.m_ParkingSize = VehicleUtils.GetParkingSize(car, ref this.m_PrefabRefs, ref this.m_ObjectGeometryData);
                             parameters.m_Methods |= PathMethod.Road | PathMethod.Parking;
                             parameters.m_IgnoredRules = VehicleUtils.GetIgnoredPathfindRules(carData);
                             Game.Vehicles.PersonalCar componentData;

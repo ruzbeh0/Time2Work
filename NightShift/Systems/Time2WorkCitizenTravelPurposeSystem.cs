@@ -1,9 +1,4 @@
-﻿// Decompiled with JetBrains decompiler
-// Type: Game.Simulation.Time2WorkCitizenTravelPurposeSystem
-// Assembly: Game, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-// MVID: 3C8C3C1D-D7EB-4536-8BE0-6F4028D2725F
-// Assembly location: C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Game.dll
-
+﻿
 using Colossal.Collections;
 using Colossal.Entities;
 using Game;
@@ -146,6 +141,7 @@ namespace Time2Work
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 m_ArriveQueue = nativeQueue.AsParallelWriter(),
                 m_NormalizedTime = this.m_TimeSystem.normalizedTime,
+                m_RandomSeed = RandomSeed.Next(),
                 lunch_break_pct = Mod.m_Setting.lunch_break_percentage,
                 school_start_time = (int)Mod.m_Setting.school_start_time,
                 school_end_time = (int)Mod.m_Setting.school_end_time,
@@ -301,6 +297,7 @@ namespace Time2Work
             public NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive>.ParallelWriter m_ArriveQueue;
             public EconomyParameterData m_EconomyParameters;
             public float m_NormalizedTime;
+            public RandomSeed m_RandomSeed;
             public int lunch_break_pct;
             public int school_start_time;
             public int school_end_time;
@@ -325,7 +322,8 @@ namespace Time2Work
                 NativeArray<TravelPurpose> nativeArray2 = chunk.GetNativeArray<TravelPurpose>(ref this.m_TravelPurposeType);
                 
                 NativeArray<CurrentBuilding> nativeArray3 = chunk.GetNativeArray<CurrentBuilding>(ref this.m_CurrentBuildingType);
-                
+                Random random = this.m_RandomSeed.GetRandom(unfilteredChunkIndex);
+
                 bool flag1 = chunk.Has<HealthProblem>(ref this.m_HealthProblemType);
                 for (int index = 0; index < chunk.Count; ++index)
                 {
@@ -352,6 +350,18 @@ namespace Time2Work
                             {
                                 this.m_ArriveQueue.Enqueue(new Time2WorkCitizenTravelPurposeSystem.Arrive(entity, nativeArray3[index].m_CurrentBuilding, Time2WorkCitizenTravelPurposeSystem.ArriveType.WakeUp));
                             }
+                        }
+                    }
+                    else if (travelPurpose.m_Purpose == Game.Citizens.Purpose.VisitAttractions)
+                    {
+                        if (flag2)
+                        {
+                            this.m_CommandBuffer.SetComponentEnabled<Arrived>(unfilteredChunkIndex, entity, false);
+                        }
+                        if (random.NextInt(100) == 0)
+                        {
+                            this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
+
                         }
                     }
                     else if (flag2)

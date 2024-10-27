@@ -630,7 +630,7 @@ namespace Time2Work
                         && !Time2WorkWorkerSystem.IsLunchTime(citizen, worker, ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_Frame,this.m_TimeData, ticksPerDay) && Time2WorkWorkerSystem.IsTimeToWork(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction))
                     {
                         DynamicBuffer<TripNeeded> dynamicBuffer = bufferAccessor[index];
-                        if (!this.m_Attendings.HasComponent(entity1) && (citizen.m_State & CitizenFlags.MovingAway) == CitizenFlags.None)
+                        if (!this.m_Attendings.HasComponent(entity1) && (citizen.m_State & CitizenFlags.MovingAwayReachOC) == CitizenFlags.None)
                         {
                             Entity workplace = nativeArray3[index].m_Workplace;
                             Entity entity2 = Entity.Null;

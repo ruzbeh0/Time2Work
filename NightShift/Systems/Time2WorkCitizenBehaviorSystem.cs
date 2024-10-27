@@ -174,6 +174,7 @@ namespace Time2Work
             uint frameWithInterval = SimulationUtils.GetUpdateFrameWithInterval(this.m_SimulationSystem.frameIndex, (uint)this.GetUpdateInterval(SystemUpdatePhase.GameSimulation), 16);
             NativeQueue<Entity> nativeQueue1 = new NativeQueue<Entity>((AllocatorManager.AllocatorHandle)Allocator.TempJob);
             NativeQueue<Entity> nativeQueue2 = new NativeQueue<Entity>((AllocatorManager.AllocatorHandle)Allocator.TempJob);
+            this.__TypeHandle.__Game_Citizens_HouseholdCitizen_RO_BufferLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_CommuterHousehold_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Vehicles_OwnedVehicle_RO_BufferLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Prefabs_OutsideConnectionData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
@@ -219,7 +220,7 @@ namespace Time2Work
                 m_LeisureType = this.__TypeHandle.__Game_Citizens_Leisure_RO_ComponentTypeHandle,
                 m_HouseholdNeeds = this.__TypeHandle.__Game_Citizens_HouseholdNeed_RW_ComponentLookup,
                 m_Households = this.__TypeHandle.__Game_Citizens_Household_RO_ComponentLookup,
-                m_Properties = this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup,
+                m_PropertyRenters = this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup,
                 m_Transforms = this.__TypeHandle.__Game_Objects_Transform_RO_ComponentLookup,
                 m_CarKeepers = this.__TypeHandle.__Game_Citizens_CarKeeper_RO_ComponentLookup,
                 m_PersonalCars = this.__TypeHandle.__Game_Vehicles_PersonalCar_RW_ComponentLookup,
@@ -520,7 +521,7 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<Household> m_Households;
             [ReadOnly]
-            public ComponentLookup<PropertyRenter> m_Properties;
+            public ComponentLookup<PropertyRenter> m_PropertyRenters;
             [ReadOnly]
             public ComponentLookup<Game.Objects.Transform> m_Transforms;
             [ReadOnly]
@@ -559,6 +560,8 @@ namespace Time2Work
             public BufferLookup<OwnedVehicle> m_OwnedVehicles;
             [ReadOnly]
             public ComponentLookup<CommuterHousehold> m_CommuterHouseholds;
+            [ReadOnly]
+            public BufferLookup<HouseholdCitizen> m_HouseholdCitizenBufs;
             [ReadOnly]
             public EntityArchetype m_HouseholdArchetype;
             [ReadOnly]
@@ -651,12 +654,6 @@ namespace Time2Work
                 return true;
             }
 
-            private bool CheckLeisure(ref Citizen citizenData, ref Unity.Mathematics.Random random)
-            {
-                int num = 128 - (int)citizenData.m_LeisureCounter;
-                return random.NextInt(this.m_LeisureParameters.m_LeisureRandomFactor) < num;
-            }
-
             private void GoHome(
               Entity entity,
               Entity target,
@@ -724,7 +721,7 @@ namespace Time2Work
                 {
                     if (purpose != Game.Citizens.Purpose.MovingAway)
                         return;
-                    citizen.m_State |= CitizenFlags.MovingAway;
+                    citizen.m_State |= CitizenFlags.MovingAwayReachOC;
                 }
             }
             private void GoShopping(
@@ -757,19 +754,28 @@ namespace Time2Work
             private bool DoLeisure(
               int chunkIndex,
               Entity entity,
+              Entity householdEntity,
+              Entity currentBuilding,
+              bool isTourist,
               ref Citizen citizen,
-              Entity household,
-              float3 position,
               int population,
               ref Unity.Mathematics.Random random,
               ref EconomyParameterData economyParameters)
             {
-                int num1 = math.min(80, Mathf.RoundToInt(200f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
-                if (random.NextInt(100) > num1)
+                if (isTourist)
                 {
-                    citizen.m_LeisureCounter = byte.MaxValue;
-                    return true;
+                    if (this.m_OutsideConnections.HasComponent(currentBuilding) && this.m_TouristHouseholds[householdEntity].m_Hotel != Entity.Null)
+                        return false;
                 }
+                else
+                {
+                    int num = 128 - (int)citizen.m_LeisureCounter;
+                    if (this.m_OutsideConnections.HasComponent(currentBuilding) || random.NextInt(this.m_LeisureParameters.m_LeisureRandomFactor) > num)
+                        return false;
+                }
+                int num1 = math.min(80, Mathf.RoundToInt(200f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
+                if (!isTourist && random.NextInt(100) > num1)
+                    citizen.m_LeisureCounter = byte.MaxValue;
                 float x = this.GetTimeLeftUntilInterval(Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction));
                 if (this.m_Workers.HasComponent(entity))
                 {
@@ -794,13 +800,15 @@ namespace Time2Work
                         x = math.min(x, this.GetTimeLeftUntilInterval(timeToStudy));
                     }
                 }
+                if (isTourist)
+                    citizen.m_LeisureCounter = (byte)0;
                 uint num2 = (uint)((double)x * 262144.0);
                 Leisure component = new Leisure()
                 {
                     m_LastPossibleFrame = this.m_SimulationFrame + num2
                 };
                 this.m_CommandBuffer.AddComponent<Leisure>(chunkIndex, entity, component);
-                return false;
+                return true;
             }
 
             private void ReleaseCar(int chunkIndex, Entity citizen)
@@ -827,6 +835,10 @@ namespace Time2Work
               DynamicBuffer<TripNeeded> trips,
               ref Unity.Mathematics.Random random)
             {
+                if (!this.m_CarKeepers.IsComponentEnabled(entity))
+                {
+                    this.m_CarReserverQueue.Enqueue(entity);
+                }
                 Entity meeting1 = this.m_AttendingMeetings[entity].m_Meeting;
                 if (this.m_Attendees.HasBuffer(meeting1) && this.m_Meetings.HasComponent(meeting1))
                 {
@@ -839,37 +851,37 @@ namespace Time2Work
                         {
                             if (attendee.Length > 0 && attendee[0].m_Attendee == entity)
                             {
-                                if (coordinatedMeetingData.m_Purpose.m_Purpose == Game.Citizens.Purpose.Shopping)
+                                if (coordinatedMeetingData.m_TravelPurpose.m_Purpose == Game.Citizens.Purpose.Shopping)
                                 {
                                     float3 position = this.m_Transforms[currentBuilding].m_Position;
                                     this.GoShopping(chunkIndex, entity, household, new HouseholdNeed()
                                     {
-                                        m_Resource = coordinatedMeetingData.m_Purpose.m_Resource,
-                                        m_Amount = coordinatedMeetingData.m_Purpose.m_Data
+                                        m_Resource = coordinatedMeetingData.m_TravelPurpose.m_Resource,
+                                        m_Amount = coordinatedMeetingData.m_TravelPurpose.m_Data
                                     }, position);
                                     return true;
                                 }
-                                if (coordinatedMeetingData.m_Purpose.m_Purpose == Game.Citizens.Purpose.Traveling)
+                                if (coordinatedMeetingData.m_TravelPurpose.m_Purpose == Game.Citizens.Purpose.Traveling)
                                 {
                                     Citizen citizen1 = new Citizen();
-                                    this.GoToOutsideConnection(entity, household, currentBuilding, Entity.Null, ref citizen1, trips, coordinatedMeetingData.m_Purpose.m_Purpose, ref random);
+                                    this.GoToOutsideConnection(entity, household, currentBuilding, Entity.Null, ref citizen1, trips, coordinatedMeetingData.m_TravelPurpose.m_Purpose, ref random);
                                 }
-                                else if (coordinatedMeetingData.m_Purpose.m_Purpose == Game.Citizens.Purpose.GoingHome)
+                                else if (coordinatedMeetingData.m_TravelPurpose.m_Purpose == Game.Citizens.Purpose.GoingHome)
                                 {
-                                    if (this.m_Properties.HasComponent(household))
+                                    if (this.m_PropertyRenters.HasComponent(household))
                                     {
-                                        meeting2.m_Target = this.m_Properties[household].m_Property;
+                                        meeting2.m_Target = this.m_PropertyRenters[household].m_Property;
                                         this.m_Meetings[meeting1] = meeting2;
-                                        this.GoHome(entity, this.m_Properties[household].m_Property, trips, currentBuilding);
+                                        this.GoHome(entity, this.m_PropertyRenters[household].m_Property, trips, currentBuilding);
                                     }
                                 }
                                 else
                                 {
                                     trips.Add(new TripNeeded()
                                     {
-                                        m_Purpose = coordinatedMeetingData.m_Purpose.m_Purpose,
-                                        m_Resource = coordinatedMeetingData.m_Purpose.m_Resource,
-                                        m_Data = coordinatedMeetingData.m_Purpose.m_Data,
+                                        m_Purpose = coordinatedMeetingData.m_TravelPurpose.m_Purpose,
+                                        m_Resource = coordinatedMeetingData.m_TravelPurpose.m_Resource,
+                                        m_Data = coordinatedMeetingData.m_TravelPurpose.m_Data,
                                         m_TargetAgent = new Entity()
                                     });
                                     return true;
@@ -882,12 +894,12 @@ namespace Time2Work
                             {
                                 if (attendee[index].m_Attendee == entity)
                                 {
-                                    if (meeting2.m_Target != Entity.Null && currentBuilding != meeting2.m_Target && (!this.m_Properties.HasComponent(meeting2.m_Target) || this.m_Properties[meeting2.m_Target].m_Property != currentBuilding))
+                                    if (meeting2.m_Target != Entity.Null && currentBuilding != meeting2.m_Target && (!this.m_PropertyRenters.HasComponent(meeting2.m_Target) || this.m_PropertyRenters[meeting2.m_Target].m_Property != currentBuilding))
                                         trips.Add(new TripNeeded()
                                         {
-                                            m_Purpose = coordinatedMeetingData.m_Purpose.m_Purpose,
-                                            m_Resource = coordinatedMeetingData.m_Purpose.m_Resource,
-                                            m_Data = coordinatedMeetingData.m_Purpose.m_Data,
+                                            m_Purpose = coordinatedMeetingData.m_TravelPurpose.m_Purpose,
+                                            m_Resource = coordinatedMeetingData.m_TravelPurpose.m_Resource,
+                                            m_Data = coordinatedMeetingData.m_TravelPurpose.m_Data,
                                             m_TargetAgent = meeting2.m_Target
                                         });
                                     return true;
@@ -955,7 +967,7 @@ namespace Time2Work
                                 {
                                     this.m_CommandBuffer.AddComponent<Deleted>(unfilteredChunkIndex, entity1, new Deleted());
                                 }
-                                if ((citizen.m_State & CitizenFlags.MovingAway) != CitizenFlags.None)
+                                if ((citizen.m_State & CitizenFlags.MovingAwayReachOC) != CitizenFlags.None)
                                 {
                                     this.m_CommandBuffer.AddComponent<Deleted>(unfilteredChunkIndex, entity1, new Deleted());
                                 }
@@ -986,16 +998,16 @@ namespace Time2Work
                                     else
                                     {
                                         Entity entity3 = Entity.Null;
-                                        if (this.m_Properties.HasComponent(household))
+                                        if (this.m_PropertyRenters.HasComponent(household))
                                         {
-                                            entity3 = this.m_Properties[household].m_Property;
+                                            entity3 = this.m_PropertyRenters[household].m_Property;
                                         }
                                         else if (tourist_flag)
                                         {
                                             Entity hotel = this.m_TouristHouseholds[household].m_Hotel;
-                                            if (this.m_Properties.HasComponent(hotel))
+                                            if (this.m_PropertyRenters.HasComponent(hotel))
                                             {
-                                                entity3 = this.m_Properties[hotel].m_Property;
+                                                entity3 = this.m_PropertyRenters[hotel].m_Property;
                                             }
                                         }
                                         else if (commuter)
@@ -1183,12 +1195,9 @@ namespace Time2Work
                                                             }
                                                         } else
                                                         {
-                                                            num = chunk.Has<Leisure>(ref this.m_LeisureType) || this.m_OutsideConnections.HasComponent(currentBuilding) ? 0 : (this.CheckLeisure(ref citizen, ref random) ? 1 : 0);
-                                                            nativeArray2[index] = citizen;
-                                                            if (num != 0)
+                                                            if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, tourist_flag, ref citizen, population, ref random, ref this.m_EconomyParameters))
                                                             {
-                                                                if (this.DoLeisure(unfilteredChunkIndex, entity1, ref citizen, household, this.m_Transforms[currentBuilding].m_Position, population, ref random, ref this.m_EconomyParameters))
-                                                                    nativeArray2[index] = citizen;
+                                                                nativeArray2[index] = citizen;
                                                             }
                                                         }
                                                     }
@@ -1236,11 +1245,10 @@ namespace Time2Work
                                                             } 
                                                         }
 
-                                                        int num = chunk.Has<Leisure>(ref this.m_LeisureType) || this.m_OutsideConnections.HasComponent(currentBuilding) ? 0 : (this.CheckLeisure(ref citizen, ref random) ? 1 : 0);
                                                         nativeArray2[index] = citizen;
-                                                        if (num != 0 && (this.m_NormalizedTime > x1 || disable_early_shop_leisure))
+                                                        if (!chunk.Has<Leisure>(ref this.m_LeisureType) && (this.m_NormalizedTime > x1 || disable_early_shop_leisure))
                                                         {
-                                                            if (this.DoLeisure(unfilteredChunkIndex, entity1, ref citizen, household, this.m_Transforms[currentBuilding].m_Position, population, ref random, ref this.m_EconomyParameters))
+                                                            if (this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, tourist_flag, ref citizen, population, ref random, ref this.m_EconomyParameters))
                                                                 nativeArray2[index] = citizen;
                                                         }
                                                         else
@@ -1335,6 +1343,8 @@ namespace Time2Work
             public BufferLookup<OwnedVehicle> __Game_Vehicles_OwnedVehicle_RO_BufferLookup;
             [ReadOnly]
             public ComponentLookup<CommuterHousehold> __Game_Citizens_CommuterHousehold_RO_ComponentLookup;
+            [ReadOnly]
+            public BufferLookup<HouseholdCitizen> __Game_Citizens_HouseholdCitizen_RO_BufferLookup;
             public ComponentLookup<CarKeeper> __Game_Citizens_CarKeeper_RW_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<HouseholdMember> __Game_Citizens_HouseholdMember_RO_ComponentLookup;
@@ -1394,6 +1404,7 @@ namespace Time2Work
                 this.__Game_Prefabs_OutsideConnectionData_RO_ComponentLookup = state.GetComponentLookup<OutsideConnectionData>(true);
                 this.__Game_Vehicles_OwnedVehicle_RO_BufferLookup = state.GetBufferLookup<OwnedVehicle>(true);
                 this.__Game_Citizens_CommuterHousehold_RO_ComponentLookup = state.GetComponentLookup<CommuterHousehold>(true);
+                this.__Game_Citizens_HouseholdCitizen_RO_BufferLookup = state.GetBufferLookup<HouseholdCitizen>(true);
                 this.__Game_Citizens_CarKeeper_RW_ComponentLookup = state.GetComponentLookup<CarKeeper>();
                 this.__Game_Citizens_HouseholdMember_RO_ComponentLookup = state.GetComponentLookup<HouseholdMember>(true);
                 this.__Game_Citizens_Citizen_RO_ComponentLookup = state.GetComponentLookup<Citizen>(true);

@@ -85,9 +85,11 @@ namespace Time2Work.Systems
                 m_PrefabRefs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
                 m_AttractivenessParameter = this.m_AttractivenessParameterQuery.GetSingleton<AttractivenessParameterData>(),
                 m_DemandParameterData = this.m_DemandParameterQuery.GetSingleton<DemandParameterData>(),
-                m_SeasonCloudiness = this.m_ClimateSystem.seasonCloudiness,
-                m_SeasonRain = this.m_ClimateSystem.seasonPrecipitation,
-                m_SeasonTemperature = this.m_ClimateSystem.seasonTemperature,
+                m_WeatherClassification = this.m_ClimateSystem.classification,
+                m_Temperature = (float)this.m_ClimateSystem.temperature,
+                m_Precipitation = (float)this.m_ClimateSystem.precipitation,
+                m_IsRaining = this.m_ClimateSystem.isRaining,
+                m_IsSnowing = this.m_ClimateSystem.isSnowing,
                 m_City = this.m_CitySystem.City,
                 m_Frame = this.m_SimulationSystem.frameIndex,
                 m_RandomSeed = RandomSeed.Next(),
@@ -140,9 +142,11 @@ namespace Time2Work.Systems
             public Entity m_City;
             public uint m_Frame;
             public EntityCommandBuffer m_CommandBuffer;
-            public float m_SeasonTemperature;
-            public float m_SeasonRain;
-            public float m_SeasonCloudiness;
+            public ClimateSystem.WeatherClassification m_WeatherClassification;
+            public float m_Temperature;
+            public float m_Precipitation;
+            public bool m_IsRaining;
+            public bool m_IsSnowing;
             public Setting.DTSimulationEnum m_daytype;
 
             public void Execute()
@@ -151,7 +155,7 @@ namespace Time2Work.Systems
                     return;
                 Random random = this.m_RandomSeed.GetRandom((int)this.m_Frame);
                 int attractiveness = this.m_Tourisms[this.m_City].m_Attractiveness;
-                if ((double)random.NextFloat() >= (double)Time2WorkTourismSystem.GetTouristProbability(this.m_AttractivenessParameter, attractiveness, this.m_SeasonTemperature, this.m_SeasonRain, this.m_SeasonCloudiness, this.m_daytype))
+                if ((double)random.NextFloat() >= (double)Time2WorkTourismSystem.GetTouristProbability(this.m_AttractivenessParameter, attractiveness, this.m_WeatherClassification, this.m_Temperature, this.m_Precipitation, this.m_IsRaining, this.m_IsSnowing, this.m_daytype))
                     return;
                 int index = random.NextInt(this.m_HouseholdPrefabs.Length);
                 Entity prefabEntity = this.m_PrefabEntities[index];
