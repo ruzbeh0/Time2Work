@@ -681,7 +681,7 @@ namespace Time2Work
             June = 6,
             July = 7,
             August = 8,
-            Septermber = 9,
+            September = 9,
             October = 10,
             November = 11,
             December = 12
@@ -981,7 +981,7 @@ namespace Time2Work
                 { m_Setting.GetEnumValueLocaleID(Setting.months.June), "Jun" },
                 { m_Setting.GetEnumValueLocaleID(Setting.months.July), "Jul" },
                 { m_Setting.GetEnumValueLocaleID(Setting.months.August), "Aug" },
-                { m_Setting.GetEnumValueLocaleID(Setting.months.Septermber), "Sep" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.September), "Sep" },
                 { m_Setting.GetEnumValueLocaleID(Setting.months.October), "Oct" },
                 { m_Setting.GetEnumValueLocaleID(Setting.months.November), "Nov" },
                 { m_Setting.GetEnumValueLocaleID(Setting.months.December), "Dec" },
@@ -1013,7 +1013,7 @@ namespace Time2Work
             {
                 return new Dictionary<string, string>
             {
-                { m_Setting.GetSettingsLocaleID(), "Time2Work" },
+                { m_Setting.GetSettingsLocaleID(), "Realistic Trips" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SettingsSection), "Configurações" },
                 { m_Setting.GetOptionTabLocaleID(Setting.WorkSection), "Emprego" },
                 { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Lazer" },
@@ -1092,7 +1092,7 @@ namespace Time2Work
                 //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.WeekText)), $"Porcentagem de Trabalhadores por Dia" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DTText)), $"Alterar os parametros abaixo requer reinício do jogo." },
                 //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.MultilineText)), $"AVISO: O recurso de Tempo mais Lento pode causar problemas com os mods Population Rebalance e Info Loom - em uma cidade existente. Uma nova cidade provavelmente não terá problemas com esses mods." },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.settings_choice)), $"Alterar as configurações do mod" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.settings_choice)), $"Alterar as configurações do mod" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.settings_choice)), $"Alterar todas as configurações. Desempenho: irá atualizar as configurações para melhorar o desempenho, isso é semelhante ao jogo Vanilla. Balanceado: tem a maioria dos recursos deste mod habilitados, mas alguns deles que têm alto impacto no desempenho estão desabilitadas. Configurações baseadas em um país: dados do mundo real foram coletados para alguns países. Selecionar um deles tornará o jogo mais realista, mas pode afetar o desempenho do jogo." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Button)), "Confirmar" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Button)), $"Confirmar novas configurações" },
@@ -1285,7 +1285,7 @@ namespace Time2Work
                 { m_Setting.GetEnumValueLocaleID(Setting.months.June), "Jun" },
                 { m_Setting.GetEnumValueLocaleID(Setting.months.July), "Jul" },
                 { m_Setting.GetEnumValueLocaleID(Setting.months.August), "Ago" },
-                { m_Setting.GetEnumValueLocaleID(Setting.months.Septermber), "Set" },
+                { m_Setting.GetEnumValueLocaleID(Setting.months.September), "Set" },
                 { m_Setting.GetEnumValueLocaleID(Setting.months.October), "Out" },
                 { m_Setting.GetEnumValueLocaleID(Setting.months.November), "Nov" },
                 { m_Setting.GetEnumValueLocaleID(Setting.months.December), "Dez" },
