@@ -240,6 +240,7 @@ namespace Time2Work
                 m_OutsideConnectionDatas = this.__TypeHandle.__Game_Prefabs_OutsideConnectionData_RO_ComponentLookup,
                 m_OwnedVehicles = this.__TypeHandle.__Game_Vehicles_OwnedVehicle_RO_BufferLookup,
                 m_CommuterHouseholds = this.__TypeHandle.__Game_Citizens_CommuterHousehold_RO_ComponentLookup,
+                m_HouseholdCitizenBufs = this.__TypeHandle.__Game_Citizens_HouseholdCitizen_RO_BufferLookup,
                 m_HouseholdArchetype = this.m_HouseholdArchetype,
                 CommercialPropertyLookup = this.__TypeHandle.CommercialPropertyLookup,
                 IndustrialPropertyLookup = this.__TypeHandle.IndustrialPropertyLookup,
@@ -646,6 +647,9 @@ namespace Time2Work
                     float2 sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction);
                     double threshold_go_home = Math.Min(Math.Abs(sleepTime.x - this.m_NormalizedTime), Math.Abs(1 - (sleepTime.x - this.m_NormalizedTime)));
 
+                    //Mod.log.Info($"Going home. TIme:{this.m_NormalizedTime}, Threshold:{threshold_go_home}, sleeptime:{sleepTime}");
+
+
                     if (threshold_go_home <= 0.03)
                     {
                         this.GoHome(entity, home, trips, currentBuilding);
@@ -759,6 +763,7 @@ namespace Time2Work
               bool isTourist,
               ref Citizen citizen,
               int population,
+              int ticksPerDay,
               ref Unity.Mathematics.Random random,
               ref EconomyParameterData economyParameters)
             {
@@ -802,7 +807,7 @@ namespace Time2Work
                 }
                 if (isTourist)
                     citizen.m_LeisureCounter = (byte)0;
-                uint num2 = (uint)((double)x * 262144.0);
+                uint num2 = (uint)((double)x * ticksPerDay);
                 Leisure component = new Leisure()
                 {
                     m_LastPossibleFrame = this.m_SimulationFrame + num2
@@ -935,7 +940,7 @@ namespace Time2Work
                 {
                     Entity household = nativeArray3[index].m_Household;
                     Entity entity1 = nativeArray1[index];
-                    bool tourist_flag = this.m_TouristHouseholds.HasComponent(household);
+                    bool isTourist = this.m_TouristHouseholds.HasComponent(household);
                     DynamicBuffer<TripNeeded> trips = bufferAccessor[index];
                     if (household == Entity.Null)
                     {
@@ -1002,7 +1007,7 @@ namespace Time2Work
                                         {
                                             entity3 = this.m_PropertyRenters[household].m_Property;
                                         }
-                                        else if (tourist_flag)
+                                        else if (isTourist)
                                         {
                                             Entity hotel = this.m_TouristHouseholds[household].m_Hotel;
                                             if (this.m_PropertyRenters.HasComponent(hotel))
@@ -1038,16 +1043,12 @@ namespace Time2Work
                                         {
                                             if (currentBuilding == entity3)
                                             {
-                                                Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, this.m_TimeData, ticksPerDay)));
-                                                int simulate_prob = rand.NextInt(100);
-                                                if(simulate_prob > (100-Mod.simulation_reduction))
-                                                {
+
                                                     if (chunk.Has<Leisure>(ref this.m_LeisureType))
                                                     {
                                                         this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
                                                     }
-                                                    continue;
-                                                }
+
                                             }
                                             if (!this.m_AttendingMeetings.HasComponent(entity1) || !this.AttendMeeting(unfilteredChunkIndex, entity1, ref citizen, household, currentBuilding, trips, ref random))
                                             {
@@ -1195,7 +1196,7 @@ namespace Time2Work
                                                             }
                                                         } else
                                                         {
-                                                            if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, tourist_flag, ref citizen, population, ref random, ref this.m_EconomyParameters))
+                                                            if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters))
                                                             {
                                                                 nativeArray2[index] = citizen;
                                                             }
@@ -1245,18 +1246,26 @@ namespace Time2Work
                                                             } 
                                                         }
 
-                                                        nativeArray2[index] = citizen;
-                                                        if (!chunk.Has<Leisure>(ref this.m_LeisureType) && (this.m_NormalizedTime > x1 || disable_early_shop_leisure))
+                                                        if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters))
                                                         {
-                                                            if (this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, tourist_flag, ref citizen, population, ref random, ref this.m_EconomyParameters))
-                                                                nativeArray2[index] = citizen;
+                                                            nativeArray2[index] = citizen;
+                                                        }
+
+                                                        nativeArray2[index] = citizen;
+                                                        if (!chunk.Has<Leisure>(ref this.m_LeisureType) && (this.m_NormalizedTime > x1 || disable_early_shop_leisure) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters))
+                                                        {
+                                                            nativeArray2[index] = citizen;
                                                         }
                                                         else
                                                         {
+                                                            //Mod.log.Info($"Has leisure?{chunk.Has<Leisure>(ref this.m_LeisureType)}");
                                                             if (!chunk.Has<Leisure>(ref this.m_LeisureType))
                                                             {
                                                                 if (currentBuilding != entity3)
                                                                 {
+                                                                    //Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction) 
+                                                                    //Mod.log.Info($"Going home. TIme:{this.m_NormalizedTime}, Today off day? {Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob, ticksPerDay)}, " +
+                                                                    //    $"Time2work: {Time2WorkWorkerSystem.GetTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction)}");
                                                                     this.GoHome(entity1, entity3, trips, currentBuilding);
                                                                 }
                                                                 else

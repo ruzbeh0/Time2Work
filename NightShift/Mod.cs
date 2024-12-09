@@ -26,7 +26,6 @@ namespace Time2Work
         public static ILog log = LogManager.GetLogger($"{nameof(Time2Work)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
         public static Setting m_Setting;
         //public static ModData m_ModData;
-        public const int simulation_reduction = 10;
 
         // Mods Settings Folder
         public static string SettingsFolder = Path.Combine(EnvPath.kUserDataPath, "ModsSettings", nameof(Time2Work));

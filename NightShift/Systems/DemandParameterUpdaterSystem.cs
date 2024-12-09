@@ -68,6 +68,8 @@ namespace Time2Work.Systems
                     data.m_CommuterWorkerRatioLimit = 7;
                 }
 
+                data.m_HouseholdSpawnSpeedFactor /= Mod.m_Setting.slow_time_factor;
+
                 EntityManager.SetComponentData<DemandParameterData>(tsd, data);
             }
         }

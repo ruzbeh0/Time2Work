@@ -273,6 +273,7 @@ namespace Time2Work
             }
             double num4 = (double)num2;
 
+            //Mod.log.Info($"Time to Work:{math.frac((float)(num1 - num4))} to {y - peak_spread}");
             return new float2(math.frac((float)(num1 - num4)), y - peak_spread);
         }
 
@@ -671,14 +672,7 @@ namespace Time2Work
                                     {
                                         home = this.m_Properties[household].m_Property;
                                     }
-                                    if (nativeArray4[index].m_CurrentBuilding == home)
-                                    {
-                                        int simulate_prob = random.NextInt(100);
-                                        if (simulate_prob > (100 - Mod.simulation_reduction))
-                                        {
-                                            continue;
-                                        }
-                                    }
+
                                     if (threshold_start_work <= 0.03 ||
                                         threshold_resume_work <= 0.03)
                                     {

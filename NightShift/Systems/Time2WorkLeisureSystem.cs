@@ -588,17 +588,14 @@ namespace Time2Work
                     else
                     {
                        Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizenData.m_PseudoRandom + Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, this.m_TimeData, ticksPerDay)));
-                       int simulate_prob = rand.NextInt(100);
-                       if (simulate_prob > (100 - Mod.simulation_reduction))
-                       {
+
                            if(this.m_Purposes.HasComponent(entity1) && (this.m_Purposes[entity1].m_Purpose == Game.Citizens.Purpose.Leisure || this.m_Purposes[entity1].m_Purpose == Game.Citizens.Purpose.Traveling))
                                        {
                                this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity1);
                            }
                            this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
                            this.m_CommandBuffer.RemoveComponent(unfilteredChunkIndex, entity1, in this.m_PathfindTypes);
-                           continue;
-                       }
+
 
                         if (!flag && this.m_PathInfos.HasComponent(entity1))
                         {
