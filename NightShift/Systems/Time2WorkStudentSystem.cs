@@ -169,7 +169,7 @@ namespace Time2Work
                 m_Frame = this.m_SimulationSystem.frameIndex,
                 m_PopulationEntity = this.m_PopulationQuery.GetSingletonEntity(),
                 m_TimeData = this.m_TimeDataQuery.GetSingleton<TimeData>(),
-                m_CarReserverQueue = this.m_CitizenBehaviorSystem.GetCarReserverQueue(out deps),
+                m_CarReserverQueue = this.m_CitizenBehaviorSystem.GetCarReserveQueue(out deps),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 school_offdayprob = WeekSystem.getSchoolOffDayProb(),
                 school_start_time = new int3((int)Mod.m_Setting.school_start_time, (int)Mod.m_Setting.high_school_start_time, (int)Mod.m_Setting.univ_start_time),

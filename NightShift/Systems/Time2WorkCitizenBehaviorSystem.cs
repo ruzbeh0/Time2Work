@@ -29,6 +29,9 @@ namespace Time2Work
 {
     public partial class Time2WorkCitizenBehaviorSystem : GameSystemBase
     {
+        public static readonly float kMaxPathfindCost = 17000f;
+        public static readonly float kMaxMovingAwayCost = CitizenBehaviorSystem.kMaxPathfindCost * 10f;
+        public static readonly int kMinLeisurePossibility = 80;
         private JobHandle m_CarReserveWriters;
         private EntityQuery m_CitizenQuery;
         private EntityQuery m_OutsideConnectionQuery;
@@ -39,10 +42,9 @@ namespace Time2Work
         private SimulationSystem m_SimulationSystem;
         private Time2WorkTimeSystem m_TimeSystem;
         private EndFrameBarrier m_EndFrameBarrier;
-        private CityStatisticsSystem m_CityStatisticsSystem;
         private EntityArchetype m_HouseholdArchetype;
-        private NativeQueue<Entity> m_CarReserverQueue;
-        private NativeQueue<Entity>.ParallelWriter m_ParallelCarReserverQueue;
+        private NativeQueue<Entity> m_CarReserveQueue;
+        private NativeQueue<Entity>.ParallelWriter m_ParallelCarReserveQueue;
         private Time2WorkCitizenBehaviorSystem.TypeHandle __TypeHandle;
         private Setting.DTSimulationEnum m_daytype;
 
@@ -128,10 +130,10 @@ namespace Time2Work
             return (double)sleepTime.y < (double)sleepTime.x ? (double)normalizedTime > (double)sleepTime.x || (double)normalizedTime < (double)sleepTime.y : (double)normalizedTime > (double)sleepTime.x && (double)normalizedTime < (double)sleepTime.y;
         }
 
-        public NativeQueue<Entity>.ParallelWriter GetCarReserverQueue(out JobHandle deps)
+        public NativeQueue<Entity>.ParallelWriter GetCarReserveQueue(out JobHandle deps)
         {
             deps = this.m_CarReserveWriters;
-            return this.m_ParallelCarReserverQueue;
+            return this.m_ParallelCarReserveQueue;
         }
 
         public void AddCarReserveWriter(JobHandle writer)
@@ -139,15 +141,15 @@ namespace Time2Work
             this.m_CarReserveWriters = JobHandle.CombineDependencies(this.m_CarReserveWriters, writer);
         }
 
+        [UnityEngine.Scripting.Preserve]
         protected override void OnCreate()
         {
             base.OnCreate();
             this.m_SimulationSystem = this.World.GetOrCreateSystemManaged<SimulationSystem>();
             this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
             this.m_EndFrameBarrier = this.World.GetOrCreateSystemManaged<EndFrameBarrier>();
-            this.m_CityStatisticsSystem = this.World.GetOrCreateSystemManaged<CityStatisticsSystem>();
-            this.m_CarReserverQueue = new NativeQueue<Entity>((AllocatorManager.AllocatorHandle)Allocator.Persistent);
-            this.m_ParallelCarReserverQueue = this.m_CarReserverQueue.AsParallelWriter();
+            this.m_CarReserveQueue = new NativeQueue<Entity>((AllocatorManager.AllocatorHandle)Allocator.Persistent);
+            this.m_ParallelCarReserveQueue = this.m_CarReserveQueue.AsParallelWriter();
             this.m_EconomyParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<EconomyParameterData>());
             this.m_LeisureParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<LeisureParametersData>());
             this.m_PopulationQuery = this.GetEntityQuery(ComponentType.ReadOnly<Population>());
@@ -163,12 +165,14 @@ namespace Time2Work
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
         }
 
+        [UnityEngine.Scripting.Preserve]
         protected override void OnDestroy()
         {
-            this.m_CarReserverQueue.Dispose();
+            this.m_CarReserveQueue.Dispose();
             base.OnDestroy();
         }
 
+        [UnityEngine.Scripting.Preserve]
         protected override void OnUpdate()
         {
             uint frameWithInterval = SimulationUtils.GetUpdateFrameWithInterval(this.m_SimulationSystem.frameIndex, (uint)this.GetUpdateInterval(SystemUpdatePhase.GameSimulation), 16);
@@ -256,7 +260,7 @@ namespace Time2Work
                 m_NormalizedTime = this.m_TimeSystem.normalizedTime,
                 m_TimeData = this.m_TimeDataQuery.GetSingleton<TimeData>(),
                 m_PopulationEntity = this.m_PopulationQuery.GetSingletonEntity(),
-                m_CarReserverQueue = this.m_ParallelCarReserverQueue,
+                m_CarReserverQueue = this.m_ParallelCarReserveQueue,
                 m_MailSenderQueue = nativeQueue1.AsParallelWriter(),
                 m_SleepQueue = nativeQueue2.AsParallelWriter(),
                 m_RandomSeed = RandomSeed.Next(),
@@ -297,8 +301,7 @@ namespace Time2Work
                 m_OwnedVehicles = this.__TypeHandle.__Game_Vehicles_OwnedVehicle_RO_BufferLookup,
                 m_PersonalCars = this.__TypeHandle.__Game_Vehicles_PersonalCar_RW_ComponentLookup,
                 m_Citizens = this.__TypeHandle.__Game_Citizens_Citizen_RO_ComponentLookup,
-                m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer(),
-                m_ReserverQueue = this.m_CarReserverQueue
+                m_ReserverQueue = this.m_CarReserveQueue
             }.Schedule<Time2WorkCitizenBehaviorSystem.CitizenReserveHouseholdCarJob>(JobHandle.CombineDependencies(jobHandle1, this.m_CarReserveWriters));
 
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle2);
@@ -310,7 +313,7 @@ namespace Time2Work
             this.__TypeHandle.__Game_Prefabs_SpawnableBuildingData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_CurrentBuilding_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-
+            
             JobHandle jobHandle3 = new Time2WorkCitizenBehaviorSystem.CitizenTryCollectMailJob()
             {
                 m_CurrentBuildingData = this.__TypeHandle.__Game_Citizens_CurrentBuilding_RO_ComponentLookup,
@@ -320,8 +323,7 @@ namespace Time2Work
                 m_ServiceObjectData = this.__TypeHandle.__Game_Prefabs_ServiceObjectData_RO_ComponentLookup,
                 m_MailSenderData = this.__TypeHandle.__Game_Citizens_MailSender_RW_ComponentLookup,
                 m_MailProducerData = this.__TypeHandle.__Game_Buildings_MailProducer_RW_ComponentLookup,
-                m_MailSenderQueue = nativeQueue1,
-                m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer()
+                m_MailSenderQueue = nativeQueue1
             }.Schedule<Time2WorkCitizenBehaviorSystem.CitizenTryCollectMailJob>(jobHandle1);
 
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle3);
@@ -338,6 +340,7 @@ namespace Time2Work
             this.Dependency = JobHandle.CombineDependencies(jobHandle2, jobHandle3, jobHandle4);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void __AssignQueries(ref SystemState state)
         {
         }
@@ -350,6 +353,7 @@ namespace Time2Work
             this.__TypeHandle.__AssignHandles(ref this.CheckedStateRef);
         }
 
+        [UnityEngine.Scripting.Preserve]
         public Time2WorkCitizenBehaviorSystem()
         {
         }
@@ -366,7 +370,6 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<Citizen> m_Citizens;
             public NativeQueue<Entity> m_ReserverQueue;
-            public EntityCommandBuffer m_CommandBuffer;
 
             public void Execute()
             {
@@ -377,6 +380,7 @@ namespace Time2Work
                     {
                         Entity household = this.m_HouseholdMembers[entity].m_Household;
                         Entity car = Entity.Null;
+
                         if (this.m_Citizens[entity].GetAge() != CitizenAge.Child && HouseholdBehaviorSystem.GetFreeCar(household, this.m_OwnedVehicles, this.m_PersonalCars, ref car) && !this.m_CarKeepers.IsComponentEnabled(entity))
                         {
                             this.m_CarKeepers.SetComponentEnabled(entity, true);
@@ -384,9 +388,10 @@ namespace Time2Work
                             {
                                 m_Car = car
                             };
-                            Game.Vehicles.PersonalCar personalCar = this.m_PersonalCars[car];
-                            personalCar.m_Keeper = entity;
-
+                            Game.Vehicles.PersonalCar personalCar = this.m_PersonalCars[car] with
+                            {
+                                m_Keeper = entity
+                            };
                             this.m_PersonalCars[car] = personalCar;
                         }
                     }
@@ -410,7 +415,6 @@ namespace Time2Work
             public ComponentLookup<MailSender> m_MailSenderData;
             public ComponentLookup<MailProducer> m_MailProducerData;
             public NativeQueue<Entity> m_MailSenderQueue;
-            public EntityCommandBuffer m_CommandBuffer;
 
             public void Execute()
             {
@@ -444,10 +448,8 @@ namespace Time2Work
 
             private bool RequireCollect(Entity prefab)
             {
-
                 if (this.m_SpawnableBuildingData.HasComponent(prefab))
                 {
-
                     SpawnableBuildingData spawnableBuildingData = this.m_SpawnableBuildingData[prefab];
                     if (this.m_MailAccumulationData.HasComponent(spawnableBuildingData.m_ZonePrefab))
                     {
@@ -456,12 +458,9 @@ namespace Time2Work
                 }
                 else
                 {
-
                     if (this.m_ServiceObjectData.HasComponent(prefab))
                     {
-
                         ServiceObjectData serviceObjectData = this.m_ServiceObjectData[prefab];
-
                         if (this.m_MailAccumulationData.HasComponent(serviceObjectData.m_Service))
                         {
                             return this.m_MailAccumulationData[serviceObjectData.m_Service].m_RequireCollect;
@@ -611,6 +610,7 @@ namespace Time2Work
             public float overtime;
             public float part_time_reduction;
 
+
             private bool CheckSleep(
               int index,
               Entity entity,
@@ -653,7 +653,7 @@ namespace Time2Work
                     if (threshold_go_home <= 0.03)
                     {
                         this.GoHome(entity, home, trips, currentBuilding);
-                    }      
+                    }
                 }
                 return true;
             }
@@ -680,14 +680,14 @@ namespace Time2Work
             }
 
             private void GoToOutsideConnection(
-        Entity entity,
-        Entity household,
-        Entity currentBuilding,
-        Entity targetBuilding,
-        ref Citizen citizen,
-        DynamicBuffer<TripNeeded> trips,
-        Game.Citizens.Purpose purpose,
-        ref Unity.Mathematics.Random random)
+              Entity entity,
+              Entity household,
+              Entity currentBuilding,
+              Entity targetBuilding,
+              ref Citizen citizen,
+              DynamicBuffer<TripNeeded> trips,
+              Game.Citizens.Purpose purpose,
+              ref Unity.Mathematics.Random random)
             {
                 if (purpose == Game.Citizens.Purpose.MovingAway)
                 {
@@ -728,6 +728,7 @@ namespace Time2Work
                     citizen.m_State |= CitizenFlags.MovingAwayReachOC;
                 }
             }
+
             private void GoShopping(
               int chunkIndex,
               Entity citizen,
@@ -757,11 +758,11 @@ namespace Time2Work
 
             private bool DoLeisure(
               int chunkIndex,
-              Entity entity,
+              Entity citizenEntity,
               Entity householdEntity,
               Entity currentBuilding,
               bool isTourist,
-              ref Citizen citizen,
+              ref Citizen citizenData,
               int population,
               int ticksPerDay,
               ref Unity.Mathematics.Random random,
@@ -774,19 +775,19 @@ namespace Time2Work
                 }
                 else
                 {
-                    int num = 128 - (int)citizen.m_LeisureCounter;
+                    int num = 128 - (int)citizenData.m_LeisureCounter;
                     if (this.m_OutsideConnections.HasComponent(currentBuilding) || random.NextInt(this.m_LeisureParameters.m_LeisureRandomFactor) > num)
                         return false;
                 }
-                int num1 = math.min(80, Mathf.RoundToInt(200f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
+                int num1 = math.min(CitizenBehaviorSystem.kMinLeisurePossibility, Mathf.RoundToInt(200f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
                 if (!isTourist && random.NextInt(100) > num1)
-                    citizen.m_LeisureCounter = byte.MaxValue;
-                float x = this.GetTimeLeftUntilInterval(Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction));
-                if (this.m_Workers.HasComponent(entity))
+                    citizenData.m_LeisureCounter = byte.MaxValue;
+                float x = this.GetTimeLeftUntilInterval(Time2WorkCitizenBehaviorSystem.GetSleepTime(citizenEntity, citizenData, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction));
+                if (this.m_Workers.HasComponent(citizenEntity))
                 {
-                    Worker worker = this.m_Workers[entity];
-                    float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, worker, ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction);
-                    float2 timeToLunch = Time2WorkWorkerSystem.GetLunchTime(citizen, worker, ref economyParameters); 
+                    Worker worker = this.m_Workers[citizenEntity];
+                    float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizenData, worker, ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction);
+                    float2 timeToLunch = Time2WorkWorkerSystem.GetLunchTime(citizenData, worker, ref economyParameters);
                     if(timeToLunch.x > 0)
                     {
                         float x1 = math.min(this.GetTimeLeftUntilInterval(timeToLunch), this.GetTimeLeftUntilInterval(timeToWork));
@@ -798,21 +799,21 @@ namespace Time2Work
                 }
                 else
                 {
-                    if (this.m_Students.HasComponent(entity))
+                    if (this.m_Students.HasComponent(citizenEntity))
                     {
-                        Game.Citizens.Student student = this.m_Students[entity];
-                        float2 timeToStudy = Time2WorkStudentSystem.GetTimeToStudy(citizen, student, ref economyParameters, school_start_time, school_end_time, ticksPerDay);
+                        Game.Citizens.Student student = this.m_Students[citizenEntity];
+                        float2 timeToStudy = Time2WorkStudentSystem.GetTimeToStudy(citizenData, student, ref economyParameters, school_start_time, school_end_time, ticksPerDay);
                         x = math.min(x, this.GetTimeLeftUntilInterval(timeToStudy));
                     }
                 }
                 if (isTourist)
-                    citizen.m_LeisureCounter = (byte)0;
+                    citizenData.m_LeisureCounter = (byte)0;
                 uint num2 = (uint)((double)x * ticksPerDay);
                 Leisure component = new Leisure()
                 {
                     m_LastPossibleFrame = this.m_SimulationFrame + num2
                 };
-                this.m_CommandBuffer.AddComponent<Leisure>(chunkIndex, entity, component);
+                this.m_CommandBuffer.AddComponent<Leisure>(chunkIndex, citizenEntity, component);
                 return true;
             }
 
@@ -823,11 +824,12 @@ namespace Time2Work
                 Entity car = this.m_CarKeepers[citizen].m_Car;
                 if (this.m_PersonalCars.HasComponent(car))
                 {
-                    Game.Vehicles.PersonalCar personalCar = this.m_PersonalCars[car];
-                    personalCar.m_Keeper = Entity.Null;
+                    Game.Vehicles.PersonalCar personalCar = this.m_PersonalCars[car] with
+                    {
+                        m_Keeper = Entity.Null
+                    };
                     this.m_PersonalCars[car] = personalCar;
                 }
-
                 this.m_CommandBuffer.SetComponentEnabled<CarKeeper>(chunkIndex, citizen, false);
             }
 
@@ -953,6 +955,7 @@ namespace Time2Work
                         {
                             m_Citizen = entity1
                         });
+                        UnityEngine.Debug.LogWarning((object)string.Format("Citizen:{0} don't have valid household", (object)entity1.Index));
                     }
                     else
                     {
@@ -963,314 +966,306 @@ namespace Time2Work
                         else
                         {
                             Entity currentBuilding = nativeArray4[index].m_CurrentBuilding;
-                            if (this.m_Transforms.HasComponent(currentBuilding) && (!this.m_InDangerData.HasComponent(currentBuilding) || (this.m_InDangerData[currentBuilding].m_Flags & DangerFlags.StayIndoors) == (DangerFlags)0))
+                            if (currentBuilding == Entity.Null && this.m_MovingAway.HasComponent(household))
                             {
-                                Citizen citizen = nativeArray2[index];
-                                bool commuter = (citizen.m_State & CitizenFlags.Commuter) != 0;
-                                CitizenAge age = citizen.GetAge();
-                                if (commuter && (age == CitizenAge.Elderly || age == CitizenAge.Child))
+                                this.m_CommandBuffer.AddComponent<Deleted>(unfilteredChunkIndex, household, new Deleted());
+                            }
+                            else
+                            {
+                                if (this.m_Transforms.HasComponent(currentBuilding) && (!this.m_InDangerData.HasComponent(currentBuilding) || (this.m_InDangerData[currentBuilding].m_Flags & DangerFlags.StayIndoors) == (DangerFlags)0))
                                 {
-                                    this.m_CommandBuffer.AddComponent<Deleted>(unfilteredChunkIndex, entity1, new Deleted());
-                                }
-                                if ((citizen.m_State & CitizenFlags.MovingAwayReachOC) != CitizenFlags.None)
-                                {
-                                    this.m_CommandBuffer.AddComponent<Deleted>(unfilteredChunkIndex, entity1, new Deleted());
-                                }
-                                else
-                                {
-                                    MovingAway componentData1;
-                                    if (this.m_MovingAway.TryGetComponent(household, out componentData1))
+                                    Citizen citizen = nativeArray2[index];
+                                    bool flag2 = (citizen.m_State & CitizenFlags.Commuter) != 0;
+                                    CitizenAge age = citizen.GetAge();
+                                    if (flag2 && (age == CitizenAge.Elderly || age == CitizenAge.Child))
                                     {
-                                        this.GoToOutsideConnection(entity1, household, currentBuilding, componentData1.m_Target, ref citizen, trips, Game.Citizens.Purpose.MovingAway, ref random);
-                                        if (chunk.Has<Leisure>(ref this.m_LeisureType))
-                                        {
-                                            this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
-                                        }
-                                        if (this.m_Workers.HasComponent(entity1))
-                                        {
-                                            this.m_CommandBuffer.RemoveComponent<Worker>(unfilteredChunkIndex, entity1);
-                                        }
-                                        if (this.m_Students.HasComponent(entity1))
-                                        {
-                                            if (this.m_BuildingStudents.HasBuffer(this.m_Students[entity1].m_School))
-                                            {
-                                                this.m_CommandBuffer.AddComponent<StudentsRemoved>(unfilteredChunkIndex, this.m_Students[entity1].m_School);
-                                            }
-                                            this.m_CommandBuffer.RemoveComponent<Game.Citizens.Student>(unfilteredChunkIndex, entity1);
-                                        }
-                                        nativeArray2[index] = citizen;
+                                        this.m_CommandBuffer.AddComponent<Deleted>(unfilteredChunkIndex, entity1, new Deleted());
+                                    }
+                                    if ((citizen.m_State & CitizenFlags.MovingAwayReachOC) != CitizenFlags.None)
+                                    {
+                                        this.m_CommandBuffer.AddComponent<Deleted>(unfilteredChunkIndex, entity1, new Deleted());
                                     }
                                     else
                                     {
-                                        Entity entity3 = Entity.Null;
-                                        if (this.m_PropertyRenters.HasComponent(household))
+                                        MovingAway componentData1;
+                                        if (this.m_MovingAway.TryGetComponent(household, out componentData1))
                                         {
-                                            entity3 = this.m_PropertyRenters[household].m_Property;
-                                        }
-                                        else if (isTourist)
-                                        {
-                                            Entity hotel = this.m_TouristHouseholds[household].m_Hotel;
-                                            if (this.m_PropertyRenters.HasComponent(hotel))
-                                            {
-                                                entity3 = this.m_PropertyRenters[hotel].m_Property;
-                                            }
-                                        }
-                                        else if (commuter)
-                                        {
-                                            if (this.m_OutsideConnections.HasComponent(currentBuilding))
-                                            {
-                                                entity3 = currentBuilding;
-                                            }
-                                            else
-                                            {
-                                                CommuterHousehold componentData;
-                                                if (this.m_CommuterHouseholds.TryGetComponent(household, out componentData))
-                                                    entity3 = componentData.m_OriginalFrom;
-                                                if (entity3 == Entity.Null)
-                                                {
-                                                    entity3 = this.m_OutsideConnectionEntities[random.NextInt(this.m_OutsideConnectionEntities.Length)];
-                                                }
-                                            }
-                                        }
-                                        if (flag1)
-                                        {
+                                            this.GoToOutsideConnection(entity1, household, currentBuilding, componentData1.m_Target, ref citizen, trips, Game.Citizens.Purpose.MovingAway, ref random);
                                             if (chunk.Has<Leisure>(ref this.m_LeisureType))
                                             {
                                                 this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
                                             }
+                                            if (this.m_Workers.HasComponent(entity1))
+                                            {
+                                                this.m_CommandBuffer.RemoveComponent<Worker>(unfilteredChunkIndex, entity1);
+                                            }
+                                            if (this.m_Students.HasComponent(entity1))
+                                            {
+                                                if (this.m_BuildingStudents.HasBuffer(this.m_Students[entity1].m_School))
+                                                {
+                                                    this.m_CommandBuffer.AddComponent<StudentsRemoved>(unfilteredChunkIndex, this.m_Students[entity1].m_School);
+                                                }
+                                                this.m_CommandBuffer.RemoveComponent<Game.Citizens.Student>(unfilteredChunkIndex, entity1);
+                                            }
+                                            nativeArray2[index] = citizen;
                                         }
                                         else
                                         {
-                                            if (currentBuilding == entity3)
+                                            Entity entity3 = Entity.Null;
+                                            if (this.m_PropertyRenters.HasComponent(household))
                                             {
-
-                                                    if (chunk.Has<Leisure>(ref this.m_LeisureType))
-                                                    {
-                                                        this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
-                                                    }
-
+                                                entity3 = this.m_PropertyRenters[household].m_Property;
                                             }
-                                            if (!this.m_AttendingMeetings.HasComponent(entity1) || !this.AttendMeeting(unfilteredChunkIndex, entity1, ref citizen, household, currentBuilding, trips, ref random))
+                                            else if (isTourist)
                                             {
-                                                float offdayprob = 60f;
-                                                int parttime_prob = part_time_prob;
-                                                if (m_Workers.TryGetComponent(entity1, out var worker))
+                                                Entity hotel = this.m_TouristHouseholds[household].m_Hotel;
+                                                if (this.m_PropertyRenters.HasComponent(hotel))
                                                 {
-                                                    if (PrefabRefLookup.TryGetComponent(worker.m_Workplace, out var prefab1))
-                                                    {
-                                                        if (PropertyRenterLookup.TryGetComponent(worker.m_Workplace, out var propertyRenter))
-                                                        {
-                                                            //x = weekday, y = friday, z = saturday, w = sunday
-                                                            if (CommercialPropertyLookup.HasComponent(propertyRenter.m_Property))
-                                                            {
-                                                                //Mod.log.Info($"Commercial Property");
-                                                                if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
-                                                                {
-                                                                    offdayprob = commercial_offdayprob.x;
-                                                                }
-                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
-                                                                {
-                                                                    offdayprob = commercial_offdayprob.y;
-                                                                }
-                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
-                                                                {
-                                                                    offdayprob = commercial_offdayprob.z;
-                                                                    parttime_prob = 100;
-                                                                }
-                                                                else
-                                                                {
-                                                                    offdayprob = commercial_offdayprob.w;
-                                                                    parttime_prob = 100;
-                                                                }
-                                                            }
-                                                            if (IndustrialPropertyLookup.HasComponent(propertyRenter.m_Property))
-                                                            {
-                                                                if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
-                                                                {
-                                                                    offdayprob = industry_offdayprob.x;
-                                                                }
-                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
-                                                                {
-                                                                    offdayprob = industry_offdayprob.y;
-                                                                }
-                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
-                                                                {
-                                                                    offdayprob = industry_offdayprob.z;
-                                                                    parttime_prob = 100;
-                                                                }
-                                                                else
-                                                                {
-                                                                    offdayprob = industry_offdayprob.w;
-                                                                    parttime_prob = 100;
-                                                                }
-                                                            }
-                                                            if (OfficePropertyLookup.HasComponent(propertyRenter.m_Property))
-                                                            {
-                                                                if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
-                                                                {
-                                                                    offdayprob = office_offdayprob.x;
-                                                                }
-                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
-                                                                {
-                                                                    offdayprob = office_offdayprob.y;
-                                                                }
-                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
-                                                                {
-                                                                    offdayprob = office_offdayprob.z;
-                                                                    parttime_prob = 100;
-                                                                }
-                                                                else
-                                                                {
-                                                                    offdayprob = office_offdayprob.w;
-                                                                    parttime_prob = 100;
-                                                                }
-                                                            }
-                                                            else
-                                                            {
-                                                                if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
-                                                                {
-                                                                    offdayprob = cityservices_offdayprob.x;
-                                                                }
-                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
-                                                                {
-                                                                    offdayprob = cityservices_offdayprob.y;
-                                                                }
-                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
-                                                                {
-                                                                    offdayprob = cityservices_offdayprob.z;
-                                                                    parttime_prob = 100;
-                                                                }
-                                                                else
-                                                                {
-                                                                    offdayprob = cityservices_offdayprob.w;
-                                                                    parttime_prob = 100;
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-
+                                                    entity3 = this.m_PropertyRenters[hotel].m_Property;
                                                 }
-
-
-                                                if (this.m_Workers.HasComponent(entity1) && !Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob,ticksPerDay) 
-                                                    && Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction) || this.m_Students.HasComponent(entity1) && Time2WorkStudentSystem.IsTimeToStudy(citizen, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay))
+                                            }
+                                            else if (flag2)
+                                            {
+                                                if (this.m_OutsideConnections.HasComponent(currentBuilding))
                                                 {
-                                                    if(this.m_Workers.HasComponent(entity1) && Time2WorkWorkerSystem.IsLunchTime(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))
-                                                    {
-                                                        HouseholdNeed householdNeed = this.m_HouseholdNeeds[household];
-                                                        
-                                                        int num = 50;
-                                                        Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom));
-                                                        int prob = rand.NextInt(100);
-                                                        if ((householdNeed.m_Resource != Resource.NoResource || num < prob) && this.m_Transforms.HasComponent(currentBuilding))
-                                                        {
-                                                            if (householdNeed.m_Resource == Resource.NoResource)
-                                                            {
-                                                                if (prob < 25)
-                                                                {
-                                                                    householdNeed.m_Resource = Resource.Meals;
-                                                                } else
-                                                                {
-                                                                    if(prob < 35)
-                                                                    {
-                                                                        householdNeed.m_Resource = Resource.Food;
-                                                                    } else
-                                                                    {
-                                                                        if(prob < 45)
-                                                                        {
-                                                                            householdNeed.m_Resource = Resource.ConvenienceFood;
-                                                                        } else
-                                                                        {
-                                                                            householdNeed.m_Resource = Resource.Beverages;
-                                                                        }    
-                                                                    }
-                                                                }
-                                                                householdNeed.m_Amount = rand.NextInt(1,5);
-                                                            }
-                                                            this.GoShopping(unfilteredChunkIndex, entity1, household, householdNeed, this.m_Transforms[currentBuilding].m_Position);
-                                                            householdNeed.m_Resource = Resource.NoResource;
-                                                            this.m_HouseholdNeeds[household] = householdNeed;
-                                                            if (chunk.Has<Leisure>(ref this.m_LeisureType))
-                                                            {
-                                                                this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
-                                                            }
-                                                        } else
-                                                        {
-                                                            if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters))
-                                                            {
-                                                                nativeArray2[index] = citizen;
-                                                            }
-                                                        }
-                                                    }
-                                                    if (chunk.Has<Leisure>(ref this.m_LeisureType))
-                                                    {
-                                                        this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
-                                                    }
+                                                    entity3 = currentBuilding;
                                                 }
                                                 else
                                                 {
-                                                    if (this.CheckSleep(index, entity1, ref citizen, currentBuilding, household, entity3, trips, ref this.m_EconomyParameters, ref random, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, overtime, part_time_reduction))
+                                                    CommuterHousehold componentData2;
+                                                    if (this.m_CommuterHouseholds.TryGetComponent(household, out componentData2))
+                                                        entity3 = componentData2.m_OriginalFrom;
+                                                    if (entity3 == Entity.Null)
                                                     {
-                                                        if (chunk.Has<Leisure>(ref this.m_LeisureType))
+                                                        entity3 = this.m_OutsideConnectionEntities[random.NextInt(this.m_OutsideConnectionEntities.Length)];
+                                                    }
+                                                }
+                                            }
+                                            if (flag1)
+                                            {
+                                                if (chunk.Has<Leisure>(ref this.m_LeisureType))
+                                                {
+                                                    this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (!this.m_AttendingMeetings.HasComponent(entity1) || !this.AttendMeeting(unfilteredChunkIndex, entity1, ref citizen, household, currentBuilding, trips, ref random))
+                                                {
+                                                    float offdayprob = 60f;
+                                                    int parttime_prob = part_time_prob;
+                                                    if (m_Workers.TryGetComponent(entity1, out var worker))
+                                                    {
+                                                        if (PrefabRefLookup.TryGetComponent(worker.m_Workplace, out var prefab1))
+                                                            {
+                                                                if (PropertyRenterLookup.TryGetComponent(worker.m_Workplace, out var propertyRenter))
+                                                                {
+                                                                    //x = weekday, y = friday, z = saturday, w = sunday
+                                                                    if (CommercialPropertyLookup.HasComponent(propertyRenter.m_Property))
+                                                                    {
+                                                                        //Mod.log.Info($"Commercial Property");
+                                                                        if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                                                        {
+                                                                            offdayprob = commercial_offdayprob.x;
+                                                                        }
+                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                                                        {
+                                                                            offdayprob = commercial_offdayprob.y;
+                                                                        }
+                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                                                        {
+                                                                            offdayprob = commercial_offdayprob.z;
+                                                                            parttime_prob = 100;
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            offdayprob = commercial_offdayprob.w;
+                                                                            parttime_prob = 100;
+                                                                        }
+                                                                    }
+                                                                    if (IndustrialPropertyLookup.HasComponent(propertyRenter.m_Property))
+                                                                    {
+                                                                        if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                                                        {
+                                                                            offdayprob = industry_offdayprob.x;
+                                                                        }
+                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                                                        {
+                                                                            offdayprob = industry_offdayprob.y;
+                                                                        }
+                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                                                        {
+                                                                            offdayprob = industry_offdayprob.z;
+                                                                            parttime_prob = 100;
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            offdayprob = industry_offdayprob.w;
+                                                                            parttime_prob = 100;
+                                                                        }
+                                                                    }
+                                                                    if (OfficePropertyLookup.HasComponent(propertyRenter.m_Property))
+                                                                    {
+                                                                        if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                                                        {
+                                                                            offdayprob = office_offdayprob.x;
+                                                                        }
+                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                                                        {
+                                                                            offdayprob = office_offdayprob.y;
+                                                                        }
+                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                                                        {
+                                                                            offdayprob = office_offdayprob.z;
+                                                                            parttime_prob = 100;
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            offdayprob = office_offdayprob.w;
+                                                                            parttime_prob = 100;
+                                                                        }
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                                                        {
+                                                                            offdayprob = cityservices_offdayprob.x;
+                                                                        }
+                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                                                        {
+                                                                            offdayprob = cityservices_offdayprob.y;
+                                                                        }
+                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                                                        {
+                                                                            offdayprob = cityservices_offdayprob.z;
+                                                                            parttime_prob = 100;
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            offdayprob = cityservices_offdayprob.w;
+                                                                            parttime_prob = 100;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+
+                                                    }
+
+
+                                                    if (this.m_Workers.HasComponent(entity1) && !Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob, ticksPerDay)
+                                                        && Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction) || this.m_Students.HasComponent(entity1) && Time2WorkStudentSystem.IsTimeToStudy(citizen, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay))
+                                                        {
+                                                            if(this.m_Workers.HasComponent(entity1) && Time2WorkWorkerSystem.IsLunchTime(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))
+                                                            {
+                                                                HouseholdNeed householdNeed = this.m_HouseholdNeeds[household];
+
+                                                                int num = 50;
+                                                                Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom));
+                                                                int prob = rand.NextInt(100);
+                                                                if ((householdNeed.m_Resource != Resource.NoResource || num < prob) && this.m_Transforms.HasComponent(currentBuilding))
+                                                                {
+                                                                    if (householdNeed.m_Resource == Resource.NoResource)
+                                                                    {
+                                                                        if (prob < 25)
+                                                                        {
+                                                                            householdNeed.m_Resource = Resource.Meals;
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            if (prob < 35)
+                                                                            {
+                                                                                householdNeed.m_Resource = Resource.Food;
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                if (prob < 45)
+                                                                                {
+                                                                                    householdNeed.m_Resource = Resource.ConvenienceFood;
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    householdNeed.m_Resource = Resource.Beverages;
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        householdNeed.m_Amount = rand.NextInt(1, 5);
+                                                                    }
+                                                                    this.GoShopping(unfilteredChunkIndex, entity1, household, householdNeed, this.m_Transforms[currentBuilding].m_Position);
+                                                                    householdNeed.m_Resource = Resource.NoResource;
+                                                                    this.m_HouseholdNeeds[household] = householdNeed;
+                                                                    if (chunk.Has<Leisure>(ref this.m_LeisureType))
+                                                                    {
+                                                                        this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters))
+                                                                    {
+                                                                        nativeArray2[index] = citizen;
+                                                                    }
+                                                                }
+                                                            }
+                                                            if (chunk.Has<Leisure>(ref this.m_LeisureType))
                                                         {
                                                             this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
                                                         }
                                                     }
                                                     else
                                                     {
-                                                        //If today is off day, go shopping or for leisure around 10 AM
-                                                        float x1 = (float)(GaussianRandom.NextGaussianDouble(random)) * 0.05f + 0.5f;
-                                                        float x2 = 1 - Math.Abs((float)(GaussianRandom.NextGaussianDouble(random)) * 0.05f);
-
-                                                        if ((this.m_NormalizedTime > x1 && this.m_NormalizedTime < x2)|| !disable_early_shop_leisure)
-                                                        {
-                                                            //If in the morning, cim might stay home and go out later
-                                                            if(!disable_early_shop_leisure || (this.m_NormalizedTime <= 0.5 && (random.NextInt(100) < 20)) || this.m_NormalizedTime > 0.5)
+                                                        if (this.CheckSleep(index, entity1, ref citizen, currentBuilding, household, entity3, trips, ref this.m_EconomyParameters, ref random, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, overtime, part_time_reduction))
                                                             {
-                                                                if (age == CitizenAge.Adult || age == CitizenAge.Elderly)
-                                                                {
-                                                                    HouseholdNeed householdNeed = this.m_HouseholdNeeds[household];
-                                                                    if (householdNeed.m_Resource != Resource.NoResource && this.m_Transforms.HasComponent(currentBuilding))
-                                                                    {
-                                                                        this.GoShopping(unfilteredChunkIndex, entity1, household, householdNeed, this.m_Transforms[currentBuilding].m_Position);
-                                                                        householdNeed.m_Resource = Resource.NoResource;
-                                                                        this.m_HouseholdNeeds[household] = householdNeed;
-                                                                        if (chunk.Has<Leisure>(ref this.m_LeisureType))
-                                                                        {
-                                                                            this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
-                                                                            continue;
-                                                                        }
-                                                                        continue;
-                                                                    }
-                                                                }
-                                                            } 
-                                                        }
-
-                                                        if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters))
-                                                        {
-                                                            nativeArray2[index] = citizen;
-                                                        }
-
-                                                        nativeArray2[index] = citizen;
-                                                        if (!chunk.Has<Leisure>(ref this.m_LeisureType) && (this.m_NormalizedTime > x1 || disable_early_shop_leisure) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters))
-                                                        {
-                                                            nativeArray2[index] = citizen;
+                                                            if (chunk.Has<Leisure>(ref this.m_LeisureType))
+                                                            {
+                                                                this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
+                                                            }
                                                         }
                                                         else
                                                         {
-                                                            //Mod.log.Info($"Has leisure?{chunk.Has<Leisure>(ref this.m_LeisureType)}");
-                                                            if (!chunk.Has<Leisure>(ref this.m_LeisureType))
-                                                            {
-                                                                if (currentBuilding != entity3)
+                                                                //If today is off day, go shopping or for leisure around 10 AM
+                                                                float x1 = (float)(GaussianRandom.NextGaussianDouble(random)) * 0.05f + 0.5f;
+                                                                float x2 = 1 - Math.Abs((float)(GaussianRandom.NextGaussianDouble(random)) * 0.05f);
+
+                                                                if ((this.m_NormalizedTime > x1 && this.m_NormalizedTime < x2) || !disable_early_shop_leisure)
                                                                 {
-                                                                    //Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction) 
-                                                                    //Mod.log.Info($"Going home. TIme:{this.m_NormalizedTime}, Today off day? {Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob, ticksPerDay)}, " +
-                                                                    //    $"Time2work: {Time2WorkWorkerSystem.GetTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction)}");
-                                                                    this.GoHome(entity1, entity3, trips, currentBuilding);
+                                                                    //If in the morning, cim might stay home and go out later
+                                                                    if(!disable_early_shop_leisure || (this.m_NormalizedTime <= 0.5 && (random.NextInt(100) < 20)) || this.m_NormalizedTime > 0.5)
+                                                                    {
+                                                                        if (age == CitizenAge.Adult || age == CitizenAge.Elderly)
+                                                                        {
+                                                                            HouseholdNeed householdNeed = this.m_HouseholdNeeds[household];
+                                                                            if (householdNeed.m_Resource != Resource.NoResource && this.m_Transforms.HasComponent(currentBuilding))
+                                                                            {
+                                                                                this.GoShopping(unfilteredChunkIndex, entity1, household, householdNeed, this.m_Transforms[currentBuilding].m_Position);
+                                                                                householdNeed.m_Resource = Resource.NoResource;
+                                                                                this.m_HouseholdNeeds[household] = householdNeed;
+                                                                                if (chunk.Has<Leisure>(ref this.m_LeisureType))
+                                                                                {
+                                                                                    this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
+                                                                                    continue;
+                                                                                }
+                                                                                continue;
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+
+                                                                if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters))
+                                                                {
+                                                                    nativeArray2[index] = citizen;
                                                                 }
                                                                 else
+                                                            {
+                                                                if (!chunk.Has<Leisure>(ref this.m_LeisureType))
                                                                 {
-                                                                    this.ReleaseCar(unfilteredChunkIndex, entity1);
+                                                                    if (currentBuilding != entity3)
+                                                                    {
+                                                                        this.GoHome(entity1, entity3, trips, currentBuilding);
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        this.ReleaseCar(unfilteredChunkIndex, entity1);
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -1381,6 +1376,7 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<PrefabRef> PrefabRefLookup;
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void __AssignHandles(ref SystemState state)
             {
                 this.__Game_Citizens_Citizen_RW_ComponentTypeHandle = state.GetComponentTypeHandle<Citizen>();

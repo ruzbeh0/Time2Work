@@ -352,7 +352,7 @@ namespace Time2Work
                 m_Frame = this.m_SimulationSystem.frameIndex,
                 m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>(),
                 m_PopulationEntity = this.m_PopulationQuery.GetSingletonEntity(),
-                m_CarReserverQueue = this.m_Time2WorkCitizenBehaviorSystem.GetCarReserverQueue(out deps),
+                m_CarReserverQueue = this.m_Time2WorkCitizenBehaviorSystem.GetCarReserveQueue(out deps),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 lunch_break_pct = Mod.m_Setting.lunch_break_percentage,
                 vacation = Mod.m_Setting.vacation_per_year,

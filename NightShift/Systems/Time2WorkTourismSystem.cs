@@ -27,8 +27,7 @@ namespace Time2Work.Systems
         private ClimateSystem m_ClimateSystem;
         private CountHouseholdDataSystem m_CountHouseholdDataSystem;
         private EntityQuery m_AttractivenessProviderGroup;
-        private EntityQuery m_TouristHouseholdGroup;
-        private EntityQuery m_LodgingGroup;
+        private EntityQuery m_HotelGroup;
         private EntityQuery m_ParameterQuery;
         private Time2WorkTourismSystem.TypeHandle __TypeHandle;
         private const float weekdayTourismFactor = 0.9f;
@@ -101,8 +100,7 @@ namespace Time2Work.Systems
             this.m_ClimateSystem = this.World.GetOrCreateSystemManaged<ClimateSystem>();
             this.m_CountHouseholdDataSystem = this.World.GetOrCreateSystemManaged<CountHouseholdDataSystem>();
             this.m_AttractivenessProviderGroup = this.GetEntityQuery(ComponentType.ReadWrite<AttractivenessProvider>(), ComponentType.Exclude<Temp>(), ComponentType.Exclude<Deleted>());
-            this.m_TouristHouseholdGroup = this.GetEntityQuery(ComponentType.ReadOnly<TouristHousehold>(), ComponentType.ReadOnly<HouseholdCitizen>(), ComponentType.Exclude<Temp>(), ComponentType.Exclude<Deleted>());
-            this.m_LodgingGroup = this.GetEntityQuery(ComponentType.ReadOnly<LodgingProvider>(), ComponentType.Exclude<Temp>(), ComponentType.Exclude<Deleted>());
+            this.m_HotelGroup = this.GetEntityQuery(ComponentType.ReadOnly<LodgingProvider>(), ComponentType.ReadOnly<PropertyRenter>(), ComponentType.Exclude<Temp>(), ComponentType.Exclude<Deleted>());
             this.m_ParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<AttractivenessParameterData>());
             if (Mod.m_Setting.tourism_trips)
             {
@@ -134,7 +132,7 @@ namespace Time2Work.Systems
             Time2WorkTourismSystem.TourismJob jobData = new Time2WorkTourismSystem.TourismJob()
             {
                 m_m_AttractivenessProviderChunks = this.m_AttractivenessProviderGroup.ToArchetypeChunkArray((AllocatorManager.AllocatorHandle)Allocator.TempJob),
-                m_HotelChunks = this.m_LodgingGroup.ToArchetypeChunkArray((AllocatorManager.AllocatorHandle)Allocator.TempJob),
+                m_HotelChunks = this.m_HotelGroup.ToArchetypeChunkArray((AllocatorManager.AllocatorHandle)Allocator.TempJob),
                 m_LodgingProviderType = this.__TypeHandle.__Game_Companies_LodgingProvider_RO_ComponentTypeHandle,
                 m_RenterType = this.__TypeHandle.__Game_Buildings_Renter_RO_BufferTypeHandle,
                 m_CityModifiers = this.__TypeHandle.__Game_City_CityModifier_RO_BufferLookup,

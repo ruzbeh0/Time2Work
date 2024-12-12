@@ -456,7 +456,7 @@ namespace Time2Work
                         }
                     }
 
-                    vehicle = this.m_TransportVehicleSelectData.CreateVehicle(this.m_CommandBuffer, jobIndex, ref random, transform, source, Entity.Null, Entity.Null, transportType, componentData1.m_EnergyTypes, publicTransportPurpose, cargoResources, ref passengerCapacity, ref cargoCapacity);
+                    vehicle = this.m_TransportVehicleSelectData.CreateVehicle(this.m_CommandBuffer, jobIndex, ref random, transform, source, Entity.Null, Entity.Null, transportType, componentData1.m_EnergyTypes, publicTransportPurpose, cargoResources, ref passengerCapacity, ref cargoCapacity, false);
                     if (vehicle != Entity.Null)
                     {
                         if (publicTransportPurpose != (PublicTransportPurpose)0)
