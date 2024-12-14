@@ -167,7 +167,7 @@ namespace Time2Work
             double endOnTime = (GaussianRandom.NextGaussianDouble(random)) * delayFactor;
             endOnTime *= 1.4f;
 
-            if(startOnTime > 0)
+            if (startOnTime > 0)
             {
                 startOnTime *= 1.2;
             }
@@ -199,23 +199,26 @@ namespace Time2Work
                 {
                     double shift_duration = Math.Abs(economyParameters.m_WorkDayEnd + workOffset + endOnTime - (economyParameters.m_WorkDayStart + workOffset + startOnTime));
                     //Shift duration varies by education level
-                    if(worker.m_Level <= 1)
+                    if (worker.m_Level <= 1)
                     {
                         shift_duration *= 1.05f;
-                    } else if (worker.m_Level > 2)
+                    }
+                    else if (worker.m_Level > 2)
                     {
                         shift_duration /= 1.1f;
                     }
-                    if (part_time_rand < part_time_prob/2)
+                    if (part_time_rand < part_time_prob / 2)
                     {
                         //startOnTime += shift_duration * (Math.Abs(GaussianRandom.NextGaussianDouble(random) * 0.2f) + 0.35f);
                         startOnTime += shift_duration * part_time_reduction;
-                    } else
+                    }
+                    else
                     {
                         //endOnTime -= shift_duration * (0.55f - Math.Abs(GaussianRandom.NextGaussianDouble(random) * 0.2f));
                         endOnTime -= shift_duration * part_time_reduction;
                     }
-                } else
+                }
+                else
                 {
                     endOnTime += overtime;
                 }
@@ -247,13 +250,15 @@ namespace Time2Work
                     endOnTime *= 1.3f;
                 }
             }
-                
+
             double num1 = (double)(float)(((double)economyParameters.m_WorkDayStart + (double)workOffset + startOnTime));
             float y = math.frac((float)(((double)economyParameters.m_WorkDayEnd + (double)workOffset + endOnTime)));
+            //float y = math.frac((float)(((double)economyParameters.m_WorkDayEnd + (double)workOffset)));
+
             //Evening and Night Shifts are 6 to 4 hours long
-            if(worker.m_Shift != Workshift.Day)
+            if (worker.m_Shift != Workshift.Day)
             {
-                y -= random.NextFloat(0.10f,0.16f);
+                y -= random.NextFloat(0.10f, 0.16f);
             }
 
             float num2 = 0.0f;
@@ -265,7 +270,7 @@ namespace Time2Work
                     num3 = 40000f;
                 num2 = num3 / ticksPerDay;
 
-                if (commute_top10 > 0 && (24f*num2) > commute_top10)
+                if (commute_top10 > 0 && (24f * num2) > commute_top10)
                 {
                     peak_spread = 0.2f * num2;
                     num2 += peak_spread;
@@ -672,9 +677,9 @@ namespace Time2Work
                                     {
                                         home = this.m_Properties[household].m_Property;
                                     }
-
+                                    //Mod.log.Info($"work:{timeToWork}, lunch{timeToLunch}");
                                     if (threshold_start_work <= 0.03 ||
-                                        threshold_resume_work <= 0.03)
+                                        (threshold_resume_work >= 0 && threshold_resume_work <= 0.03))
                                     {
                                         if(nativeArray4[index].m_CurrentBuilding == home &&
                                             threshold_start_work > 0.03)

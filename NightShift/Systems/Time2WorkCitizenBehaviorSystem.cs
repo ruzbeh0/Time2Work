@@ -87,6 +87,14 @@ namespace Time2Work
             if (workers.HasComponent(entity))
             {
                 float2_2 = Time2WorkWorkerSystem.GetTimeToWork(citizen, workers[entity], ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction);
+                //This is to avoid part time workers from going to sleep too early
+                if(workers[entity].m_Shift == Workshift.Day && float2_2.y < 0.55f)
+                {
+                    float2_2.y += 0.2f;
+                } else if (workers[entity].m_Shift == Workshift.Day && float2_2.x >= 0.55f)
+                {
+                    float2_2.x -= 0.2f;
+                }
             }
             else
             {
@@ -282,7 +290,7 @@ namespace Time2Work
                 commute_top10 = Mod.m_Setting.commute_top10per,
                 dow = this.m_daytype,
                 part_time_reduction = Mod.m_Setting.avg_work_hours_pt_wd / Mod.m_Setting.avg_work_hours_ft_wd,
-                overtime = (Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/2
+                overtime = ((Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/2)/24
             };
             JobHandle jobHandle1 = jobData.ScheduleParallel<Time2WorkCitizenBehaviorSystem.CitizenAITickJob>(this.m_CitizenQuery, JobHandle.CombineDependencies(this.m_CarReserveWriters, JobHandle.CombineDependencies(this.Dependency, outJobHandle)));
             jobData.m_OutsideConnectionEntities.Dispose(jobHandle1);
@@ -788,7 +796,7 @@ namespace Time2Work
                     Worker worker = this.m_Workers[citizenEntity];
                     float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizenData, worker, ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction);
                     float2 timeToLunch = Time2WorkWorkerSystem.GetLunchTime(citizenData, worker, ref economyParameters);
-                    if(timeToLunch.x > 0)
+                    if(Time2WorkWorkerSystem.IsTodayLunchBreak(citizenData, lunch_break_pct) && timeToLunch.x > 0)
                     {
                         float x1 = math.min(this.GetTimeLeftUntilInterval(timeToLunch), this.GetTimeLeftUntilInterval(timeToWork));
                         x = math.min(x, x1);
@@ -1155,10 +1163,14 @@ namespace Time2Work
                                                     if (this.m_Workers.HasComponent(entity1) && !Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob, ticksPerDay)
                                                         && Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction) || this.m_Students.HasComponent(entity1) && Time2WorkStudentSystem.IsTimeToStudy(citizen, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay))
                                                         {
-                                                            if(this.m_Workers.HasComponent(entity1) && Time2WorkWorkerSystem.IsLunchTime(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))
+                                                        
+                                                            //Filtering work times that correspond to part time shifts. Those do not take lunch breaks
+                                                            float2 timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, worker, ref this.m_EconomyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction);
+                                                            
+                                                            if(this.m_Workers.HasComponent(entity1) && timeToWork.x <= 0.55f && timeToWork.y > 0.55f && Time2WorkWorkerSystem.IsLunchTime(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))
                                                             {
                                                                 HouseholdNeed householdNeed = this.m_HouseholdNeeds[household];
-
+                                                            
                                                                 int num = 50;
                                                                 Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom));
                                                                 int prob = rand.NextInt(100);
@@ -1207,9 +1219,9 @@ namespace Time2Work
                                                                 }
                                                             }
                                                             if (chunk.Has<Leisure>(ref this.m_LeisureType))
-                                                        {
-                                                            this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
-                                                        }
+                                                            {
+                                                                this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
+                                                            }
                                                     }
                                                     else
                                                     {
@@ -1222,11 +1234,22 @@ namespace Time2Work
                                                         }
                                                         else
                                                         {
-                                                                //If today is off day, go shopping or for leisure around 10 AM
-                                                                float x1 = (float)(GaussianRandom.NextGaussianDouble(random)) * 0.05f + 0.5f;
-                                                                float x2 = 1 - Math.Abs((float)(GaussianRandom.NextGaussianDouble(random)) * 0.05f);
+                                                            //If in the afternoon, go home first and maybe shop or do leisure later
+                                                            int num = 65;
+                                                            if((int)dow != (int)Setting.DTSimulationEnum.Weekday)
+                                                            {
+                                                                num = 55;
+                                                            }
+                                                            int prob = random.NextInt(100);
+                                                            if (currentBuilding != entity3 && this.m_NormalizedTime > 0.65f && num < prob)
+                                                            {
+                                                                this.GoHome(entity1, entity3, trips, currentBuilding);
+                                                            }
+                                                            //If today is off day, go shopping or for leisure around 10 AM
+                                                            float x1 = (float)(GaussianRandom.NextGaussianDouble(random)) * 0.05f + 0.5f;
+                                                            float x2 = 1 - Math.Abs((float)(GaussianRandom.NextGaussianDouble(random)) * 0.05f);
 
-                                                                if ((this.m_NormalizedTime > x1 && this.m_NormalizedTime < x2) || !disable_early_shop_leisure)
+                                                            if ((this.m_NormalizedTime > x1 && this.m_NormalizedTime < x2) || !disable_early_shop_leisure)
                                                                 {
                                                                     //If in the morning, cim might stay home and go out later
                                                                     if(!disable_early_shop_leisure || (this.m_NormalizedTime <= 0.5 && (random.NextInt(100) < 20)) || this.m_NormalizedTime > 0.5)
@@ -1242,7 +1265,6 @@ namespace Time2Work
                                                                                 if (chunk.Has<Leisure>(ref this.m_LeisureType))
                                                                                 {
                                                                                     this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
-                                                                                    continue;
                                                                                 }
                                                                                 continue;
                                                                             }
@@ -1250,11 +1272,11 @@ namespace Time2Work
                                                                     }
                                                                 }
 
-                                                                if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters))
-                                                                {
-                                                                    nativeArray2[index] = citizen;
-                                                                }
-                                                                else
+                                                            if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters))
+                                                            {
+                                                                nativeArray2[index] = citizen;
+                                                            }
+                                                            else
                                                             {
                                                                 if (!chunk.Has<Leisure>(ref this.m_LeisureType))
                                                                 {
