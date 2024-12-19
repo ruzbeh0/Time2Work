@@ -80,6 +80,7 @@ namespace Time2Work
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TourismSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TouristSpawnSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.UI.InGame.TimeUISystem>().Enabled = false;
+            World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.UI.InGame.StatisticsUISystem>().Enabled = false;
 
             updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.EditorSimulation);
@@ -101,6 +102,7 @@ namespace Time2Work
             updateSystem.UpdateAt<Time2WorkTouristSpawnSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTimeUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkUISystem>(SystemUpdatePhase.UIUpdate);
+            updateSystem.UpdateAt<Time2WorkStatisticsUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAfter<TimeSettingsMultiplierSystem>(SystemUpdatePhase.PrefabUpdate);
             updateSystem.UpdateBefore<TimeSettingsMultiplierSystem>(SystemUpdatePhase.PrefabReferences);
             updateSystem.UpdateAfter<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabUpdate);

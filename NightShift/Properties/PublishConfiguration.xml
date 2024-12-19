@@ -121,16 +121,16 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="1.5.1" />
+	<ModVersion Value="1.5.2" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.2.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="75426" />
 	<ChangeLog>
-* Fixed overtime calculation bug
-* Updated after work trip logic to favor work to home trips over work to other
-* Disabled possibility of lunch time for part time workers
-* Adjusted sleep schedule for part time workers so that they have more free time
+* Fixed leisure bug where cims left parks as soon as they arrived
+* Fixed low demand issue with big slow time factors
+* Fixed statistics graphs when slow time is enabled
+* Adjusted work to home travel behaviour
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

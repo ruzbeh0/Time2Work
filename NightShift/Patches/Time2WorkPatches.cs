@@ -5,6 +5,7 @@ using Game.Companies;
 using Game.Prefabs;
 using Game.Prefabs.Climate;
 using Game.Simulation;
+using Game.UI.InGame;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
@@ -78,6 +79,26 @@ namespace Time2Work.Patches
         static bool TimeSystemPatches_GetDay(uint frame, TimeData data, ref int __result, TimeSystem __instance)
         {
             __result = Time2WorkTimeSystem.GetDay(frame, data);
+            return false;
+        }
+
+        [HarmonyPatch(typeof(TimeUISystem), "GetDay")]
+        [HarmonyPrefix]
+        static bool TimeUISystemPatches_GetDay(ref int __result, TimeUISystem __instance)
+        {
+            Time2WorkTimeUISystem t2wTimeUISystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeUISystem>();
+
+            __result = t2wTimeUISystem.GetDay();
+            return false;
+        }
+
+        [HarmonyPatch(typeof(TimeUISystem), "GetTicks")]
+        [HarmonyPrefix]
+        static bool TimeUISystemPatches_GetTicks(ref int __result, TimeUISystem __instance)
+        {
+            Time2WorkTimeUISystem t2wTimeUISystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeUISystem>();
+
+            __result = t2wTimeUISystem.GetTicks();
             return false;
         }
 

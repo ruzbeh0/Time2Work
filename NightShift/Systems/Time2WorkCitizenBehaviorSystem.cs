@@ -1234,17 +1234,21 @@ namespace Time2Work
                                                         }
                                                         else
                                                         {
-                                                            //If in the afternoon, go home first and maybe shop or do leisure later
-                                                            int num = 65;
-                                                            if((int)dow != (int)Setting.DTSimulationEnum.Weekday)
+                                                            //If worker and in the afternoon, go home first and maybe shop or do leisure later
+                                                            if(this.m_Workers.HasComponent(entity1))
                                                             {
-                                                                num = 55;
+                                                                int num = 65;
+                                                                if ((int)dow != (int)Setting.DTSimulationEnum.Weekday)
+                                                                {
+                                                                    num = 55;
+                                                                }
+                                                                int prob = random.NextInt(100);
+                                                                if (currentBuilding == this.m_Workers[entity1].m_Workplace && this.m_NormalizedTime > 0.65f && num < prob)
+                                                                {
+                                                                    this.GoHome(entity1, entity3, trips, currentBuilding);
+                                                                }
                                                             }
-                                                            int prob = random.NextInt(100);
-                                                            if (currentBuilding != entity3 && this.m_NormalizedTime > 0.65f && num < prob)
-                                                            {
-                                                                this.GoHome(entity1, entity3, trips, currentBuilding);
-                                                            }
+                                                            
                                                             //If today is off day, go shopping or for leisure around 10 AM
                                                             float x1 = (float)(GaussianRandom.NextGaussianDouble(random)) * 0.05f + 0.5f;
                                                             float x2 = 1 - Math.Abs((float)(GaussianRandom.NextGaussianDouble(random)) * 0.05f);
