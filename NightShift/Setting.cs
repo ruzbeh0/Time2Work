@@ -129,10 +129,10 @@ namespace Time2Work
         float[] entertainment_avgday_ = [0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f];
         float[] entertainment_saturday_ = [1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f];
         float[] entertainment_sunday_ = [1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f];
-        float[] shopping_weekday_ = [0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f];
-        float[] shopping_avgday_ = [1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f];
-        float[] shopping_saturday_ = [1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f];
-        float[] shopping_sunday_ = [0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f];
+        float[] shopping_weekday_ = [0.24f, 0.24f, 0.24f, 0.3f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f];
+        float[] shopping_avgday_ = [1.41f, 1.41f, 1.41f, 1.75f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f];
+        float[] shopping_saturday_ = [1.68f, 1.68f, 1.68f, 1.6f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f];
+        float[] shopping_sunday_ = [0.53f, 0.53f, 0.53f, 1f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f];
         float[] park_weekday_ = [0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f];
         float[] park_avgday_ = [0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f];
         float[] park_saturday_ = [0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f];

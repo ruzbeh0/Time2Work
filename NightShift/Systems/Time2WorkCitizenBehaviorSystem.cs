@@ -30,6 +30,7 @@ namespace Time2Work
     public partial class Time2WorkCitizenBehaviorSystem : GameSystemBase
     {
         public static readonly float kMaxPathfindCost = 17000f;
+        public static readonly float kMaxPathfindCostLeisure = 14000f;
         public static readonly float kMaxMovingAwayCost = CitizenBehaviorSystem.kMaxPathfindCost * 10f;
         public static readonly int kMinLeisurePossibility = 80;
         private JobHandle m_CarReserveWriters;
@@ -290,7 +291,7 @@ namespace Time2Work
                 commute_top10 = Mod.m_Setting.commute_top10per,
                 dow = this.m_daytype,
                 part_time_reduction = Mod.m_Setting.avg_work_hours_pt_wd / Mod.m_Setting.avg_work_hours_ft_wd,
-                overtime = ((Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/2)/24
+                overtime = ((Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/24)
             };
             JobHandle jobHandle1 = jobData.ScheduleParallel<Time2WorkCitizenBehaviorSystem.CitizenAITickJob>(this.m_CitizenQuery, JobHandle.CombineDependencies(this.m_CarReserveWriters, JobHandle.CombineDependencies(this.Dependency, outJobHandle)));
             jobData.m_OutsideConnectionEntities.Dispose(jobHandle1);
@@ -1058,110 +1059,111 @@ namespace Time2Work
                                             }
                                             else
                                             {
-                                                if (!this.m_AttendingMeetings.HasComponent(entity1) || !this.AttendMeeting(unfilteredChunkIndex, entity1, ref citizen, household, currentBuilding, trips, ref random))
+                                                float offdayprob = 60f;
+                                                int parttime_prob = part_time_prob;
+                                                if (m_Workers.TryGetComponent(entity1, out var worker))
                                                 {
-                                                    float offdayprob = 60f;
-                                                    int parttime_prob = part_time_prob;
-                                                    if (m_Workers.TryGetComponent(entity1, out var worker))
+                                                    if (PrefabRefLookup.TryGetComponent(worker.m_Workplace, out var prefab1))
                                                     {
-                                                        if (PrefabRefLookup.TryGetComponent(worker.m_Workplace, out var prefab1))
+                                                        if (PropertyRenterLookup.TryGetComponent(worker.m_Workplace, out var propertyRenter))
+                                                        {
+                                                            //x = weekday, y = friday, z = saturday, w = sunday
+                                                            if (CommercialPropertyLookup.HasComponent(propertyRenter.m_Property))
                                                             {
-                                                                if (PropertyRenterLookup.TryGetComponent(worker.m_Workplace, out var propertyRenter))
+                                                                //Mod.log.Info($"Commercial Property");
+                                                                if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
                                                                 {
-                                                                    //x = weekday, y = friday, z = saturday, w = sunday
-                                                                    if (CommercialPropertyLookup.HasComponent(propertyRenter.m_Property))
-                                                                    {
-                                                                        //Mod.log.Info($"Commercial Property");
-                                                                        if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
-                                                                        {
-                                                                            offdayprob = commercial_offdayprob.x;
-                                                                        }
-                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
-                                                                        {
-                                                                            offdayprob = commercial_offdayprob.y;
-                                                                        }
-                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
-                                                                        {
-                                                                            offdayprob = commercial_offdayprob.z;
-                                                                            parttime_prob = 100;
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            offdayprob = commercial_offdayprob.w;
-                                                                            parttime_prob = 100;
-                                                                        }
-                                                                    }
-                                                                    if (IndustrialPropertyLookup.HasComponent(propertyRenter.m_Property))
-                                                                    {
-                                                                        if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
-                                                                        {
-                                                                            offdayprob = industry_offdayprob.x;
-                                                                        }
-                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
-                                                                        {
-                                                                            offdayprob = industry_offdayprob.y;
-                                                                        }
-                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
-                                                                        {
-                                                                            offdayprob = industry_offdayprob.z;
-                                                                            parttime_prob = 100;
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            offdayprob = industry_offdayprob.w;
-                                                                            parttime_prob = 100;
-                                                                        }
-                                                                    }
-                                                                    if (OfficePropertyLookup.HasComponent(propertyRenter.m_Property))
-                                                                    {
-                                                                        if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
-                                                                        {
-                                                                            offdayprob = office_offdayprob.x;
-                                                                        }
-                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
-                                                                        {
-                                                                            offdayprob = office_offdayprob.y;
-                                                                        }
-                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
-                                                                        {
-                                                                            offdayprob = office_offdayprob.z;
-                                                                            parttime_prob = 100;
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            offdayprob = office_offdayprob.w;
-                                                                            parttime_prob = 100;
-                                                                        }
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
-                                                                        {
-                                                                            offdayprob = cityservices_offdayprob.x;
-                                                                        }
-                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
-                                                                        {
-                                                                            offdayprob = cityservices_offdayprob.y;
-                                                                        }
-                                                                        else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
-                                                                        {
-                                                                            offdayprob = cityservices_offdayprob.z;
-                                                                            parttime_prob = 100;
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            offdayprob = cityservices_offdayprob.w;
-                                                                            parttime_prob = 100;
-                                                                        }
-                                                                    }
+                                                                    offdayprob = commercial_offdayprob.x;
+                                                                }
+                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                                                {
+                                                                    offdayprob = commercial_offdayprob.y;
+                                                                }
+                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                                                {
+                                                                    offdayprob = commercial_offdayprob.z;
+                                                                    parttime_prob = 100;
+                                                                }
+                                                                else
+                                                                {
+                                                                    offdayprob = commercial_offdayprob.w;
+                                                                    parttime_prob = 100;
                                                                 }
                                                             }
-
+                                                            if (IndustrialPropertyLookup.HasComponent(propertyRenter.m_Property))
+                                                            {
+                                                                if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                                                {
+                                                                    offdayprob = industry_offdayprob.x;
+                                                                }
+                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                                                {
+                                                                    offdayprob = industry_offdayprob.y;
+                                                                }
+                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                                                {
+                                                                    offdayprob = industry_offdayprob.z;
+                                                                    parttime_prob = 100;
+                                                                }
+                                                                else
+                                                                {
+                                                                    offdayprob = industry_offdayprob.w;
+                                                                    parttime_prob = 100;
+                                                                }
+                                                            }
+                                                            if (OfficePropertyLookup.HasComponent(propertyRenter.m_Property))
+                                                            {
+                                                                if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                                                {
+                                                                    offdayprob = office_offdayprob.x;
+                                                                }
+                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                                                {
+                                                                    offdayprob = office_offdayprob.y;
+                                                                }
+                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                                                {
+                                                                    offdayprob = office_offdayprob.z;
+                                                                    parttime_prob = 100;
+                                                                }
+                                                                else
+                                                                {
+                                                                    offdayprob = office_offdayprob.w;
+                                                                    parttime_prob = 100;
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
+                                                                {
+                                                                    offdayprob = cityservices_offdayprob.x;
+                                                                }
+                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
+                                                                {
+                                                                    offdayprob = cityservices_offdayprob.y;
+                                                                }
+                                                                else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
+                                                                {
+                                                                    offdayprob = cityservices_offdayprob.z;
+                                                                    parttime_prob = 100;
+                                                                }
+                                                                else
+                                                                {
+                                                                    offdayprob = cityservices_offdayprob.w;
+                                                                    parttime_prob = 100;
+                                                                }
+                                                            }
+                                                        }
                                                     }
 
+                                                }
 
-                                                    if (this.m_Workers.HasComponent(entity1) && !Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob, ticksPerDay)
-                                                        && Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction) || this.m_Students.HasComponent(entity1) && Time2WorkStudentSystem.IsTimeToStudy(citizen, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay))
+                                                bool working_or_studying = this.m_Workers.HasComponent(entity1) && !Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob, ticksPerDay)
+                                                        && Time2WorkWorkerSystem.IsTimeToWork(citizen, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction) || this.m_Students.HasComponent(entity1) && Time2WorkStudentSystem.IsTimeToStudy(citizen, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay);
+
+                                                if (!this.m_AttendingMeetings.HasComponent(entity1) || (!working_or_studying && !this.AttendMeeting(unfilteredChunkIndex, entity1, ref citizen, household, currentBuilding, trips, ref random)))
+                                                {  
+                                                    if (working_or_studying)
                                                         {
                                                         
                                                             //Filtering work times that correspond to part time shifts. Those do not take lunch breaks
@@ -1226,7 +1228,7 @@ namespace Time2Work
                                                     else
                                                     {
                                                         if (this.CheckSleep(index, entity1, ref citizen, currentBuilding, household, entity3, trips, ref this.m_EconomyParameters, ref random, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, overtime, part_time_reduction))
-                                                            {
+                                                        {
                                                             if (chunk.Has<Leisure>(ref this.m_LeisureType))
                                                             {
                                                                 this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
@@ -1235,7 +1237,7 @@ namespace Time2Work
                                                         else
                                                         {
                                                             //If worker and in the afternoon, go home first and maybe shop or do leisure later
-                                                            if(this.m_Workers.HasComponent(entity1))
+                                                            if (this.m_Workers.HasComponent(entity1) || this.m_Students.HasComponent(entity1))
                                                             {
                                                                 int num = 65;
                                                                 if ((int)dow != (int)Setting.DTSimulationEnum.Weekday)
@@ -1243,9 +1245,13 @@ namespace Time2Work
                                                                     num = 55;
                                                                 }
                                                                 int prob = random.NextInt(100);
-                                                                if (currentBuilding == this.m_Workers[entity1].m_Workplace && this.m_NormalizedTime > 0.65f && num < prob)
+                                                                if(this.m_NormalizedTime > 0.65f && num < prob)
                                                                 {
-                                                                    this.GoHome(entity1, entity3, trips, currentBuilding);
+                                                                    if ((this.m_Workers.HasComponent(entity1) && currentBuilding == this.m_Workers[entity1].m_Workplace) 
+                                                                        || (this.m_Students.HasComponent(entity1) && currentBuilding == this.m_Students[entity1].m_School))
+                                                                    {
+                                                                        this.GoHome(entity1, entity3, trips, currentBuilding);
+                                                                    }
                                                                 }
                                                             }
                                                             

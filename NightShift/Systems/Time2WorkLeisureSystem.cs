@@ -195,7 +195,7 @@ namespace Time2Work
                 commute_top10 = Mod.m_Setting.commute_top10per,
                 dow = this.m_daytype,
                 part_time_reduction = Mod.m_Setting.avg_work_hours_pt_wd / Mod.m_Setting.avg_work_hours_ft_wd,
-                overtime = (Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/4,
+                overtime = (Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/24,
                 meals_leisure = new float4(Mod.m_Setting.meals_weekday, Mod.m_Setting.meals_avgday, Mod.m_Setting.meals_saturday, Mod.m_Setting.meals_sunday),
                 entertainment_leisure = new float4(Mod.m_Setting.entertainment_weekday, Mod.m_Setting.entertainment_avgday, Mod.m_Setting.entertainment_saturday, Mod.m_Setting.entertainment_sunday),
                 shopping_leisure = new float4(Mod.m_Setting.shopping_weekday, Mod.m_Setting.shopping_avgday, Mod.m_Setting.shopping_saturday, Mod.m_Setting.shopping_sunday),
@@ -966,7 +966,7 @@ namespace Time2Work
                         m_Weights = CitizenUtils.GetPathfindWeights(citizenData, household1, householdCitizen.Length),
                         m_Methods = PathMethod.Pedestrian | PathMethod.Taxi | RouteUtils.GetPublicTransportMethods(this.m_TimeOfDay),
                         m_SecondaryIgnoredRules = VehicleUtils.GetIgnoredPathfindRulesTaxiDefaults(),
-                        m_MaxCost = CitizenBehaviorSystem.kMaxPathfindCost
+                        m_MaxCost = Time2WorkCitizenBehaviorSystem.kMaxPathfindCostLeisure
                     };
                     if (this.m_PropertyRenters.HasComponent(household))
                     {

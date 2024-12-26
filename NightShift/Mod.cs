@@ -79,6 +79,7 @@ namespace Time2Work
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.StorageTransferSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TourismSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TouristSpawnSystem>().Enabled = false;
+            //World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.AttractionSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.UI.InGame.TimeUISystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.UI.InGame.StatisticsUISystem>().Enabled = false;
 
@@ -100,6 +101,7 @@ namespace Time2Work
             //updateSystem.UpdateAt<Time2WorkCalendarEventLaunchSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTourismSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTouristSpawnSystem>(SystemUpdatePhase.GameSimulation);
+            //updateSystem.UpdateAt<Time2WorkAttractionSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTimeUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkStatisticsUISystem>(SystemUpdatePhase.UIUpdate);
@@ -107,6 +109,7 @@ namespace Time2Work
             updateSystem.UpdateBefore<TimeSettingsMultiplierSystem>(SystemUpdatePhase.PrefabReferences);
             updateSystem.UpdateAfter<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabUpdate);
             updateSystem.UpdateBefore<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabReferences);
+            //updateSystem.UpdateBefore<SpecialEventsSystem>(SystemUpdatePhase.GameSimulation);
 
             //Harmony
             var harmony = new Harmony(harmonyID);
