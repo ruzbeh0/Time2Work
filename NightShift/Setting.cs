@@ -17,8 +17,8 @@ namespace Time2Work
 {
     //[FileLocation(nameof(Time2Work))]
     [FileLocation($"ModsSettings\\{nameof(Time2Work)}\\{nameof(Time2Work)}")]
-    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup)]
-    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, ExternalGroup, ExpensesGroup)]
+    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, EventGroup, MinEventGroup, MaxEventGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup)]
+    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, ExternalGroup, ExpensesGroup, MinEventGroup, MaxEventGroup)]
     public class Setting : ModSetting
     {
         public const string SettingsSection = "Settings";
@@ -27,9 +27,13 @@ namespace Time2Work
         public const string SchoolSection = "School";
         public const string Weeksection = "Week";
         public const string OtherSection = "Other";
+        public const string EventSection = "Special Events";
         public const string ResetGroup = "Reset";
         public const string ShopLeisureGroup = "ShopLeisureGroup";
+        public const string EventGroup = "EventGroup";
 
+        public const string MinEventGroup = "MinEventGroup";
+        public const string MaxEventGroup = "MaxEventGroup";
         public const string SettingsGroup = "SettingsGroup";
         public const string WorkPlaceShiftGroup = "WorkPlaceShiftGroup";
         public const string DelayGroup = "DelayGroup";
@@ -615,7 +619,33 @@ namespace Time2Work
         [SettingsUISection(OtherSection, ExpensesGroup)]
         public int service_expenses_night_reduction { get; set; }
 
+        [SettingsUISlider(min = 1, max = 500, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(EventSection, EventGroup)]
+        public int min_attraction { get; set; } = 30;
 
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(EventSection, MinEventGroup)]
+        public int min_event_weekday { get; set; } = 1;
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(EventSection, MaxEventGroup)]
+        public int max_event_weekday { get; set; } = 1;
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(EventSection, MaxEventGroup)]
+        public int min_event_avg_day { get; set; } = 1;
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(EventSection, MinEventGroup)]
+        public int max_event_avg_day { get; set; } = 2;
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(EventSection, MaxEventGroup)]
+        public int min_event_weekend { get; set; } = 1;
+
+        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(EventSection, MinEventGroup)]
+        public int max_event_weekend { get; set; } = 3;
         public enum DTSimulationEnum
         {
             AverageDay,
@@ -715,8 +745,11 @@ namespace Time2Work
                 { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Leisure" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SchoolSection), "School" },
                 { m_Setting.GetOptionTabLocaleID(Setting.Weeksection), "Week" },
+                { m_Setting.GetOptionTabLocaleID(Setting.EventSection), "Special Events" },
                 { m_Setting.GetOptionTabLocaleID(Setting.OtherSection), "Other" },
 
+                { m_Setting.GetOptionGroupLocaleID(Setting.MinEventGroup), "Min Number of Events per Day of the Week" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.MaxEventGroup), "Max Number of Events per Day of the Week" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceShiftGroup), "Modify the share of evening and night work shifts" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.NonDayShiftByWorkTypeGroup), "Modify the share of non-day shifts by work type" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.RemoteGroup), "Remote Work Settings" },
@@ -925,7 +958,20 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.commuter_trips)), $"Increases outside connection commuters on weekdays and reduces them on weekends. Also increases the probability of them arriving by plane." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.service_expenses_night_reduction)), "Night Cost Reduction" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.service_expenses_night_reduction)), $"Reduce the cost of services from 11 PM to 6 AM." },
-
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_attraction)), "Min. Attraction" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.min_attraction)), $"Increasing or decreasing this setting will change the number of park facilities that can host special events." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_event_weekday)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.min_event_weekday)), $"Minimum number of events on Monday to Thursday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_event_avg_day)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.min_event_avg_day)), $"Minimum number of events on Friday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_event_weekend)), "Weekend" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.min_event_weekend)), $"Minimum number of events on the Wekend" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.max_event_weekday)), "Monday to Thursday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.max_event_weekday)), $"Maximum number of events on Monday to Thursday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.max_event_avg_day)), "Friday" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.max_event_avg_day)), $"Maximum number of events on Friday" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.max_event_weekend)), "Weekend" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.max_event_weekend)), $"Maximum number of events on the Wekend" },
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Average Day" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Weekday" },
@@ -1019,9 +1065,11 @@ namespace Time2Work
                 { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Lazer" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SchoolSection), "Escola" },
                 { m_Setting.GetOptionTabLocaleID(Setting.Weeksection), "Semana" },
+                { m_Setting.GetOptionTabLocaleID(Setting.EventSection), "Eventos Especiais" },
                 { m_Setting.GetOptionTabLocaleID(Setting.OtherSection), "Outros" },
-                
 
+                { m_Setting.GetOptionGroupLocaleID(Setting.MinEventGroup), "Número mínimo de eventos por dia da semana" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.MaxEventGroup), "Número máximo de eventos por dia da semana" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.WorkPlaceShiftGroup), "Alterar a porcentagem de turnos vespertinos e noturnos." },
                 { m_Setting.GetOptionGroupLocaleID(Setting.NonDayShiftByWorkTypeGroup), "Alterar a porcentagem de turnos vespertinos e noturnos por tipo de empregos." },
                 { m_Setting.GetOptionGroupLocaleID(Setting.RemoteGroup), "Configurações de Home Office" },
@@ -1230,6 +1278,21 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.commuter_trips)), $"Aumenta o número de trabalhadores de conexões externas nos dias de semana e reduz nos fim de semana. Também aumenta a probabilidade de eles chegarem de avião." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.service_expenses_night_reduction)), "Redução de Custo Noturno" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.service_expenses_night_reduction)), $"Reduz os custos de serviços das 23h ate as 6h." },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_attraction)), "Atração Mínima" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.min_attraction)), $"Aumentar ou diminuir esta configuração alterará o número de instalaçõesque podem hospedar eventos especiais." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_event_weekday)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.min_event_weekday)), $"Número mínimo de eventos de segunda a quinta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_event_avg_day)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.min_event_avg_day)), $"Número mínimo de eventos na sexta-feira" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_event_weekend)), "Fim de Semana" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.min_event_weekend)), $"Número mínimo de eventos no fim de semana" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.max_event_weekday)), "Segunda a Quinta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.max_event_weekday)), $"Número máximo de eventos de segunda a quinta" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.max_event_avg_day)), "Sexta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.max_event_avg_day)), $"Número máximo de eventos na sexta-feira" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.max_event_weekend)), "Fim de Semana" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.max_event_weekend)), $"Número máximo de eventos no fim de semana" },
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Dia Padrão" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Dia da Semana" },

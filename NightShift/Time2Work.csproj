@@ -23,6 +23,11 @@
 	<!--Imports must be after PropertyGroup block-->
 	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.props" />
 	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.targets" />
+	<ItemGroup>
+	  <Compile Remove="UI\**" />
+	  <EmbeddedResource Remove="UI\**" />
+	  <None Remove="UI\**" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Reference Include="Colossal.Collections">

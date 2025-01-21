@@ -1,0 +1,205 @@
+$bottomBarHeight: 48rem;
+$bottomViewHeight: 108rem;
+$bottomBarOffset: 121rem;
+$bottomBarOffsetEditor: 145rem;
+
+$laneButtonSize: 64rem;
+
+@mixin textInputBasic {
+  background-color: rgba(0, 0, 0, 0.15);
+  color: #eee;
+  padding: 0.25em 0.5em;
+  line-height: 1.15em;
+  font-size: 1em;
+  border-width: 2.5rem;
+  border-radius: 5rem;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.2);
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  &:active,
+  &:focus,
+  &.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-top-color: var(--accentColorLight);
+    border-left-color: var(--accentColorLight);
+    border-bottom-color: var(--accentColorLight);
+    border-right-color: var(--accentColorLight);
+  }
+
+  &.focused {
+    border-color: #c7ff65;
+  }
+
+  &[disabled],
+  &[disabled]:hover,
+  &[disabled]:active {
+    background-color: rgba(0, 0, 0, 0);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: rgba(128, 128, 128, 0.5);
+  }
+}
+
+@mixin baseButton($hasText: true) {
+  pointer-events: auto;
+  padding: 8rem;
+  border-radius: 4rem;
+  border: none;
+  transition: background-color 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--menuText1Normal);
+
+  &[disabled] {
+    pointer-events: none !important;
+
+    img {
+      filter: none !important;
+    }
+  }
+
+  &.hidden {
+    display: none;
+  }
+
+  &:active {
+    background-image: none !important;
+  }
+
+  img {
+    @if $hasText {
+      width: 30rem;
+      height: 30rem;
+      margin-right: 10rem;
+    } @else {
+      width: 24rem;
+      height: 24rem;
+    }
+    background-color: var(--menuText1Normal);
+    mask-size: contain;
+    mask-position: 50% 50%;
+  }
+}
+
+@mixin basicButton($hasText: true) {
+  @include baseButton($hasText);
+
+  filter: brightness(1.1) saturate(0.8);
+  background-color: var(--panelColorDark);
+  backdrop-filter: blur(4px);
+
+  &:hover {
+    background-color: var(--panelColorNormal);
+  }
+
+  &:active {
+    background-color: var(--accentColorDark-focused) !important;
+  }
+
+  img {
+    background-color: var(--menuText1Normal);
+  }
+
+  &[disabled],
+  &.disabled {
+    pointer-events: none !important;
+
+    color: var(--normalTextColorLocked) !important;
+    background-color: var(--panelColorDark) !important;
+
+    img {
+      background-color: var(--normalTextColorLocked) !important;
+    }
+  }
+}
+
+@mixin lightButton($hasText: true) {
+  @include baseButton($hasText);
+
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.35);
+  }
+
+  &:active {
+    background-color: var(--accentColorDark-focused) !important;
+  }
+
+  img {
+    background-color: var(--menuText1Normal);
+  }
+
+  &[disabled],
+  &.disabled {
+    color: var(--normalTextColorLocked) !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+
+    img {
+      background-color: var(--normalTextColorLocked) !important;
+    }
+  }
+}
+
+@mixin blackButton($hasText: true) {
+  @include baseButton($hasText);
+
+  background-color: rgba(15, 16, 19, 1);
+  backdrop-filter: blur(4px);
+
+  &:hover {
+    background-color: rgba(29, 31, 37, 1);
+  }
+
+  &:active {
+    background-color: var(--accentColorDark-focused) !important;
+  }
+
+  img {
+    background-color: var(--menuText1Normal);
+  }
+
+  &[disabled],
+  &.disabled {
+    color: var(--normalTextColorLocked) !important;
+    background-color: rgba(15, 16, 19, 1) !important;
+
+    img {
+      background-color: var(--normalTextColorLocked) !important;
+    }
+  }
+}
+
+@mixin transparentButton($hasText: true) {
+  @include baseButton($hasText);
+
+  background-color: transparent;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+
+  &:active {
+    background-color: var(--accentColorDark-focused) !important;
+  }
+
+  img {
+    background-color: var(--menuText1Normal);
+  }
+
+  &[disabled],
+  &.disabled {
+    color: var(--normalTextColorLocked) !important;
+    background-color: transparent !important;
+    opacity: 0.75;
+
+    img {
+      background-color: var(--normalTextColorLocked) !important;
+    }
+  }
+}

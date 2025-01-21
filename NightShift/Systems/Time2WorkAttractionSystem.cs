@@ -12,6 +12,10 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using Time2Work.Components;
+using Colossal.Entities;
+using static Game.Prefabs.TriggerPrefabData;
+using System;
 
 #nullable disable
 namespace Time2Work.Systems
@@ -20,11 +24,17 @@ namespace Time2Work.Systems
     public partial class Time2WorkAttractionSystem : GameSystemBase
     {
         private SimulationSystem m_SimulationSystem;
+        private Time2WorkTimeSystem m_TimeSystem;
         private TerrainAttractivenessSystem m_TerrainAttractivenessSystem;
         private TerrainSystem m_TerrainSystem;
         private EntityQuery m_BuildingGroup;
         private EntityQuery m_SettingsQuery;
         private Time2WorkAttractionSystem.TypeHandle __TypeHandle;
+        EndFrameBarrier m_EndFrameBarrier;
+        private Setting.DTSimulationEnum m_daytype;
+        private uint m_SimulationFrame;
+        private EntityQuery m_TimeDataQuery;
+        private Unity.Mathematics.Random m_random;
 
         public override int GetUpdateInterval(SystemUpdatePhase phase) => 16;
 
@@ -42,7 +52,10 @@ namespace Time2Work.Systems
         protected override void OnCreate()
         {
             base.OnCreate();
+            m_TimeDataQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Common.TimeData>());
+            m_EndFrameBarrier = World.GetOrCreateSystemManaged<EndFrameBarrier>();
             this.m_SimulationSystem = this.World.GetOrCreateSystemManaged<SimulationSystem>();
+            this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
             this.m_TerrainAttractivenessSystem = this.World.GetOrCreateSystemManaged<TerrainAttractivenessSystem>();
             this.m_TerrainSystem = this.World.GetOrCreateSystemManaged<TerrainSystem>();
             this.m_SettingsQuery = this.GetEntityQuery(ComponentType.ReadOnly<AttractivenessParameterData>());
@@ -79,9 +92,16 @@ namespace Time2Work.Systems
             this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Buildings_AttractivenessProvider_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             JobHandle dependencies;
+         
+            m_daytype = WeekSystem.currentDayOfTheWeek;
+
+            Game.Common.TimeData m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
+            m_SimulationFrame = this.m_SimulationSystem.frameIndex;
+            int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
 
             Time2WorkAttractionSystem.AttractivenessJob jobData = new Time2WorkAttractionSystem.AttractivenessJob()
             {
+                ecb = m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 m_AttractivenessType = this.__TypeHandle.__Game_Buildings_AttractivenessProvider_RW_ComponentTypeHandle,
                 m_PrefabType = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentTypeHandle,
                 m_EfficiencyType = this.__TypeHandle.__Game_Buildings_Efficiency_RO_BufferTypeHandle,
@@ -93,15 +113,22 @@ namespace Time2Work.Systems
                 m_AttractionDatas = this.__TypeHandle.__Game_Prefabs_AttractionData_RO_ComponentLookup,
                 m_ParkDatas = this.__TypeHandle.__Game_Prefabs_ParkData_RO_ComponentLookup,
                 m_PrefabRefData = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
+                m_SpecialEventData = this.__TypeHandle.__Game_Prefabs_SpecialEventData_RO_ComponentLookup,
                 m_TerrainMap = this.m_TerrainAttractivenessSystem.GetData(true, out dependencies),
                 m_HeightData = this.m_TerrainSystem.GetHeightData(),
                 m_Parameters = this.m_SettingsQuery.GetSingleton<AttractivenessParameterData>(),
-                m_UpdateFrameIndex = frameWithInterval
+                m_UpdateFrameIndex = frameWithInterval,
+                minAttraction = Mod.m_Setting.min_attraction,
+                normalizedTime = this.m_TimeSystem.normalizedTime,
+                day = day,
+                dayOfWeek = WeekSystem.dayOfWeek,
+                n = Mod.numCurrentEvents,
             };
 
             this.Dependency = jobData.ScheduleParallel<Time2WorkAttractionSystem.AttractivenessJob>(this.m_BuildingGroup, JobHandle.CombineDependencies(this.Dependency, dependencies));
             this.m_TerrainSystem.AddCPUHeightReader(this.Dependency);
             this.m_TerrainAttractivenessSystem.AddReader(this.Dependency);
+            m_EndFrameBarrier.AddJobHandleForProducer(this.Dependency);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -130,9 +157,10 @@ namespace Time2Work.Systems
             Count,
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct AttractivenessJob : IJobChunk
         {
+            public EntityCommandBuffer.ParallelWriter ecb;
             public ComponentTypeHandle<AttractivenessProvider> m_AttractivenessType;
             [ReadOnly]
             public SharedComponentTypeHandle<UpdateFrame> m_UpdateFrameType;
@@ -155,12 +183,19 @@ namespace Time2Work.Systems
             [ReadOnly]
             public ComponentLookup<PrefabRef> m_PrefabRefData;
             [ReadOnly]
+            public ComponentLookup<SpecialEventData> m_SpecialEventData;
+            [ReadOnly]
             public CellMapData<TerrainAttractiveness> m_TerrainMap;
             [ReadOnly]
             public TerrainHeightData m_HeightData;
             public AttractivenessParameterData m_Parameters;
             public uint m_UpdateFrameIndex;
-            //public bool once = true;
+            public Unity.Mathematics.Random random;
+            public int n;
+            public int minAttraction;
+            public float normalizedTime;
+            public int day;
+            public System.DayOfWeek dayOfWeek;
 
             public void Execute(
               in ArchetypeChunk chunk,
@@ -178,6 +213,7 @@ namespace Time2Work.Systems
                 BufferAccessor<InstalledUpgrade> bufferAccessor2 = chunk.GetBufferAccessor<InstalledUpgrade>(ref this.m_InstalledUpgradeType);
 
                 bool flag = chunk.Has<Signature>(ref this.m_SignatureType);
+
                 for (int index = 0; index < chunk.Count; ++index)
                 {
                     Entity prefab = nativeArray1[index].m_Prefab;
@@ -197,7 +233,7 @@ namespace Time2Work.Systems
                     if (chunk.Has<Game.Buildings.Park>(ref this.m_ParkType) && this.m_ParkDatas.HasComponent(prefab))
                     {
                         Game.Buildings.Park park = nativeArray3[index];
-
+                        
                         ParkData parkData = this.m_ParkDatas[prefab];
                         float num = parkData.m_MaintenancePool > (short)0 ? (float)park.m_Maintenance / (float)parkData.m_MaintenancePool : 0.0f;
                         attractiveness *= (float)(0.800000011920929 + 0.20000000298023224 * (double)num);
@@ -208,12 +244,32 @@ namespace Time2Work.Systems
                         float3 position = nativeArray4[index].m_Position;
                         attractiveness *= (float)(1.0 + 0.0099999997764825821 * (double)TerrainAttractivenessSystem.EvaluateAttractiveness(position, this.m_TerrainMap, this.m_HeightData, this.m_Parameters, new NativeArray<int>()));
                     }
-                    if (attractiveness > 24)
+                    if (attractiveness >= minAttraction)
                     {
-                        attractiveness = 6000f;
+                        SpecialEventData specialEventData;
+                        if (!m_SpecialEventData.TryGetComponent(prefab, out specialEventData))
+                        {
+                            attractiveness *= 1000f;
+                            specialEventData = new SpecialEventData();
+                            specialEventData.new_attraction = Mathf.RoundToInt(attractiveness);
 
-                        //Mod.log.Info($"{m_PrefabSystem.GetPrefabName(nativeArray1[index].m_Prefab)} new attraction: {attractiveness}");
-                       // once = false;
+                            ecb.AddComponent(unfilteredChunkIndex, prefab, specialEventData);
+                        } else
+                        {
+                            float start = specialEventData.start_time - 0.7f / 24f;
+                            float end = specialEventData.start_time + 0.6f*specialEventData.duration;
+                            if (normalizedTime >= start && normalizedTime <= end && specialEventData.day == day)  
+                            {
+                                if(normalizedTime <= specialEventData.start_time)
+                                {
+                                    attractiveness = specialEventData.new_attraction * (normalizedTime / specialEventData.start_time);
+                                } else
+                                {
+                                    attractiveness = specialEventData.new_attraction * (specialEventData.start_time / normalizedTime);
+                                }
+                                //Mod.log.Info($"Loading Special Event - start: {start}, end:{end}, attractiveness:{attractiveness}");
+                            }
+                        }
                     }
                     AttractivenessProvider attractivenessProvider = new AttractivenessProvider()
                     {
@@ -255,6 +311,8 @@ namespace Time2Work.Systems
             public ComponentLookup<ParkData> __Game_Prefabs_ParkData_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<PrefabRef> __Game_Prefabs_PrefabRef_RO_ComponentLookup;
+            [ReadOnly]
+            public ComponentLookup<SpecialEventData> __Game_Prefabs_SpecialEventData_RO_ComponentLookup;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void __AssignHandles(ref SystemState state)
@@ -270,6 +328,7 @@ namespace Time2Work.Systems
                 this.__Game_Prefabs_AttractionData_RO_ComponentLookup = state.GetComponentLookup<AttractionData>(true);
                 this.__Game_Prefabs_ParkData_RO_ComponentLookup = state.GetComponentLookup<ParkData>(true);
                 this.__Game_Prefabs_PrefabRef_RO_ComponentLookup = state.GetComponentLookup<PrefabRef>(true);
+                this.__Game_Prefabs_SpecialEventData_RO_ComponentLookup = state.GetComponentLookup<SpecialEventData>(true);
             }
         }
     }

@@ -24,6 +24,9 @@ using UnityEngine;
 using Game.Objects;
 using Game.Routes;
 using Time2Work.Systems;
+using Colossal.Entities;
+using static Game.Prefabs.TriggerPrefabData;
+using Time2Work.Components;
 
 namespace Time2Work
 {
@@ -99,6 +102,7 @@ namespace Time2Work
             this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Economy_Resources_RO_BufferLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_Household_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.__Game_Citizens_SpecialEventData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_Worker_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_Student_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Prefabs_LeisureProviderData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
@@ -144,6 +148,7 @@ namespace Time2Work
                 m_Students = this.__TypeHandle.__Game_Citizens_Student_RO_ComponentLookup,
                 m_Workers = this.__TypeHandle.__Game_Citizens_Worker_RO_ComponentLookup,
                 m_Households = this.__TypeHandle.__Game_Citizens_Household_RO_ComponentLookup,
+                m_SpecialEventDatas = this.__TypeHandle.__Game_Citizens_SpecialEventData_RO_ComponentLookup,
                 m_Resources = this.__TypeHandle.__Game_Economy_Resources_RO_BufferLookup,
                 m_CitizenDatas = this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentLookup,
                 m_Renters = this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup,
@@ -243,7 +248,7 @@ namespace Time2Work
         {
         }
 
-        [BurstCompile]
+        //[BurstCompile]
         private struct SpendLeisurejob : IJob
         {
             public NativeQueue<LeisureEvent> m_LeisureQueue;
@@ -316,7 +321,7 @@ namespace Time2Work
             }
         }
         
-        [BurstCompile]
+        //[BurstCompile]
         private struct LeisureJob : IJobChunk
         {
             public ComponentTypeHandle<Leisure> m_LeisureType;
@@ -359,6 +364,8 @@ namespace Time2Work
             public BufferLookup<Game.Economy.Resources> m_Resources;
             [ReadOnly]
             public ComponentLookup<Household> m_Households;
+            [ReadOnly]
+            public ComponentLookup<SpecialEventData> m_SpecialEventDatas;
             [ReadOnly]
             public ComponentLookup<PropertyRenter> m_Renters;
             [NativeDisableParallelForRestriction]
@@ -449,7 +456,8 @@ namespace Time2Work
               ref Citizen citizen,
               ref Leisure leisure,
               Entity providerEntity,
-              LeisureProviderData provider)
+              LeisureProviderData provider,
+              Entity specialEventDataEntity)
             {
                 bool flag = this.m_BuildingData.HasComponent(providerEntity) && BuildingUtils.CheckOption(this.m_BuildingData[providerEntity], BuildingOption.Inactive);
 
@@ -474,8 +482,22 @@ namespace Time2Work
                         m_Provider = providerEntity
                     });
                 }
+                SpecialEventData specialEventdata;
 
-                if (((citizen.m_LeisureCounter > (byte)250 ? 1 : (this.m_SimulationFrame >= leisure.m_LastPossibleFrame ? 1 : 0)) | (flag ? 1 : 0)) == 0)
+                bool leisureCounterCondition = citizen.m_LeisureCounter > (byte)250;
+                if (m_SpecialEventDatas.TryGetComponent(specialEventDataEntity, out specialEventdata))
+                {
+                    int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
+                    if (specialEventdata.day == day)
+                    {  
+                        if(m_TimeOfDay >= specialEventdata.start_time && m_TimeOfDay <= (specialEventdata.start_time + specialEventdata.duration))
+                        {
+                            leisureCounterCondition = false;
+                        }
+                    }
+                }
+
+                if (((leisureCounterCondition ? 1 : (this.m_SimulationFrame >= leisure.m_LastPossibleFrame ? 1 : 0)) | (flag ? 1 : 0)) == 0)
                     return;
 
                 this.m_CommandBuffer.RemoveComponent<Leisure>(index, entity);
@@ -530,6 +552,8 @@ namespace Time2Work
                     travel_avghour = travel_leisure.w;
                 }
 
+                SpecialEventData specialEventdata;
+
                 for (int index = 0; index < nativeArray1.Length; ++index)
                 {
                     Entity entity1 = nativeArray1[index];
@@ -540,6 +564,20 @@ namespace Time2Work
                     Entity providerEntity = leisure.m_TargetAgent;
                     Entity entity2 = Entity.Null;
                     LeisureProviderData provider = new LeisureProviderData();
+
+                    //During special event parks will attract more people
+                    if (m_SpecialEventDatas.TryGetComponent(entity2, out specialEventdata))
+                    {
+                        int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
+                        if (specialEventdata.day == day)
+                        {
+                            if (m_TimeOfDay >= specialEventdata.start_time && m_TimeOfDay <= (specialEventdata.start_time + specialEventdata.duration))
+                            {
+                                park_avghour *= 3;
+                            }
+                        }
+                    }
+
                     if (leisure.m_TargetAgent != Entity.Null && this.m_CurrentBuildings.HasComponent(entity1))
                     {
                         Entity currentBuilding = this.m_CurrentBuildings[entity1].m_CurrentBuilding;
@@ -581,7 +619,7 @@ namespace Time2Work
                     }
                     if (entity2 != Entity.Null)
                     {
-                        this.SpendLeisure(unfilteredChunkIndex, entity1, ref citizenData, ref leisure, providerEntity, provider);
+                        this.SpendLeisure(unfilteredChunkIndex, entity1, ref citizenData, ref leisure, providerEntity, provider, entity2);
                         nativeArray2[index] = leisure;
                         this.m_CitizenDatas[entity1] = citizenData;
                     }
@@ -1065,6 +1103,8 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<Household> __Game_Citizens_Household_RO_ComponentLookup;
             [ReadOnly]
+            public ComponentLookup<SpecialEventData> __Game_Citizens_SpecialEventData_RO_ComponentLookup;
+            [ReadOnly]
             public BufferLookup<Game.Economy.Resources> __Game_Economy_Resources_RO_BufferLookup;
             public ComponentLookup<Citizen> __Game_Citizens_Citizen_RW_ComponentLookup;
             [ReadOnly]
@@ -1134,6 +1174,7 @@ namespace Time2Work
                 this.__Game_Citizens_Student_RO_ComponentLookup = state.GetComponentLookup<Game.Citizens.Student>(true);
                 this.__Game_Citizens_Worker_RO_ComponentLookup = state.GetComponentLookup<Worker>(true);
                 this.__Game_Citizens_Household_RO_ComponentLookup = state.GetComponentLookup<Household>(true);
+                this.__Game_Citizens_SpecialEventData_RO_ComponentLookup = state.GetComponentLookup<SpecialEventData>(true);
                 this.__Game_Economy_Resources_RO_BufferLookup = state.GetBufferLookup<Game.Economy.Resources>(true);
                 this.__Game_Citizens_Citizen_RW_ComponentLookup = state.GetComponentLookup<Citizen>();
                 this.__Game_Prefabs_CarData_RO_ComponentLookup = state.GetComponentLookup<CarData>(true);

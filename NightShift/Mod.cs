@@ -23,9 +23,12 @@ namespace Time2Work
     public class Mod : IMod
     {
         public static readonly string harmonyID = "Time2Work";
+        public static readonly string Id = "Time2Work";
         public static ILog log = LogManager.GetLogger($"{nameof(Time2Work)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
         public static Setting m_Setting;
-        //public static ModData m_ModData;
+        public static int numCurrentEvents = 999;
+        public static Mod Instance { get; private set; }
+        internal ILog Log { get; private set; }
 
         // Mods Settings Folder
         public static string SettingsFolder = Path.Combine(EnvPath.kUserDataPath, "ModsSettings", nameof(Time2Work));
@@ -101,7 +104,9 @@ namespace Time2Work
             //updateSystem.UpdateAt<Time2WorkCalendarEventLaunchSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTourismSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTouristSpawnSystem>(SystemUpdatePhase.GameSimulation);
-            //updateSystem.UpdateAt<Time2WorkAttractionSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAt<Time2WorkAttractionSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAfter<SpecialEventSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAt<SpecialEventsUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkTimeUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkStatisticsUISystem>(SystemUpdatePhase.UIUpdate);
@@ -109,7 +114,8 @@ namespace Time2Work
             updateSystem.UpdateBefore<TimeSettingsMultiplierSystem>(SystemUpdatePhase.PrefabReferences);
             updateSystem.UpdateAfter<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabUpdate);
             updateSystem.UpdateBefore<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabReferences);
-            //updateSystem.UpdateBefore<SpecialEventsSystem>(SystemUpdatePhase.GameSimulation);
+            
+            
 
             //Harmony
             var harmony = new Harmony(harmonyID);

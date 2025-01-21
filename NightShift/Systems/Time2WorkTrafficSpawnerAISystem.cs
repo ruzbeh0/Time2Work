@@ -180,7 +180,7 @@ namespace Time2Work
         {
         }
 
-        [BurstCompile]
+        //[BurstCompile]
         private struct TrafficSpawnerTickJob : IJobChunk
         {
             [ReadOnly]

@@ -30,7 +30,7 @@ namespace Time2Work
     public partial class Time2WorkCitizenBehaviorSystem : GameSystemBase
     {
         public static readonly float kMaxPathfindCost = 17000f;
-        public static readonly float kMaxPathfindCostLeisure = 14000f;
+        public static readonly float kMaxPathfindCostLeisure = 17000f;
         public static readonly float kMaxMovingAwayCost = CitizenBehaviorSystem.kMaxPathfindCost * 10f;
         public static readonly int kMinLeisurePossibility = 80;
         private JobHandle m_CarReserveWriters;
@@ -367,7 +367,7 @@ namespace Time2Work
         {
         }
 
-        [BurstCompile]
+        //[BurstCompile]
         private struct CitizenReserveHouseholdCarJob : IJob
         {
             public ComponentLookup<CarKeeper> m_CarKeepers;
@@ -408,7 +408,7 @@ namespace Time2Work
             }
         }
 
-        [BurstCompile]
+        //[BurstCompile]
         private struct CitizenTryCollectMailJob : IJob
         {
             [ReadOnly]
@@ -480,7 +480,7 @@ namespace Time2Work
             }
         }
 
-        [BurstCompile]
+        //[BurstCompile]
         private struct CitizeSleepJob : IJob
         {
             [ReadOnly]
@@ -508,7 +508,7 @@ namespace Time2Work
             }
         }
 
-        [BurstCompile]
+        //[BurstCompile]
         private struct CitizenAITickJob : IJobChunk
         {
             [ReadOnly]

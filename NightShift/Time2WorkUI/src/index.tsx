@@ -1,20 +1,3 @@
-//import { ModRegistrar } from "cs2/modding";
-//import { week } from "mods/week";
-//
-//const register: ModRegistrar = (moduleRegistry) => {
-//    moduleRegistry.extend(
-//        "game-ui/game/components/toolbar/bottom/time-controls/time-controls.tsx",
-//        "TimeControls",
-//        week,
-//    );
-//}
-//
-//
-//export default register;
-
-/**
-* Extensions for menu UI components.
-*/
 
 import { getModule, type ModRegistrar } from 'cs2/modding';
 import { Button } from 'cs2/ui';
@@ -22,6 +5,9 @@ import { type ReactElement, useEffect, useState } from 'react';
 import timeControlsStyles from 'mods/time-controls.module.scss';
 import mod from "../mod.json";
 import { useValue, bindValue, trigger } from "cs2/api";
+import RealisticTripsMenu from "./mods/RealisticTripsContent/RealisticTripsMenu";
+import 'intl';
+import 'intl/locale-data/jsonp/en-US'; 
 
 const coTimeControlsStyles: Record<string, string> = getModule(
     'game-ui/game/components/toolbar/bottom/time-controls/time-controls.module.scss',
@@ -43,6 +29,8 @@ export const register: ModRegistrar = moduleRegistry => {
         'game-ui/game/components/toolbar/bottom/time-controls/time-controls.module.scss',
         timeControlsStyles
     );
+
+    moduleRegistry.append('GameTopLeft', RealisticTripsMenu);
 };
 
 function TimeControlsPortal(props: { children: ReactElement }): ReactElement {
