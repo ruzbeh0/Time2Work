@@ -123,10 +123,10 @@ namespace Time2Work.Systems
 
                             SpecialEventInfo info = new SpecialEventInfo();
                             info.event_location = this.World.GetOrCreateSystemManaged<PrefabSystem>().GetPrefabName(prefabRef.m_Prefab);
-                            info.start_hour = (int)(24f * specialEventdata.start_time);
-                            info.end_hour = (int)(24f * (specialEventdata.start_time + specialEventdata.duration));
-                            info.start_minutes = (int)(60 * (info.start_hour - (24f * (specialEventdata.start_time))));
-                            info.end_minutes = (int)(60 * (info.end_hour - (24f * (specialEventdata.start_time + specialEventdata.duration))));
+                            info.start_hour = (int)Math.Round(24f * specialEventdata.start_time);
+                            info.end_hour = (int)Math.Round(24f * (specialEventdata.start_time + specialEventdata.duration));
+                            info.start_minutes = (int)(6 * (info.start_hour - (24f * (specialEventdata.start_time))));
+                            info.end_minutes = (int)(6 * (info.end_hour - (24f * (specialEventdata.start_time + specialEventdata.duration))));
                             m_Results[numberEvents] = info;
                             numberEvents++;
                         }    

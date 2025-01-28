@@ -27,6 +27,7 @@ namespace Time2Work
         public static ILog log = LogManager.GetLogger($"{nameof(Time2Work)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
         public static Setting m_Setting;
         public static int numCurrentEvents = 999;
+        public static string version = "1.7";
         public static Mod Instance { get; private set; }
         internal ILog Log { get; private set; }
 
@@ -37,7 +38,7 @@ namespace Time2Work
 
         public void OnLoad(UpdateSystem updateSystem)
         {
-            log.Info(nameof(OnLoad));
+            log.Info($"Realistic Trips - Version:{version}");
 
             if(!Directory.Exists(SettingsFolder))
             {
@@ -82,7 +83,7 @@ namespace Time2Work
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.StorageTransferSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TourismSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TouristSpawnSystem>().Enabled = false;
-            //World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.AttractionSystem>().Enabled = false;
+            World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.AttractionSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.UI.InGame.TimeUISystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.UI.InGame.StatisticsUISystem>().Enabled = false;
 

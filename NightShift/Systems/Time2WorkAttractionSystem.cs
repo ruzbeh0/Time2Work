@@ -218,6 +218,7 @@ namespace Time2Work.Systems
                 {
                     Entity prefab = nativeArray1[index].m_Prefab;
                     AttractionData data = new AttractionData();
+                    bool isPark = false;
                     if (this.m_AttractionDatas.HasComponent(prefab))
                     {
                         data = this.m_AttractionDatas[prefab];
@@ -237,6 +238,7 @@ namespace Time2Work.Systems
                         ParkData parkData = this.m_ParkDatas[prefab];
                         float num = parkData.m_MaintenancePool > (short)0 ? (float)park.m_Maintenance / (float)parkData.m_MaintenancePool : 0.0f;
                         attractiveness *= (float)(0.800000011920929 + 0.20000000298023224 * (double)num);
+                        isPark = true;
                     }
 
                     if (chunk.Has<Game.Objects.Transform>(ref this.m_TransformType))
@@ -244,7 +246,7 @@ namespace Time2Work.Systems
                         float3 position = nativeArray4[index].m_Position;
                         attractiveness *= (float)(1.0 + 0.0099999997764825821 * (double)TerrainAttractivenessSystem.EvaluateAttractiveness(position, this.m_TerrainMap, this.m_HeightData, this.m_Parameters, new NativeArray<int>()));
                     }
-                    if (attractiveness >= minAttraction)
+                    if (attractiveness >= minAttraction && isPark)
                     {
                         SpecialEventData specialEventData;
                         if (!m_SpecialEventData.TryGetComponent(prefab, out specialEventData))

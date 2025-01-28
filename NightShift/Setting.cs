@@ -623,27 +623,27 @@ namespace Time2Work
         [SettingsUISection(EventSection, EventGroup)]
         public int min_attraction { get; set; } = 30;
 
-        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISlider(min = 0, max = 3, step = 1f, scalarMultiplier = 1, unit = Unit.kInteger)]
         [SettingsUISection(EventSection, MinEventGroup)]
         public int min_event_weekday { get; set; } = 1;
 
-        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISlider(min = 0, max = 3, step = 1f, scalarMultiplier = 1, unit = Unit.kInteger)]
         [SettingsUISection(EventSection, MaxEventGroup)]
         public int max_event_weekday { get; set; } = 1;
 
-        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISlider(min = 0, max = 3, step = 1f, scalarMultiplier = 1, unit = Unit.kInteger)]
         [SettingsUISection(EventSection, MaxEventGroup)]
         public int min_event_avg_day { get; set; } = 1;
 
-        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISlider(min = 0, max = 3, step = 1f, scalarMultiplier = 1, unit = Unit.kInteger)]
         [SettingsUISection(EventSection, MinEventGroup)]
         public int max_event_avg_day { get; set; } = 2;
 
-        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISlider(min = 0, max = 3, step = 1f, scalarMultiplier = 1, unit = Unit.kInteger)]
         [SettingsUISection(EventSection, MaxEventGroup)]
         public int min_event_weekend { get; set; } = 1;
 
-        [SettingsUISlider(min = 0, max = 3, step = 0.01f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISlider(min = 0, max = 3, step = 1f, scalarMultiplier = 1, unit = Unit.kInteger)]
         [SettingsUISection(EventSection, MinEventGroup)]
         public int max_event_weekend { get; set; } = 3;
         public enum DTSimulationEnum

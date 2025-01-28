@@ -17,6 +17,7 @@ using Unity.Mathematics;
 using Game.Citizens;
 using System.Net;
 using Time2Work.Utils;
+using Unity.Entities.UniversalDelegates;
 
 namespace Time2Work.Systems
 {
@@ -32,6 +33,7 @@ namespace Time2Work.Systems
         protected override void OnCreate()
         {
             base.OnCreate();
+            Mod.log.Info($"SpecialEventSystem OnCreate");
 
             _query = GetEntityQuery(new EntityQueryDesc()
             {
@@ -49,6 +51,9 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
+
+            Mod.log.Info($"SpecialEventSystem OnUpdate");
+
             var entities = _query.ToEntityArray(Allocator.Temp);
 
             Game.Common.TimeData m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
@@ -61,18 +66,26 @@ namespace Time2Work.Systems
             Unity.Mathematics.Random random = new Unity.Mathematics.Random((uint)day);
             int n = 0;
 
-            int numberEvents = random.NextInt(Mod.m_Setting.min_event_weekday, Mod.m_Setting.max_event_weekday);
+            int min = Mod.m_Setting.min_event_weekday;
+            int max = Mod.m_Setting.max_event_weekday;
 
             if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
             {
-                numberEvents = random.NextInt(Mod.m_Setting.min_event_weekend, Mod.m_Setting.max_event_weekend);
+                min = Mod.m_Setting.min_event_weekend;
+                max = Mod.m_Setting.max_event_weekend;
             }
             else if (dayOfWeek.Equals(DayOfWeek.Friday))
             {
-                numberEvents = random.NextInt(Mod.m_Setting.min_event_avg_day, Mod.m_Setting.max_event_avg_day);
+                min = Mod.m_Setting.min_event_avg_day;
+                max = Mod.m_Setting.max_event_avg_day;
             }
 
-            if ((int)dayOfWeek > -1 && (hour == 0 && minute < 4 || !updated))
+            int numberEvents = random.NextInt(min, max + 1);
+
+            Mod.log.Info($"dayOfWeek:{dayOfWeek}, day: {day}, hour:{hour}, minute:{minute}, numberEvents:{numberEvents}, entities:{entities.Length}, min: {min}, max: {max}");
+
+
+            if ((int)dayOfWeek > -1 && (hour == 0 && minute >= 4 && minute < 10 || !updated))
             {
                 updated = true;
 
@@ -82,16 +95,17 @@ namespace Time2Work.Systems
                     SpecialEventData specialEventData;
                     if(EntityManager.TryGetComponent(ent, out specialEventData))
                     {
-                        Unity.Mathematics.Random random2 = new Unity.Mathematics.Random((uint)(specialEventData.new_attraction+day));
+                        uint seed = (uint)(specialEventData.new_attraction / 100 + day * day);
+                        Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
                         int r = random2.NextInt(0,entities.Length);
 
-                        //Mod.log.Info($"r:{r}, enti:{entities.Length}, numberEvents:{numberEvents}, attr:{specialEventData.new_attraction}, n:{n}");
+                        Mod.log.Info($"seed:{seed}, r:{r}, enti:{entities.Length}, numberEvents:{numberEvents}, attr:{specialEventData.new_attraction}, n:{n}");
                         if (n < numberEvents && (r < numberEvents || i == entities.Length - 1))
                         {
                             if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
                             {
                                 specialEventData.start_time = random.NextInt(8, 20) / 24f;
-                                specialEventData.duration = random.NextInt(2, 4) / 24f;
+                                specialEventData.duration = random.NextInt(2, 5) / 24f;
                             }
                             else
                             {
@@ -107,7 +121,7 @@ namespace Time2Work.Systems
                                 int timeint = (int) time;
                                 Mod.log.Info($"timeint:{timeint}");
                                 specialEventData.start_time = Math.Max(8,Math.Min((timeint + 16f),20)) / 24f;
-                                specialEventData.duration = random.NextInt(2, 3) / 24f;
+                                specialEventData.duration = random.NextInt(2, 4) / 24f;
                             }
                             specialEventData.day = day;
                             n++;
@@ -119,7 +133,10 @@ namespace Time2Work.Systems
                     }
                     i++;
                 }
-                updated = true;
+                if(n == numberEvents)
+                {
+                    updated = true;
+                }
             }
         }
 
