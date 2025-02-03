@@ -24,6 +24,7 @@ using System;
 using System.Data;
 using Time2Work.Systems;
 using Time2Work.Utils;
+using Time2Work.Components;
 
 namespace Time2Work
 {
@@ -291,7 +292,9 @@ namespace Time2Work
                 commute_top10 = Mod.m_Setting.commute_top10per,
                 dow = this.m_daytype,
                 part_time_reduction = Mod.m_Setting.avg_work_hours_pt_wd / Mod.m_Setting.avg_work_hours_ft_wd,
-                overtime = ((Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/24)
+                overtime = ((Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/24),
+                specialEventStartTime = SpecialEventSystem.startTime,
+                specialEventEndTime = SpecialEventSystem.endTime
             };
             JobHandle jobHandle1 = jobData.ScheduleParallel<Time2WorkCitizenBehaviorSystem.CitizenAITickJob>(this.m_CitizenQuery, JobHandle.CombineDependencies(this.m_CarReserveWriters, JobHandle.CombineDependencies(this.Dependency, outJobHandle)));
             jobData.m_OutsideConnectionEntities.Dispose(jobHandle1);
@@ -367,7 +370,7 @@ namespace Time2Work
         {
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct CitizenReserveHouseholdCarJob : IJob
         {
             public ComponentLookup<CarKeeper> m_CarKeepers;
@@ -408,7 +411,7 @@ namespace Time2Work
             }
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct CitizenTryCollectMailJob : IJob
         {
             [ReadOnly]
@@ -480,7 +483,7 @@ namespace Time2Work
             }
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct CitizeSleepJob : IJob
         {
             [ReadOnly]
@@ -508,7 +511,7 @@ namespace Time2Work
             }
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct CitizenAITickJob : IJobChunk
         {
             [ReadOnly]
@@ -618,6 +621,8 @@ namespace Time2Work
             public Setting.DTSimulationEnum dow;
             public float overtime;
             public float part_time_reduction;
+            public float3 specialEventStartTime;
+            public float3 specialEventEndTime;
 
 
             private bool CheckSleep(
@@ -775,7 +780,8 @@ namespace Time2Work
               int population,
               int ticksPerDay,
               ref Unity.Mathematics.Random random,
-              ref EconomyParameterData economyParameters)
+              ref EconomyParameterData economyParameters,
+              bool specialEvent)
             {
                 if (isTourist)
                 {
@@ -785,10 +791,19 @@ namespace Time2Work
                 else
                 {
                     int num = 128 - (int)citizenData.m_LeisureCounter;
+                    if(specialEvent)
+                    {
+                        num += 15;
+                    }
                     if (this.m_OutsideConnections.HasComponent(currentBuilding) || random.NextInt(this.m_LeisureParameters.m_LeisureRandomFactor) > num)
                         return false;
                 }
-                int num1 = math.min(CitizenBehaviorSystem.kMinLeisurePossibility, Mathf.RoundToInt(200f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
+                int leisureProb = Time2WorkCitizenBehaviorSystem.kMinLeisurePossibility;
+                if(specialEvent)
+                {
+                    leisureProb += 15;
+                }
+                int num1 = math.min(leisureProb, Mathf.RoundToInt(200f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
                 if (!isTourist && random.NextInt(100) > num1)
                     citizenData.m_LeisureCounter = byte.MaxValue;
                 float x = this.GetTimeLeftUntilInterval(Time2WorkCitizenBehaviorSystem.GetSleepTime(citizenEntity, citizenData, ref economyParameters, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction));
@@ -947,6 +962,18 @@ namespace Time2Work
                 BufferAccessor<TripNeeded> bufferAccessor = chunk.GetBufferAccessor<TripNeeded>(ref this.m_TripType);
                 bool flag1 = chunk.Has<HealthProblem>(ref this.m_HealthProblemType);
                 int population = this.m_PopulationData[this.m_PopulationEntity].m_Population;
+
+                //Check if there is a special event happening
+                bool specialEvent = false;
+                for(int i = 0; i < 3; i++)
+                {
+                    if(m_NormalizedTime >= specialEventStartTime[i] && m_NormalizedTime <= specialEventEndTime[i])
+                    {
+                        specialEvent = true;
+                    }
+                    //Mod.log.Info($"i:{i},m_NormalizedTime:{m_NormalizedTime},{specialEventStartTime[i]},{specialEventEndTime[i]},{specialEvent}");
+                }
+
                 for (int index = 0; index < nativeArray1.Length; ++index)
                 {
                     Entity household = nativeArray3[index].m_Household;
@@ -1214,7 +1241,7 @@ namespace Time2Work
                                                                 }
                                                                 else
                                                                 {
-                                                                    if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters))
+                                                                    if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters, specialEvent))
                                                                     {
                                                                         nativeArray2[index] = citizen;
                                                                     }
@@ -1282,7 +1309,7 @@ namespace Time2Work
                                                                     }
                                                                 }
 
-                                                            if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters))
+                                                            if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters, specialEvent))
                                                             {
                                                                 nativeArray2[index] = citizen;
                                                             }

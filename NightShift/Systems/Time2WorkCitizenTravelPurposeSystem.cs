@@ -257,7 +257,7 @@ namespace Time2Work
         {
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct CitizenArriveJob : IJobChunk
         {
             [ReadOnly]
@@ -538,7 +538,7 @@ namespace Time2Work
             WakeUp,
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct ArriveJob : IJob
         {
             public ComponentLookup<CitizenPresence> m_CitizenPresenceData;
@@ -625,7 +625,7 @@ namespace Time2Work
             }
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct CitizenStuckJob : IJobChunk
         {
             [ReadOnly]

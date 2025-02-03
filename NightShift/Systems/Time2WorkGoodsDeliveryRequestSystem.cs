@@ -129,7 +129,7 @@ namespace Time2Work
             public TripNeeded m_Trip;
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct DispatchJob : IJob
         {
             public BufferLookup<TripNeeded> m_TripNeededs;
@@ -187,7 +187,7 @@ namespace Time2Work
             }
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct FindSellerJob : IJobChunk
         {
             [ReadOnly]

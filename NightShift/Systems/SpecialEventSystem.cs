@@ -29,11 +29,14 @@ namespace Time2Work.Systems
         private EntityQuery m_TimeDataQuery;
         private SimulationSystem m_SimulationSystem;
         private bool updated = false;
+        public static int numberEvents;
+        public static float3 startTime;
+        public static float3 endTime;
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            Mod.log.Info($"SpecialEventSystem OnCreate");
+            //Mod.log.Info($"SpecialEventSystem OnCreate");
 
             _query = GetEntityQuery(new EntityQueryDesc()
             {
@@ -52,7 +55,7 @@ namespace Time2Work.Systems
         protected override void OnUpdate()
         {
 
-            Mod.log.Info($"SpecialEventSystem OnUpdate");
+            //Mod.log.Info($"SpecialEventSystem OnUpdate");
 
             var entities = _query.ToEntityArray(Allocator.Temp);
 
@@ -63,7 +66,7 @@ namespace Time2Work.Systems
             int hour = currentDateTime.Hour;
             int minute = currentDateTime.Minute;
             System.DayOfWeek dayOfWeek = (System.DayOfWeek)WeekSystem.getDayOfWeekInt();
-            Unity.Mathematics.Random random = new Unity.Mathematics.Random((uint)day);
+            Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex((uint)day*100);
             int n = 0;
 
             int min = Mod.m_Setting.min_event_weekday;
@@ -80,10 +83,9 @@ namespace Time2Work.Systems
                 max = Mod.m_Setting.max_event_avg_day;
             }
 
-            int numberEvents = random.NextInt(min, max + 1);
+            numberEvents = random.NextInt(min, max + 1);
 
-            Mod.log.Info($"dayOfWeek:{dayOfWeek}, day: {day}, hour:{hour}, minute:{minute}, numberEvents:{numberEvents}, entities:{entities.Length}, min: {min}, max: {max}");
-
+            //Mod.log.Info($"dayOfWeek:{dayOfWeek}, day: {day}, hour:{hour}, minute:{minute}, numberEvents:{numberEvents}, entities:{entities.Length}, min: {min}, max: {max}");
 
             if ((int)dayOfWeek > -1 && (hour == 0 && minute >= 4 && minute < 10 || !updated))
             {
@@ -99,7 +101,7 @@ namespace Time2Work.Systems
                         Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
                         int r = random2.NextInt(0,entities.Length);
 
-                        Mod.log.Info($"seed:{seed}, r:{r}, enti:{entities.Length}, numberEvents:{numberEvents}, attr:{specialEventData.new_attraction}, n:{n}");
+                        //Mod.log.Info($"seed:{seed}, r:{r}, enti:{entities.Length}, numberEvents:{numberEvents}, attr:{specialEventData.new_attraction}, n:{n}");
                         if (n < numberEvents && (r < numberEvents || i == entities.Length - 1))
                         {
                             if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
@@ -110,7 +112,6 @@ namespace Time2Work.Systems
                             else
                             {
                                 float time = (float)GaussianRandom.NextGaussianDouble(random);
-                                Mod.log.Info($"time:{time}");
                                 if(time > 0)
                                 {
                                     time *= 4;
@@ -119,11 +120,12 @@ namespace Time2Work.Systems
                                     time *= 8;
                                 }
                                 int timeint = (int) time;
-                                Mod.log.Info($"timeint:{timeint}");
                                 specialEventData.start_time = Math.Max(8,Math.Min((timeint + 16f),20)) / 24f;
                                 specialEventData.duration = random.NextInt(2, 4) / 24f;
                             }
                             specialEventData.day = day;
+                            startTime[n] = specialEventData.start_time;
+                            endTime[n] = specialEventData.start_time + specialEventData.duration;
                             n++;
                         } else
                         {

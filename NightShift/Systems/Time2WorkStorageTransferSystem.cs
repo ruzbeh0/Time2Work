@@ -203,7 +203,7 @@ namespace Time2Work
             public int m_Amount;
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct TransferJob : IJobChunk
         {
             [ReadOnly]
@@ -461,7 +461,7 @@ namespace Time2Work
             }
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct HandleTransfersJob : IJob
         {
             public NativeQueue<Time2WorkStorageTransferSystem.StorageTransferEvent> m_TransferQueue;

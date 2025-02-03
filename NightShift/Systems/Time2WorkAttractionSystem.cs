@@ -258,7 +258,7 @@ namespace Time2Work.Systems
                             ecb.AddComponent(unfilteredChunkIndex, prefab, specialEventData);
                         } else
                         {
-                            float start = specialEventData.start_time - 0.7f / 24f;
+                            float start = specialEventData.start_time - 1f / 24f;
                             float end = specialEventData.start_time + 0.6f*specialEventData.duration;
                             if (normalizedTime >= start && normalizedTime <= end && specialEventData.day == day)  
                             {

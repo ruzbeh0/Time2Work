@@ -9,8 +9,6 @@ namespace Time2Work.Systems
 {
     public partial class DemandParameterUpdaterSystem : GameSystemBase
     {
-        private Dictionary<Entity, DemandParameterData> _demandParameterData = new Dictionary<Entity, DemandParameterData>();
-
         private EntityQuery _query;
 
         private Setting.DTSimulationEnum m_daytype;
@@ -35,13 +33,7 @@ namespace Time2Work.Systems
 
             foreach (var tsd in prefabs)
             {
-                DemandParameterData data;
-
-                if (!_demandParameterData.TryGetValue(tsd, out data))
-                {
-                    data = EntityManager.GetComponentData<DemandParameterData>(tsd);
-                    _demandParameterData.Add(tsd, data);
-                }
+                DemandParameterData data = EntityManager.GetComponentData<DemandParameterData>(tsd);
 
                 bool updateCommuters = Mod.m_Setting.commuter_trips;
 

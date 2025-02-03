@@ -280,10 +280,6 @@ namespace Time2Work
 
             float xx = math.frac((float)(num1 - num4));
             float yy = y - peak_spread;
-            if (yy > xx && yy - xx < 0.10)
-            {
-                Mod.log.Info($"Time to Work:{math.frac((float)(num1 - num4))} to {y - peak_spread}");
-            }
             
             return new float2(math.frac((float)(num1 - num4)), y - peak_spread);
         }
@@ -441,7 +437,7 @@ namespace Time2Work
         {
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct GoToWorkJob : IJobChunk
         {
             [ReadOnly]
@@ -744,7 +740,7 @@ namespace Time2Work
             }
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct WorkJob : IJobChunk
         {
             [ReadOnly]

@@ -79,7 +79,7 @@ namespace Time2Work.Systems
         {
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct CheckEventLaunchJob : IJobChunk
         {
             [ReadOnly]

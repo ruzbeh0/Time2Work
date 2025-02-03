@@ -94,7 +94,8 @@ namespace Time2Work.Systems
         {
             var entities = _query.ToEntityArray(Allocator.Temp);
 
-            int numberEvents = 0;
+            int nEvents = SpecialEventSystem.numberEvents;
+            int n = 0;
 
             Game.Common.TimeData m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
             m_SimulationFrame = this.m_SimulationSystem.frameIndex;
@@ -117,9 +118,9 @@ namespace Time2Work.Systems
 
                     if (EntityManager.TryGetComponent<SpecialEventData>(prefabRef.m_Prefab, out specialEventdata))
                     {
-                        if(specialEventdata.day == day)
+                        if(specialEventdata.day == day && n < nEvents)
                         {
-                            Mod.log.Info($"Special Event at: {this.World.GetOrCreateSystemManaged<PrefabSystem>().GetPrefabName(prefabRef.m_Prefab)} - Start Time:{specialEventdata.start_time}, Duration:{specialEventdata.duration}, Attraction: {attractivenessProvider.m_Attractiveness}");
+                            //Mod.log.Info($"Special Event at: {this.World.GetOrCreateSystemManaged<PrefabSystem>().GetPrefabName(prefabRef.m_Prefab)} - Start Time:{specialEventdata.start_time}, Duration:{specialEventdata.duration}, Attraction: {attractivenessProvider.m_Attractiveness}");
 
                             SpecialEventInfo info = new SpecialEventInfo();
                             info.event_location = this.World.GetOrCreateSystemManaged<PrefabSystem>().GetPrefabName(prefabRef.m_Prefab);
@@ -127,14 +128,14 @@ namespace Time2Work.Systems
                             info.end_hour = (int)Math.Round(24f * (specialEventdata.start_time + specialEventdata.duration));
                             info.start_minutes = (int)(6 * (info.start_hour - (24f * (specialEventdata.start_time))));
                             info.end_minutes = (int)(6 * (info.end_hour - (24f * (specialEventdata.start_time + specialEventdata.duration))));
-                            m_Results[numberEvents] = info;
-                            numberEvents++;
+                            m_Results[n] = info;
+                            n++;
                         }    
                     }
                 }
             }
 
-            Mod.numCurrentEvents = numberEvents;
+            Mod.numCurrentEvents = n;
             m_uiResults.Update();
         }
 

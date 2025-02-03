@@ -17,8 +17,8 @@ namespace Time2Work
 {
     //[FileLocation(nameof(Time2Work))]
     [FileLocation($"ModsSettings\\{nameof(Time2Work)}\\{nameof(Time2Work)}")]
-    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, EventGroup, MinEventGroup, MaxEventGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup)]
-    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, ExternalGroup, ExpensesGroup, MinEventGroup, MaxEventGroup)]
+    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, EventGroup, MinEventGroup, MaxEventGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup, OtherGroup)]
+    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, OtherGroup, ExternalGroup, ExpensesGroup, MinEventGroup, MaxEventGroup)]
     public class Setting : ModSetting
     {
         public const string SettingsSection = "Settings";
@@ -52,6 +52,7 @@ namespace Time2Work
         public const string School2WeekGroup = "School2WeekGroup";
         public const string School34WeekGroup = "School34WeekGroup";
         public const string TrucksGroup = "TrucksGroup";
+        public const string OtherGroup = "OtherGroup";
         public const string DTSimulationGroup = "DTSimulationGroup";
         public const string SlowerTimeGroup = "SlowerTimeGroup";
         public const string ExternalGroup = "ExternalGroup";
@@ -125,26 +126,27 @@ namespace Time2Work
         int[] school_lv34_sunday_pct_ = [0, 0, 0, 4, 0, 0, 0, 5, 10, 0, 0];
         int[] school_vacation_month1_ = [7, 7, 1, 7, 7, 7, 7, 4, 6, 7, 7];
         int[] school_vacation_month2_ = [8, 8, 7, 8, 8, 8, 8, 5, 7, 8, 8];
-        float[] meals_weekday_ = [1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f];
-        float[] meals_avgday_ = [1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f];
-        float[] meals_saturday_ = [1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f];
-        float[] meals_sunday_ = [1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f];
-        float[] entertainment_weekday_ = [0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f];
-        float[] entertainment_avgday_ = [0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f];
-        float[] entertainment_saturday_ = [1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f];
-        float[] entertainment_sunday_ = [1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f];
+        float[] meals_weekday_ = [1.15f, 1.15f, 1.15f, 1.25f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f];
+        float[] meals_avgday_ = [1.2f, 1.2f, 1.2f, 1.39f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f];
+        float[] meals_saturday_ = [1.32f, 1.32f, 1.32f, 1.67f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f];
+        float[] meals_sunday_ = [1.32f, 1.32f, 1.32f, 1.75f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f];
+        float[] entertainment_weekday_ = [0.61f, 0.61f, 0.61f, 0.93f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f];
+        float[] entertainment_avgday_ = [0.76f, 0.76f, 0.76f, 1.11f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f];
+        float[] entertainment_saturday_ = [1.15f, 1.15f, 1.15f, 1.48f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f];
+        float[] entertainment_sunday_ = [1.15f, 1.15f, 1.15f, 1.48f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f];
         float[] shopping_weekday_ = [0.24f, 0.24f, 0.24f, 0.3f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f];
-        float[] shopping_avgday_ = [1.41f, 1.41f, 1.41f, 1.75f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f];
-        float[] shopping_saturday_ = [1.68f, 1.68f, 1.68f, 1.6f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f];
-        float[] shopping_sunday_ = [0.53f, 0.53f, 0.53f, 1f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f];
-        float[] park_weekday_ = [0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f];
-        float[] park_avgday_ = [0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f];
-        float[] park_saturday_ = [0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f];
-        float[] park_sunday_ = [0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f];
+        float[] shopping_avgday_ = [1.41f, 1.41f, 1.41f, 0.85f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f];
+        float[] shopping_saturday_ = [1.68f, 1.68f, 1.68f, 1f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f];
+        float[] shopping_sunday_ = [0.53f, 0.53f, 0.53f, 0.7f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f];
+        float[] park_weekday_ = [0.3f, 0.3f, 0.3f, 0.31f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f];
+        float[] park_avgday_ = [0.31f, 0.31f, 0.31f, 0.38f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f];
+        float[] park_saturday_ = [0.35f, 0.35f, 0.35f, 0.52f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f];
+        float[] park_sunday_ = [0.35f, 0.35f, 0.35f, 0.52f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f];
         float[] travel_weekday_ = [0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f];
         float[] travel_avgday_ = [0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f];
         float[] travel_saturday_ = [0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f];
         float[] travel_sunday_ = [0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f];
+        int[] traffic_reduction_ = [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 
         public Setting(IMod mod) : base(mod)
@@ -249,6 +251,7 @@ namespace Time2Work
             travel_avgday = travel_avgday_[index];
             travel_saturday = travel_saturday_[index];
             travel_sunday = travel_sunday_[index];
+            trafficReduction = traffic_reduction_[index];
         }
 
         public override void Apply()
@@ -530,6 +533,10 @@ namespace Time2Work
         [SettingsUISection(Weeksection, SlowerTimeGroup)]
         public DTSimulationEnum dt_simulation { get; set; } = DTSimulationEnum.AverageDay;
 
+        [SettingsUISection(Weeksection, SlowerTimeGroup)]
+        [SettingsUIMultilineText]
+        public string MultilineText => string.Empty;
+
         [SettingsUISlider(min = 1f, max = 10, step = 0.1f, scalarMultiplier = 1, unit = Unit.kFloatSingleFraction)]
         [SettingsUISection(Weeksection, SlowerTimeGroup)]
         public float slow_time_factor { get; set; }
@@ -619,9 +626,13 @@ namespace Time2Work
         [SettingsUISection(OtherSection, ExpensesGroup)]
         public int service_expenses_night_reduction { get; set; }
 
+        [SettingsUISlider(min = 0, max = 5, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(OtherSection, OtherGroup)]
+        public int trafficReduction { get; set; }
+
         [SettingsUISlider(min = 1, max = 500, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
         [SettingsUISection(EventSection, EventGroup)]
-        public int min_attraction { get; set; } = 30;
+        public int min_attraction { get; set; } = 25;
 
         [SettingsUISlider(min = 0, max = 3, step = 1f, scalarMultiplier = 1, unit = Unit.kInteger)]
         [SettingsUISection(EventSection, MinEventGroup)]
@@ -768,6 +779,7 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.SlowerTimeGroup), "Day and Time Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.DTSimulationGroup), "Day Type Simulation" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TrucksGroup), "Trucks" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.OtherGroup), "OTher" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.ExternalGroup), "External Trips" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.ExpensesGroup), "Service Expenses" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.WeekGroup), "Percentage of Workers per Day" },
@@ -778,7 +790,7 @@ namespace Time2Work
 
                 //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.WeekText)), $"Percentage of Workers per Day" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DTText)), $"Changing the parameters below require restarting the game." },
-                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.MultilineText)), $"WARNING: Slower Time feature can cause issues with Population Rebalance and Info Loom mods - in an existing city. A new city will probably not have problems with those mods." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.MultilineText)), $"WARNING: Changing the slow time factor for existing cities will cause cim's age to change which can cause issues in the game. If the factor is changed, the population age distribution will balance itself over time." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.settings_choice)), "Mod settings" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.settings_choice)), $"Change all mod settings. Performance: will update the settings to improve performance, this is similar to the Vanilla game. Balanced: has most of the features from this mod enabled, but a few of them that have high impact on performance are disabled. Country based settings: real world data was collected for a few countries, selecting one of them will make the game more realistic but it might impact performance." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Button)), "Confirm" },
@@ -958,6 +970,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.commuter_trips)), $"Increases outside connection commuters on weekdays and reduces them on weekends. Also increases the probability of them arriving by plane." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.service_expenses_night_reduction)), "Night Cost Reduction" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.service_expenses_night_reduction)), $"Reduce the cost of services from 11 PM to 6 AM." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.trafficReduction)), "Traffic Reduction" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.trafficReduction)), $"Lower values increase traffic in the city. Vanilla value is 5. Zero will have the maximun amout of traffic." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_attraction)), "Min. Attraction" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.min_attraction)), $"Increasing or decreasing this setting will change the number of park facilities that can host special events." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_event_weekday)), "Monday to Thursday" },
@@ -1088,6 +1102,7 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.SlowerTimeGroup), "Configurações do Dia e do Tempo" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.DTSimulationGroup), "Tipo de Simulação Diária" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.TrucksGroup), "Caminhões" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.OtherGroup), "Outros" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.ExternalGroup), "Viagens Externas" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.ExpensesGroup), "Gastos com Serviços" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.WeekGroup), "Porcentagem de Trabalhadores por Dia" },
@@ -1278,7 +1293,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.commuter_trips)), $"Aumenta o número de trabalhadores de conexões externas nos dias de semana e reduz nos fim de semana. Também aumenta a probabilidade de eles chegarem de avião." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.service_expenses_night_reduction)), "Redução de Custo Noturno" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.service_expenses_night_reduction)), $"Reduz os custos de serviços das 23h ate as 6h." },
-
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.trafficReduction)), "Redução de Tráfego" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.trafficReduction)), $"Valores mais baixos aumentam o tráfego na cidade. O valor vanilla é 5. Zero terá a quantidade máxima de tráfego." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_attraction)), "Atração Mínima" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.min_attraction)), $"Aumentar ou diminuir esta configuração alterará o número de instalaçõesque podem hospedar eventos especiais." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_event_weekday)), "Segunda a Quinta" },

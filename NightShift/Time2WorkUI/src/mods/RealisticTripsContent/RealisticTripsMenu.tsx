@@ -1,28 +1,41 @@
 import React, { useCallback, useState, FC } from 'react';
-import { Button, FloatingButton, Tooltip } from "cs2/ui";
+import { Button, FloatingButton, Tooltip, Portal, PanelProps } from "cs2/ui";
 import icon from "images/realistictrips.svg";
 import styles from "./RealisticTripsMenu.module.scss";
 import SpecialEvents from "mods/RealisticTripsSections/SpecialEventSection/SpecialEvents";
-
-
+import useDataUpdate from "mods/use-data-update";
+import { SpecialEventValues } from "mods/RealisticTripsSections/SpecialEventSection/SpecialEvents";
+import { formatWords } from "utils/FormatText";
 // Define the Section type
 type Section = 'Special Events';
 
 // Define a new type for components that accept an onClose prop
-type SectionComponentProps = {
-  onClose: () => void;
+interface SectionComponentProps extends PanelProps{}
+
+const formatTime = (hour: number, minutes: number) => {
+  const h = String(hour).padStart(2, '0');
+  const m = String(minutes).padStart(2, '0');
+  return `${h}:${m}`;
 };
 
-// Update the sections array type
-const sections: { name: Section; displayName: string; component: FC<SectionComponentProps> }[] = [
-  { name: 'Special Events', displayName: 'SpecialEvents', component: SpecialEvents },
+const allSections: {
+  name: Section;
+  displayName: string;
+  component: FC<SectionComponentProps>;
+}[] = [
+  { name: "Special Events", displayName: "Special Events", component: SpecialEvents },
 ];
 
 const RealisticTripsButton: FC = () => {
   const [mainMenuOpen, setMainMenuOpen] = useState<boolean>(false);
   const [openSections, setOpenSections] = useState<Record<Section, boolean>>({
-    'Special Events': false,
-});
+    "Special Events": false,
+  });
+  const [specialEvents, setSpecialEvents] = useState<SpecialEventValues[]>([]);
+  useDataUpdate('specialEventInfo.specialEventDetails', setSpecialEvents);
+  
+  // Filter events that have a location
+  const filteredEvents = specialEvents.filter(event => event.event_location && event.event_location.trim() !== "");
 
   const toggleMainMenu = useCallback(() => {
     setMainMenuOpen(prev => !prev);
@@ -35,10 +48,51 @@ const RealisticTripsButton: FC = () => {
     }));
   }, []);
 
+  const tooltipContent = (
+  <div style={{ minWidth: '250px' }}>
+    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Realistic Trips - Special Events</div>
+    {filteredEvents.length === 0 ? (
+      <div>No Events</div>
+    ) : (
+      <ul style={{ paddingLeft: '0', listStyleType: 'none', margin: '0' }}>
+        {filteredEvents.map((event, idx) => (
+          <li
+            key={idx}
+            style={{
+              marginBottom: '0.5rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <strong
+              style={{
+                marginRight: '10rem', 
+                flex: '1',
+              }}
+            >
+              {formatWords(event.event_location)}
+            </strong>
+            <span style={{ whiteSpace: 'nowrap' }}>
+              {formatTime(event.start_hour, event.start_minutes)} -{' '}
+              {formatTime(event.end_hour, event.end_minutes)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+);
+
   return (
     <div>
-      <Tooltip tooltip="Realistic Trips">
-        <FloatingButton onClick={toggleMainMenu} src={icon} aria-label="Toggle Realistic Trips Menu" />
+      {/* 5. Use the "tooltip" prop with our dynamic list of events */}
+      <Tooltip tooltip={tooltipContent}>
+        <FloatingButton
+          onClick={toggleMainMenu}
+          src={icon}
+          aria-label="Toggle Realistic Trips Menu"
+        />
       </Tooltip>
 
       {mainMenuOpen && (
@@ -47,31 +101,31 @@ const RealisticTripsButton: FC = () => {
           className={styles.panel}
         >
           <header className={styles.header}>
-            <h2>Realistic Trips</h2>
+            <div>Realistic Trips</div>
           </header>
           <div className={styles.buttonRow}>
-            {sections.map(({ name }) => (
+            {allSections.map(({name, displayName}) => (
               <Button
                 key={name}
-                variant='flat'
-                aria-label={name}
+                variant="flat"
+                aria-label={displayName}
                 aria-expanded={openSections[name]}
-                className={
-                  openSections[name] ? styles.buttonSelected : styles.Time2WorkButton
-                }
+                className={`${styles.Time2WorkButton} ${openSections[name] ? styles.buttonSelected : ''}`}
                 onClick={() => toggleSection(name)}
-                onMouseDown={(e) => e.preventDefault()}
+                onMouseDown={e => e.preventDefault()}
               >
-                {name}
+                {displayName}
               </Button>
             ))}
           </div>
         </div>
       )}
 
-      {sections.map(({ name, component: Component }) => (
+      {allSections.map(({name, component: Component}) => (
         openSections[name] && (
-          <Component key={name} onClose={() => toggleSection(name, false)} />
+          <Portal key={name}>
+            <Component onClose={() => toggleSection(name, false)}/>
+          </Portal>
         )
       ))}
     </div>

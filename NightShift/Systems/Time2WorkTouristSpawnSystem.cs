@@ -117,7 +117,7 @@ namespace Time2Work.Systems
         {
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct SpawnTouristHouseholdJob : IJob
         {
             [ReadOnly]

@@ -2,53 +2,188 @@
   position: absolute;
   display: flex;
   flex-direction: column;
-  //background-color: var(--panelColorNormal);
-  //border: 1px solid #444;
-  border-radius: 8px;
-  //box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-top-left-radius: var(--panelRadiusInner);
+  border-top-right-radius: var(--panelRadiusInner);
+  border-bottom-left-radius: var(--panelRadiusInner);
+  border-bottom-right-radius: var(--panelRadiusInner);
   overflow: hidden;
-  
-  //backdrop-filter: var(--panelBlur);
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accentColorNormal);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accentColorNormal);
+    outline-offset: 2px;
+  }
 }
 
 .header {
   cursor: move;
   padding: 10px;
-  background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(45, 45, 45, 0.95));
+  background-color: rgba(6, 10, 16, calc(var(--panelOpacityDark) + 0.2));
   backdrop-filter: var(--panelBlur);
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
-  font-size: 1.5vw;
+  font-size: var(--fontSizeXL);
   color: var(--accentColorNormal);
   font-weight: bold;
   border-bottom-width: 3px;
   border-bottom-style: solid;
   border-bottom-color: var(--accentColorNormal);
+  user-select: none;
+  backdrop-filter: var(--panelBlur);
+  margin-left: 1rem;
+  &:active {
+    cursor: grabbing;
+  }
 }
 
-.exitbutton FormattedText {
-  color: white;
+.exitbutton {
+  FormattedText {
+    color: white;
+  }
+
+  &:focus {
+    outline: 2px solid var(--accentColorNormal);
+    outline-offset: -2px;
+    border-radius: 4px;
+  }
 }
 
 .content {
   flex: 1 1 auto;
   padding: 10px;
-  overflow: auto; 
+  overflow: auto;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(45, 45, 45, 0.95));
+  background-color: rgba(6, 10, 16, calc(var(--panelOpacityDark) + 0.2));
+  backdrop-filter: var(--panelBlur);
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--accentColorNormal);
+    border-radius: 4px;
+
+    &:hover {
+      background: var(--accentColorHover);
+    }
+  }
 }
 
-.resizer {
+.resizeHandles {
   position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  > div {
+    position: absolute;
+    pointer-events: auto;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+}
+
+.n {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: ns-resize;
+}
+
+.s {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: ns-resize;
+}
+
+.e {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+
+.w {
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+
+.ne {
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nesw-resize;
+}
+
+.nw {
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nwse-resize;
+}
+
+.se {
   bottom: 0;
   right: 0;
-  width: 20px;
-  height: 20px;
+  width: 8px;
+  height: 8px;
   cursor: nwse-resize;
-  background: linear-gradient(45deg, transparent 50%, white 50%);
- 
+}
+
+.sw {
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nesw-resize;
+}
+.resize-handle {
+  background-color: transparent;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.resize-handle:hover {
+  background-color: rgba(0, 0, 0, 0.15); // Light shading for visibility
+  border-radius: 2px;
+}
+
+.n:hover,
+.s:hover {
+  height: 8px; // Make the top and bottom resize handles easier to grab
+}
+
+.e:hover,
+.w:hover {
+  width: 8px; // Left and right edges are easier to resize
+}
+
+.ne:hover,
+.nw:hover,
+.se:hover,
+.sw:hover {
+  width: 12px;
+  height: 12px;
 }

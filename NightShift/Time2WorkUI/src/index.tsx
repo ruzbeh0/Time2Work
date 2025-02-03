@@ -6,8 +6,7 @@ import timeControlsStyles from 'mods/time-controls.module.scss';
 import mod from "../mod.json";
 import { useValue, bindValue, trigger } from "cs2/api";
 import RealisticTripsMenu from "./mods/RealisticTripsContent/RealisticTripsMenu";
-import 'intl';
-import 'intl/locale-data/jsonp/en-US'; 
+
 
 const coTimeControlsStyles: Record<string, string> = getModule(
     'game-ui/game/components/toolbar/bottom/time-controls/time-controls.module.scss',

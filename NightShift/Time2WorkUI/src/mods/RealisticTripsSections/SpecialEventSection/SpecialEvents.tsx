@@ -1,11 +1,11 @@
-// Workplaces.tsx
-import React, { FC, useCallback, useEffect, useState } from 'react';
+import React, {FC, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import useDataUpdate from 'mods/use-data-update';
-import $Panel from 'mods/panel';
-
+import { Panel, Scrollable, Portal, DraggablePanelProps, Number2 } from 'cs2/ui'; // Updated import
+import styles from './SpecialEvents.module.scss';
+import {formatWords} from "utils/FormatText";
 
 // Define interfaces for component props
-interface SpecialEventValues {
+export interface SpecialEventValues {
     start_hour: number;
     start_minutes: number;
     end_hour: number;
@@ -13,142 +13,146 @@ interface SpecialEventValues {
     event_location: string;
     [key: string]: any;
 }
-interface SpecialEventProps {
-    levelColor?: string;
+
+interface SpecialEventProps extends DraggablePanelProps {
+
     levelValues: SpecialEventValues;
     showAll?: boolean;
 }
 
-// SpecialEvent Component
-const SpecialEventLevel: React.FC<SpecialEventProps> = ({
-    levelColor,
-    levelValues,
-    showAll = true,
-}) => {
-    if (showAll) {
-        return (
-            <div
-                className="labels_L7Q row_S2v"
-                style={{ width: '99%', paddingTop: '1rem', paddingBottom: '1rem' }}
-            >
-                <div style={{ width: '1%' }}></div>
-                <div style={{ alignItems: 'left', width: '44%' }}>
-                    <div>{levelValues['event_location']}</div>
-                </div>
-                <div style={{ width: '28%', justifyContent: 'left' }}>
-                    {`${levelValues['start_hour']}:${levelValues['start_minutes']}0`}
-                </div>
-                <div style={{ width: '28%', justifyContent: 'left' }}>
-                    {`${levelValues['end_hour']}:${levelValues['end_minutes']}0`}
-                </div>
-            </div>
-        );
-    } else {
-        return (<div></div>);
-    }
-};
 
 
-// Main SpecialEvent Component
-interface SpecialEventLevelProps {
-    onClose: () => void;
-}
+const SpecialEventLevel: React.FC<SpecialEventProps> = ({levelValues, showAll = true}) => {
+    if (!showAll) return null;
 
-// Simple horizontal line
-const DataDivider: React.FC = () => {
     return (
-        <div style={{ display: 'flex', height: '4rem', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ borderBottom: '1px solid gray' }}></div>
+        <div
+            className="labels_L7Q row_S2v"
+            style={{
+                width: '100%',
+                padding: '1rem 25rem',
+                display: 'flex',
+                alignItems: 'center',
+                boxSizing: 'border-box',
+            }}
+        >
+            <div style={{
+                flex: '0 0 50%',
+                paddingRight: '1rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+            }}>
+                {formatWords(levelValues.event_location)}
+            </div>
+            <div style={{flex: '0 0 25%', textAlign: 'center'}}>
+                {`${levelValues.start_hour}:${levelValues.start_minutes.toString().padStart(2, '0')}`}
+            </div>
+            <div style={{flex: '0 0 25%', textAlign: 'center'}}>
+                {`${levelValues.end_hour}:${levelValues.end_minutes.toString().padStart(2, '0')}`}
+            </div>
         </div>
     );
 };
 
-const SpecialEvent: FC<SpecialEventLevelProps> = ({ onClose }) => {
+// In the main SpecialEvent component, update the header:
+
+
+// Main SpecialEvent Component
+interface SpecialEventLevelProps extends DraggablePanelProps {
+
+}
+
+// Simple horizontal line
+const DataDivider: React.FC = () => (
+    <div style={{display: 'flex', height: '4rem', flexDirection: 'column', justifyContent: 'center'}}>
+        <div style={{borderBottom: '1px solid gray', width: '100%'}}></div>
+    </div>
+);
+
+const SpecialEvent: FC<SpecialEventLevelProps> = ({onClose, initialPosition, ...props}) => {
     // State for controlling the visibility of the panel
     const [isPanelVisible, setIsPanelVisible] = useState(true);
+    const initialPos: Number2 = { x: 0.038, y: 0.15 };
+    const panelRef = useRef<HTMLDivElement>(null);
 
     // Data fetching and other logic
-    const [SpecialEvent, setSpecialEvent] = useState<SpecialEventValues[]>([]);
-    useDataUpdate('specialEventInfo.specialEventDetails', setSpecialEvent);
+    const [specialEvents, setSpecialEvents] = useState<SpecialEventValues[]>([]);
+    useDataUpdate('specialEventInfo.specialEventDetails', setSpecialEvents);
 
-    const defaultPosition = { top: window.innerHeight * 0.05, left: window.innerWidth * 0.005 } ;
-    const [panelPosition, setPanelPosition] = useState(defaultPosition);
-    const handleSavePosition = useCallback((position: { top: number; left: number }) => {
-        setPanelPosition(position);
-    }, []);
-    const [lastClosedPosition, setLastClosedPosition] = useState(defaultPosition);
 
-    // Handler for closing the panel
-    const handleClose = useCallback(() => {
-        setLastClosedPosition(panelPosition); // Save the current position before closing
-        setIsPanelVisible(false);
-        onClose();
-    }, [onClose, panelPosition]);
 
-    useEffect(() => {
-        if (!isPanelVisible) {
-            setPanelPosition(lastClosedPosition);
-        }
-    }, [isPanelVisible, lastClosedPosition]);
 
-    if (!isPanelVisible) {
-        return null;
-    }
+
+    // Filter out events without a valid event_location
+    const filteredSpecialEvents = useMemo(() => {
+        return specialEvents.filter(event => {
+            return event.event_location && event.event_location.trim() !== '';
+        });
+    }, [specialEvents]);
 
     return (
-        <$Panel
-            title="Special Events"
-            onClose={handleClose}
-            initialSize={{ width: window.innerWidth * 0.25, height: window.innerHeight * 0.15 }}
-            initialPosition={panelPosition}
-            onSavePosition={handleSavePosition}
-        >
-            {SpecialEvent.length === 0 ? (
+        <Panel
+
+            draggable={true}
+            initialPosition={initialPos}
+            onClose={onClose}
+            className={styles.panel}
+
+
+            header={(
+                <div className={styles.header}>
+                    <span className={styles.headerText}>Special Events</span>
+                </div>
+            )}>
+
+
+
+
+            {filteredSpecialEvents.length === 0 ? (
                 <p>No Events Today</p>
             ) : (
                 <div>
-                    {/* Your existing content rendering */}
-                    {/* Adjusted heights as needed */}
-                    <div style={{ height: '10rem' }}></div>
-                    <div
-                        className="labels_L7Q row_S2v"
-                        style={{ width: '99%', paddingTop: '1rem', paddingBottom: '1rem' }}
-                    >
-                        <div style={{ width: '1%' }}></div>
-                        <div style={{ alignItems: 'left', width: '44%' }}>
-                                <div><b>{"Event Location"}</b></div>
-                        </div>
-                        <div style={{ width: '28%', justifyContent: 'left' }}>
-                                <b>{"Start Time"}</b>
-                        </div>
-                        <div style={{ width: '28%', justifyContent: 'left' }}>
-                                <b>{"End Time"}</b>
+                    <div style={{maxWidth: '1200px', margin: '0 auto', padding: '0 25rem'}}>
+                        <div
+                            className="labels_L7Q row_S2v"
+                            style={{
+                                width: '100%',
+                                padding: '1rem 0',
+                                display: 'flex',
+                                alignItems: 'center',
+                            }}
+                        >
+                            <div style={{flex: '0 0 50%'}}>
+                                <div><b>Event Location</b></div>
+                            </div>
+                            <div style={{flex: '0 0 25%', textAlign: 'center'}}>
+                                <b>Start Time</b>
+                            </div>
+                            <div style={{flex: '0 0 25%', textAlign: 'center'}}>
+                                <b>End Time</b>
+                            </div>
                         </div>
                     </div>
-                    <DataDivider />
-                        <div style={{ height: '5rem' }}></div>
-                    <SpecialEventLevel
-                         levelValues={SpecialEvent[0]}
-                    />
-                    <SpecialEventLevel
-                         levelValues={SpecialEvent[1]}
-                    />
-                    <SpecialEventLevel
-                         levelValues={SpecialEvent[2]}
-                    />
-                    <DataDivider />
+                    <DataDivider/>
+
+                    {/* Event List */}
+                    <div style={{padding: '1rem 0'}}>
+                        <Scrollable smooth={true} vertical={true} trackVisibility="scrollable">
+                            {filteredSpecialEvents.map((event, index) => (
+                                <SpecialEventLevel
+                                    key={index}
+                                    levelValues={event}
+                                />
+                            ))}
+                        </Scrollable>
+                    </div>
+
+                    <DataDivider/>
                 </div>
             )}
-        </$Panel>
+        </Panel>
     );
 };
 
 export default SpecialEvent;
-
-// Registering the panel with HookUI (if needed)
-// window._$hookui.registerPanel({
-//     id: 'infoloom.workplaces',
-//     name: 'InfoLoom: Workplaces',
-//     icon: 'Media/Game/Icons/Workers.svg',
-//     component: $Workplaces,
-// });

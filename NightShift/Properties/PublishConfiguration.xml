@@ -57,7 +57,7 @@ An Average Day, is similar to the vanilla default setting. It consists of a comb
 
 On a Weekday, most of the trips will be work or school related. On a Weekend, there will be more Leisure and Shopping trips. Schools are closed on Weekends. Also, workers that work on weekend will have shorter shifts. Weekend shift duration was calculated from this source: https://www.bls.gov/charts/american-time-use/emp-by-ftpt-job-edu-h.htm
 
-* **Slow Time and Increase Day Length** If enabled, this option will make the day longer - while keeping the simulation speed the same. The day length of the vanilla game when compared to the cim's travel times is not reasonable. It is commom to find cims that take around 2 in game hours to get from home to work and this is not realistic. Most major cities in the world have an average commute of 25 to 30 minutes, in my test city the average commute was around 1 hour and 40 minutes. Based on this, if this option is enabled I recommend that the reduction factor be set to 3.5.
+* **Slow Time and Increase Day Length** If enabled, this option will make the day longer - while keeping the simulation speed the same. The day length of the vanilla game when compared to the cim's travel times is not reasonable. It is commom to find cims that take around 2 in game hours to get from home to work and this is not realistic. Most major cities in the world have an average commute of 25 to 30 minutes, in my test city the average commute was around 1 hour and 40 minutes. Based on this, if this option is enabled I recommend that the reduction factor be set to 3.5. It is not recommended to change this setting in an existing city, doing so will affect citizens ages and can cause some problems. That will eventually be resolved over time as citizens age.
 * **Days per Month** Default value is 1, if increased the number of days per month and year will change. This does affect the simulation, if with the default values it took 1 year (12 days) for a cim do age 1 year, with 2 days per month it will still take 1 year (24 days) for a cim to age 1 year.
 
 In this section it is also possible to configure the percentage of workers that will go to work in each day of the week. This can be configured by work type, which include: Office, Commercial, Industry and City Services. The default values for these parameters were calculated from this source: https://www.bls.gov/news.release/flex2.t09.htm
@@ -68,6 +68,17 @@ This section has some options to configure external trips for tourists and commu
 
 * **Tourism variation by day of the week** If enabled, there will be more tourists on the weekend and less tourists on weekdays. On Fridays (an Average Day) the number of tourists won't change.
 * **Commuter variation by day of the week** If enabled, there will be more commuters on the weekend and less tourists weekdays. On Fridays (an Average Day) the number of commuters won't change. Commuters are workers that spawn from outside connections, in the vanilla game they can come into your city by car or train. This option also addes the possibility of them arriving by plane - which you can interpret as business travelers from other cities going into your city for business meetings.
+
+## Traffic Reduction
+
+In the Other tab, it is possible to configure the game's traffic reduction factor. The game default's value is 5. This factor is used to reduce traffic in the city by not simulation all citizens trips. A value of zero will have all citizens doing their trips. Note that this can affect performance.
+
+## Special Events
+
+Special events will happen at park facilities on specific times every day. The number of events per day will vary based on the day of the week. While a park facility is hosting an event, that facility will attract more visitors than normal. It is possible on check the events of the day by clicking on the mod's icon on the top left (see image). The settings below can be changed in the mods menu:
+
+* **Min Attraction** Each park facility has a different attraction level. For example, a small playground has much lower attraction than a soccer field. Changing the value of this option will increase or descrease the park facilities that can host events.
+* **Min and Max events by day of the week** Each day of the week can have a different number of events. The number of events is selected randomly based on the minimum and maximum values defined in these options.
 
 ## Percentage of Workers by Day Type and Work Type
 
@@ -82,13 +93,6 @@ This mod is compatible with the Traffic Simulation Adjuster mod. However, both o
 You should expect to see less trips at night and a significant increase in rush hour traffic.
 
 If you enable this mod in an existing city it will take a day or two for you to notice a change in the time of day activity.
-
-## Compatibility with other Mods
-
-The slower time feature is currently not compatible with:
-
-* Info Loom
-* Population Rebalance
 
 The External Trips feature will not worked correctly if used with the Demand Master Pro mod.
 
@@ -127,7 +131,10 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="75426" />
 	<ChangeLog>
+* Added Special Events
+* Improved compatibility with other mods that update demand parameters
 * Updated Canada settings
+* Added option to configure traffic reduction factor (same as Traffic Simulation Adjuster Mod)
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

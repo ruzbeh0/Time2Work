@@ -206,6 +206,7 @@ namespace Time2Work
                 shopping_leisure = new float4(Mod.m_Setting.shopping_weekday, Mod.m_Setting.shopping_avgday, Mod.m_Setting.shopping_saturday, Mod.m_Setting.shopping_sunday),
                 park_leisure = new float4(Mod.m_Setting.park_weekday, Mod.m_Setting.park_avgday, Mod.m_Setting.park_saturday, Mod.m_Setting.park_sunday),
                 travel_leisure = new float4(Mod.m_Setting.travel_weekday, Mod.m_Setting.travel_avgday, Mod.m_Setting.travel_saturday, Mod.m_Setting.travel_sunday),
+                day = Time2WorkTimeSystem.GetDay(m_SimulationSystem.frameIndex, m_TimeDataQuery.GetSingleton<TimeData>(), Time2WorkTimeSystem.kTicksPerDay)
             }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobHandle.CombineDependencies(this.Dependency, JobHandle.CombineDependencies(outJobHandle, deps)));
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle);
             this.m_PathFindSetupSystem.AddQueueWriter(jobHandle);
@@ -248,7 +249,7 @@ namespace Time2Work
         {
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct SpendLeisurejob : IJob
         {
             public NativeQueue<LeisureEvent> m_LeisureQueue;
@@ -321,7 +322,7 @@ namespace Time2Work
             }
         }
         
-        //[BurstCompile]
+        [BurstCompile]
         private struct LeisureJob : IJobChunk
         {
             public ComponentTypeHandle<Leisure> m_LeisureType;
@@ -449,6 +450,7 @@ namespace Time2Work
             private float shopping_avghour;
             private float park_avghour;
             private float travel_avghour;
+            public int day;
 
             private void SpendLeisure(
               int index,
@@ -457,7 +459,8 @@ namespace Time2Work
               ref Leisure leisure,
               Entity providerEntity,
               LeisureProviderData provider,
-              Entity specialEventDataEntity)
+              Entity specialEventDataEntity,
+              int day)
             {
                 bool flag = this.m_BuildingData.HasComponent(providerEntity) && BuildingUtils.CheckOption(this.m_BuildingData[providerEntity], BuildingOption.Inactive);
 
@@ -487,7 +490,6 @@ namespace Time2Work
                 bool leisureCounterCondition = citizen.m_LeisureCounter > (byte)250;
                 if (m_SpecialEventDatas.TryGetComponent(specialEventDataEntity, out specialEventdata))
                 {
-                    int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
                     if (specialEventdata.day == day)
                     {  
                         if(m_TimeOfDay >= specialEventdata.start_time && m_TimeOfDay <= (specialEventdata.start_time + specialEventdata.duration))
@@ -568,12 +570,11 @@ namespace Time2Work
                     //During special event parks will attract more people
                     if (m_SpecialEventDatas.TryGetComponent(entity2, out specialEventdata))
                     {
-                        int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
                         if (specialEventdata.day == day)
                         {
                             if (m_TimeOfDay >= specialEventdata.start_time && m_TimeOfDay <= (specialEventdata.start_time + specialEventdata.duration))
                             {
-                                park_avghour *= 3;
+                                park_avghour *= 5;
                             }
                         }
                     }
@@ -619,13 +620,13 @@ namespace Time2Work
                     }
                     if (entity2 != Entity.Null)
                     {
-                        this.SpendLeisure(unfilteredChunkIndex, entity1, ref citizenData, ref leisure, providerEntity, provider, entity2);
+                        this.SpendLeisure(unfilteredChunkIndex, entity1, ref citizenData, ref leisure, providerEntity, provider, entity2, day);
                         nativeArray2[index] = leisure;
                         this.m_CitizenDatas[entity1] = citizenData;
                     }
                     else
                     {
-                       Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizenData.m_PseudoRandom + Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, this.m_TimeData, ticksPerDay)));
+                       Unity.Mathematics.Random rand = Unity.Mathematics.Random.CreateFromIndex((uint)(citizenData.m_PseudoRandom + day));
 
                         if (!flag && this.m_PathInfos.HasComponent(entity1))
                         {

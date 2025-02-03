@@ -6,7 +6,7 @@
   },
   "scripts": {
     "build": "webpack",
-    "dev": "webpack --watch",
+    "dev": "webpack --mode development --watch",
     "update": "npx create-csii-ui-mod update",
     "clean": "npx create-csii-ui-mod clean"
   },

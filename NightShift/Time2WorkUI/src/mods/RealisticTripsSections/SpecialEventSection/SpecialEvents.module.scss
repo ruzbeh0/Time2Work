@@ -1,0 +1,45 @@
+.panel {
+  width: 400rem;
+  display: flex;
+  flex-direction: column; // Added to ensure proper layout
+}
+
+.header {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  height: 20rem;
+  text-transform: none;
+}
+
+.headerText {
+  margin-left: -5rem;
+  font-size: 115%;
+}
+
+.tableHeader {
+  margin: 25rem;
+}
+
+// New styles based on the inline JSX
+.eventRow {
+  width: 100%;
+  padding: 1rem 25rem;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.eventLocation {
+  flex: 0 0 50%;
+  padding-right: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eventTime {
+  flex: 0 0 25%;
+  text-align: center;
+}

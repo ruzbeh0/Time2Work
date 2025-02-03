@@ -168,7 +168,7 @@ namespace Time2Work.Systems
         {
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct TourismJob : IJob
         {
             [DeallocateOnJobCompletion]
