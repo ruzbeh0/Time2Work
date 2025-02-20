@@ -54,9 +54,6 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
-
-            //Mod.log.Info($"SpecialEventSystem OnUpdate");
-
             var entities = _query.ToEntityArray(Allocator.Temp);
 
             Game.Common.TimeData m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
@@ -101,8 +98,8 @@ namespace Time2Work.Systems
                         Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
                         int r = random2.NextInt(0,entities.Length);
 
-                        //Mod.log.Info($"seed:{seed}, r:{r}, enti:{entities.Length}, numberEvents:{numberEvents}, attr:{specialEventData.new_attraction}, n:{n}");
-                        if (n < numberEvents && (r < numberEvents || i == entities.Length - 1))
+                        //Mod.log.Info($"seed:{seed}, r:{r}, enti:{entities.Length}, numberEvents:{numberEvents}, attr:{specialEventData.new_attraction}, n:{n}, day:{specialEventData.day}");
+                        if (specialEventData.day != day && (n < numberEvents && (r < numberEvents || i == entities.Length - 1)))
                         {
                             if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
                             {

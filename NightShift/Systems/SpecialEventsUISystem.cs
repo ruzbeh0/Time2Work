@@ -10,6 +10,8 @@ using Unity.Collections;
 using Unity.Entities;
 using Time2Work.Extensions;
 using Colossal.UI.Binding;
+using Game.Rendering;
+using Colossal.UI;
 
 namespace Time2Work.Systems
 {
@@ -21,8 +23,10 @@ namespace Time2Work.Systems
         private uint m_SimulationFrame;
         private EntityQuery m_TimeDataQuery;
         private SimulationSystem m_SimulationSystem;
+        private CameraUpdateSystem _cameraUpdateSystem;
         private struct SpecialEventInfo
         {
+            public Entity entity;
             public int start_hour;
             public int start_minutes;
             public int end_hour;
@@ -35,6 +39,8 @@ namespace Time2Work.Systems
         private static void WriteSpecialEventInfo(IJsonWriter writer, SpecialEventInfo info)
         {
             writer.TypeBegin("SpecialEventInfo");
+            writer.PropertyName("entity");
+            writer.Write(info.entity);
             writer.PropertyName("start_hour");
             writer.Write(info.start_hour);
             writer.PropertyName("start_minutes");
@@ -75,6 +81,8 @@ namespace Time2Work.Systems
 
             m_SimulationSystem = this.World.GetOrCreateSystemManaged<SimulationSystem>();
             m_TimeDataQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Common.TimeData>());
+            _cameraUpdateSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<CameraUpdateSystem>();
+
 
             AddBinding(m_uiResults = new RawValueBinding(kGroup, "specialEventDetails", delegate (IJsonWriter binder)
             {
@@ -85,6 +93,8 @@ namespace Time2Work.Systems
                 }
                 binder.ArrayEnd();
             }));
+
+            AddBinding(new TriggerBinding<Entity>(group, "NavigateTo", NavigateTo));
 
             m_Results = new NativeArray<SpecialEventInfo>(4, Allocator.Persistent);
 
@@ -120,9 +130,14 @@ namespace Time2Work.Systems
                     {
                         if(specialEventdata.day == day && n < nEvents)
                         {
+                            if(n > 0 && m_Results[n - 1].event_location == this.World.GetOrCreateSystemManaged<PrefabSystem>().GetPrefabName(prefabRef.m_Prefab))
+                            {
+                                continue;
+                            } 
                             //Mod.log.Info($"Special Event at: {this.World.GetOrCreateSystemManaged<PrefabSystem>().GetPrefabName(prefabRef.m_Prefab)} - Start Time:{specialEventdata.start_time}, Duration:{specialEventdata.duration}, Attraction: {attractivenessProvider.m_Attractiveness}");
 
                             SpecialEventInfo info = new SpecialEventInfo();
+                            info.entity = ent;
                             info.event_location = this.World.GetOrCreateSystemManaged<PrefabSystem>().GetPrefabName(prefabRef.m_Prefab);
                             info.start_hour = (int)Math.Round(24f * specialEventdata.start_time);
                             info.end_hour = (int)Math.Round(24f * (specialEventdata.start_time + specialEventdata.duration));
@@ -137,6 +152,23 @@ namespace Time2Work.Systems
 
             Mod.numCurrentEvents = n;
             m_uiResults.Update();
+        }
+
+        public void NavigateTo(Entity entity)
+        {
+            if (_cameraUpdateSystem.orbitCameraController != null && entity != Entity.Null)
+            {
+                _cameraUpdateSystem.orbitCameraController.followedEntity = entity;
+                _cameraUpdateSystem.orbitCameraController.TryMatchPosition(_cameraUpdateSystem.activeCameraController);
+                _cameraUpdateSystem.activeCameraController = _cameraUpdateSystem.orbitCameraController;
+            }
+        }
+
+        protected override void OnDestroy()
+        {
+            _cameraUpdateSystem = null;
+
+            base.OnDestroy();
         }
 
         public override int GetUpdateInterval(SystemUpdatePhase phase) => 16;
