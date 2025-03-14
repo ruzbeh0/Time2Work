@@ -763,6 +763,7 @@ namespace Time2Work
                     m_ResourceNeeded = need.m_Resource,
                     m_AmountNeeded = need.m_Amount
                 });
+                
             }
 
             private float GetTimeLeftUntilInterval(float2 interval)

@@ -19,6 +19,10 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Time2Work.Components;
+using static Game.Prefabs.TriggerPrefabData;
+using Game.Economy;
+using Time2Work.Utils;
 
 #nullable disable
 namespace Time2Work
@@ -30,6 +34,7 @@ namespace Time2Work
         private EndFrameBarrier m_EndFrameBarrier;
         private EntityQuery m_ArrivedGroup;
         private EntityQuery m_StuckGroup;
+        private EntityQuery m_ShoppingGroup;
         private EntityQuery m_EconomyParameterGroup;
         private EntityQuery m_OutsideConnectionQuery;
         private EntityQuery m_ServiceBuildingQuery;
@@ -41,26 +46,18 @@ namespace Time2Work
         {
             base.OnCreate();
             
-            this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
-            
-            this.m_CityStatisticsSystem = this.World.GetOrCreateSystemManaged<CityStatisticsSystem>();
-            
+            this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>(); 
+            this.m_CityStatisticsSystem = this.World.GetOrCreateSystemManaged<CityStatisticsSystem>(); 
             this.m_EndFrameBarrier = this.World.GetOrCreateSystemManaged<EndFrameBarrier>();
-            
-            this.m_ArrivedGroup = this.GetEntityQuery(ComponentType.ReadOnly<Citizen>(), ComponentType.ReadWrite<TravelPurpose>(), ComponentType.ReadWrite<TripNeeded>(), ComponentType.ReadOnly<CurrentBuilding>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
-            
+            this.m_ArrivedGroup = this.GetEntityQuery(ComponentType.ReadOnly<Citizen>(), ComponentType.ReadWrite<TravelPurpose>(), ComponentType.ReadWrite<TripNeeded>(), ComponentType.ReadOnly<CurrentBuilding>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>()); 
             this.m_StuckGroup = this.GetEntityQuery(ComponentType.ReadOnly<Citizen>(), ComponentType.ReadWrite<TravelPurpose>(), ComponentType.ReadWrite<TripNeeded>(), ComponentType.Exclude<CurrentTransport>(), ComponentType.Exclude<CurrentBuilding>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
-            
+            this.m_ShoppingGroup = this.GetEntityQuery(ComponentType.ReadOnly<Citizen>(), ComponentType.ReadWrite<TravelPurpose>(), ComponentType.ReadWrite<Shopper>(), ComponentType.ReadOnly<CurrentBuilding>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
             this.m_OutsideConnectionQuery = this.GetEntityQuery(ComponentType.ReadWrite<Game.Objects.OutsideConnection>(), ComponentType.Exclude<Game.Objects.ElectricityOutsideConnection>(), ComponentType.Exclude<Game.Objects.WaterPipeOutsideConnection>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
-            
             this.m_ServiceBuildingQuery = this.GetEntityQuery(ComponentType.ReadWrite<CityServiceUpkeep>(), ComponentType.ReadWrite<Building>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Destroyed>(), ComponentType.Exclude<Temp>());
-            
             this.m_EconomyParameterGroup = this.GetEntityQuery(ComponentType.ReadOnly<EconomyParameterData>());
-            
             this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
             
-            
-            this.RequireAnyForUpdate(this.m_ArrivedGroup, this.m_StuckGroup);
+            this.RequireAnyForUpdate(this.m_ArrivedGroup, this.m_StuckGroup, this.m_ShoppingGroup);
         }
 
         protected override void OnUpdate()
@@ -124,6 +121,7 @@ namespace Time2Work
                 m_CurrentBuildingType = this.__TypeHandle.__Game_Citizens_CurrentBuilding_RO_ComponentTypeHandle,
                 m_TravelPurposeType = this.__TypeHandle.__Game_Citizens_TravelPurpose_RW_ComponentTypeHandle,
                 m_HealthProblemType = this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentTypeHandle,
+                m_Shopping = this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup,
                 m_ArrivedType = this.__TypeHandle.__Game_Citizens_Arrived_RO_ComponentTypeHandle,
                 m_BuildingData = this.__TypeHandle.__Game_Buildings_Building_RO_ComponentLookup,
                 m_Schools = this.__TypeHandle.__Game_Buildings_School_RO_ComponentLookup,
@@ -152,32 +150,52 @@ namespace Time2Work
                 part_time_prob = Mod.m_Setting.part_time_percentage,
                 commute_top10 = Mod.m_Setting.commute_top10per,
                 part_time_reduction = Mod.m_Setting.avg_work_hours_pt_wd / Mod.m_Setting.avg_work_hours_ft_wd,
-                overtime = (Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/24
+                overtime = (Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2)/24,
+                avg_time_beverages = Mod.m_Setting.avg_time_beverages,
+                avg_time_chemicals = Mod.m_Setting.avg_time_chemicals,
+                avg_time_convenienceFood = Mod.m_Setting.avg_time_convenienceFood,
+                avg_time_electronics = Mod.m_Setting.avg_time_electronics,
+                avg_time_software = Mod.m_Setting.avg_time_software,
+                avg_time_financial = Mod.m_Setting.avg_time_financial,
+                avg_time_food = Mod.m_Setting.avg_time_food,
+                avg_time_furniture = Mod.m_Setting.avg_time_furniture,
+                avg_time_meals = Mod.m_Setting.avg_time_meals,
+                avg_time_media = Mod.m_Setting.avg_time_media,
+                avg_time_paper = Mod.m_Setting.avg_time_paper,
+                avg_time_petrochemicals = Mod.m_Setting.avg_time_petrochemicals,
+                avg_time_pharmaceuticals = Mod.m_Setting.avg_time_pharmaceuticals,
+                avg_time_plastics = Mod.m_Setting.avg_time_plastics,
+                avg_time_telecom = Mod.m_Setting.avg_time_telecom,
+                avg_time_textiles = Mod.m_Setting.avg_time_textiles,
+                avg_time_recreation = Mod.m_Setting.avg_time_recreation,
+                avg_time_entertainment = Mod.m_Setting.avg_time_entertainment,
+                avg_time_vehicles = Mod.m_Setting.avg_time_vehicles
             };
             
             this.Dependency = jobData.ScheduleParallel<Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob>(this.m_ArrivedGroup, this.Dependency);
             
             this.m_EndFrameBarrier.AddJobHandleForProducer(this.Dependency);
-            
-            
+
+            Time2WorkCitizenTravelPurposeSystem.CitizenStopShoppingJob jobData2 = new Time2WorkCitizenTravelPurposeSystem.CitizenStopShoppingJob()
+            {
+                m_EntityType = this.__TypeHandle.__Unity_Entities_Entity_TypeHandle,
+                m_CurrentBuildingType = this.__TypeHandle.__Game_Citizens_CurrentBuilding_RO_ComponentTypeHandle,
+                m_TravelPurposeType = this.__TypeHandle.__Game_Citizens_TravelPurpose_RW_ComponentTypeHandle,
+                m_Shopping = this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup,
+                m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
+                m_NormalizedTime = this.m_TimeSystem.normalizedTime
+            };
+
+            this.Dependency = jobData2.ScheduleParallel<Time2WorkCitizenTravelPurposeSystem.CitizenStopShoppingJob>(this.m_ShoppingGroup, this.Dependency);
+
+            this.m_EndFrameBarrier.AddJobHandleForProducer(this.Dependency);
+
             this.__TypeHandle.__Game_Citizens_HouseholdCitizen_RO_BufferLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Citizens_Household_RW_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Buildings_Occupant_RW_BufferLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Buildings_Patient_RW_BufferLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Buildings_CitizenPresence_RW_ComponentLookup.Update(ref this.CheckedStateRef);
             JobHandle deps;
             
@@ -212,8 +230,9 @@ namespace Time2Work
             
             
             this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            
-            
+
+            this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup.Update(ref this.CheckedStateRef);
+
             this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             
             
@@ -269,6 +288,7 @@ namespace Time2Work
             public ComponentTypeHandle<HealthProblem> m_HealthProblemType;
             [ReadOnly]
             public ComponentTypeHandle<Arrived> m_ArrivedType;
+            public ComponentLookup<Shopper> m_Shopping;
             [ReadOnly]
             public ComponentLookup<Worker> m_Workers;
             [ReadOnly]
@@ -309,6 +329,25 @@ namespace Time2Work
             public float commute_top10;
             public float overtime;
             public float part_time_reduction;
+            public int avg_time_beverages;
+            public int avg_time_chemicals;
+            public int avg_time_convenienceFood;
+            public int avg_time_electronics;
+            public int avg_time_software;
+            public int avg_time_financial;
+            public int avg_time_food;
+            public int avg_time_furniture;
+            public int avg_time_meals;
+            public int avg_time_media;
+            public int avg_time_paper;
+            public int avg_time_petrochemicals;
+            public int avg_time_pharmaceuticals;
+            public int avg_time_plastics;
+            public int avg_time_telecom;
+            public int avg_time_textiles;
+            public int avg_time_recreation;
+            public int avg_time_entertainment;
+            public int avg_time_vehicles;
 
             public void Execute(
               in ArchetypeChunk chunk,
@@ -371,7 +410,6 @@ namespace Time2Work
                         switch (travelPurpose.m_Purpose)
                         {
                             case Game.Citizens.Purpose.None:
-                            case Game.Citizens.Purpose.Shopping:
                             case Game.Citizens.Purpose.Leisure:
                             case Game.Citizens.Purpose.Exporting:
                             case Game.Citizens.Purpose.MovingAway:
@@ -382,8 +420,92 @@ namespace Time2Work
                             case Game.Citizens.Purpose.Disappear:
                             case Game.Citizens.Purpose.WaitingHome:
                             case Game.Citizens.Purpose.PathFailed:
-                                
                                 this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
+                                continue;
+                            case Game.Citizens.Purpose.Shopping:
+
+                                Shopper shopper;
+                                if (!this.m_Shopping.TryGetComponent(entity, out shopper))
+                                {
+                                    float shopping_time = 0f;
+                                    switch (travelPurpose.m_Resource)
+                                    {
+                                        case Resource.Beverages:
+                                            shopping_time = avg_time_beverages / 1440f;
+                                            break;
+                                        case Resource.Chemicals:
+                                            shopping_time = avg_time_chemicals / 1440f;
+                                            break;
+                                        case Resource.ConvenienceFood:
+                                            shopping_time = avg_time_convenienceFood / 1440f;
+                                            break;
+                                        case Resource.Electronics:
+                                            shopping_time = avg_time_electronics / 1440f;
+                                            break;
+                                        case Resource.Software:
+                                            shopping_time = avg_time_software / 1440f;
+                                            break;
+                                        case Resource.Financial:
+                                            shopping_time = avg_time_financial / 1440f;
+                                            break;
+                                        case Resource.Food:
+                                            shopping_time = avg_time_food / 1440f;
+                                            break;
+                                        case Resource.Furniture:
+                                            shopping_time = avg_time_furniture / 1440f;
+                                            break;
+                                        case Resource.Meals:
+                                            shopping_time = avg_time_meals / 1440f;
+                                            break;
+                                        case Resource.Media:
+                                            shopping_time = avg_time_media / 1440f;
+                                            break;
+                                        case Resource.Paper:
+                                            shopping_time = avg_time_paper / 1440f;
+                                            break;
+                                        case Resource.Petrochemicals:
+                                            shopping_time = avg_time_petrochemicals / 1440f;
+                                            break;
+                                        case Resource.Pharmaceuticals:
+                                            shopping_time = avg_time_pharmaceuticals / 1440f;
+                                            break;
+                                        case Resource.Plastics:
+                                            shopping_time = avg_time_plastics / 1440f;
+                                            break;
+                                        case Resource.Telecom:
+                                            shopping_time = avg_time_telecom / 1440f;
+                                            break;
+                                        case Resource.Textiles:
+                                            shopping_time = avg_time_textiles / 1440f;
+                                            break;
+                                        case Resource.Recreation:
+                                            shopping_time = avg_time_recreation / 1440f;
+                                            break;
+                                        case Resource.Entertainment:
+                                            shopping_time = avg_time_entertainment / 1440f;
+                                            break;
+                                        case Resource.Vehicles:
+                                            shopping_time = avg_time_vehicles / 1440f;
+                                            break;
+                                        default:
+                                            break;
+                                    }
+
+
+                                    Citizen citizen = this.m_Citizens[entity];
+                                    uint seed = (uint)(citizen.m_PseudoRandom + 1000 * m_NormalizedTime);
+                                    Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
+                                    // Add + or - variation on shopping time by 30% of the time defined above
+                                    float random_factor = 0.8f;
+                                    if(shopping_time <= 10f/1440f)
+                                    {
+                                       random_factor = 0.5f;
+                                    }
+
+                                    shopping_time += (float)(GaussianRandom.NextGaussianDouble(random2) * random_factor * shopping_time);
+                                    //Mod.log.Info($"{entity.Index}: Add Shopping, shopping time:{shopping_time}, resource:{travelPurpose.m_Resource}");
+                                    this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(this.m_NormalizedTime + shopping_time));
+                                }
                                 continue;
                             case Game.Citizens.Purpose.GoingHome:
                                 
@@ -511,6 +633,62 @@ namespace Time2Work
                 this.Execute(in chunk, unfilteredChunkIndex, useEnabledMask, in chunkEnabledMask);
             }
         }
+
+        [BurstCompile]
+        private struct CitizenStopShoppingJob : IJobChunk
+        {
+            [ReadOnly]
+            public EntityTypeHandle m_EntityType;
+            [ReadOnly]
+            public ComponentTypeHandle<CurrentBuilding> m_CurrentBuildingType;
+            public ComponentTypeHandle<TravelPurpose> m_TravelPurposeType;
+            public ComponentLookup<Shopper> m_Shopping;
+            public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
+            public float m_NormalizedTime;
+
+            public void Execute(
+              in ArchetypeChunk chunk,
+              int unfilteredChunkIndex,
+              bool useEnabledMask,
+              in v128 chunkEnabledMask)
+            {
+
+                NativeArray<Entity> nativeArray1 = chunk.GetNativeArray(this.m_EntityType);
+
+                NativeArray<TravelPurpose> nativeArray2 = chunk.GetNativeArray<TravelPurpose>(ref this.m_TravelPurposeType);
+
+                NativeArray<CurrentBuilding> nativeArray3 = chunk.GetNativeArray<CurrentBuilding>(ref this.m_CurrentBuildingType);
+                
+                for (int index = 0; index < chunk.Count; ++index)
+                {
+
+                    Entity entity = nativeArray1[index];
+                    TravelPurpose travelPurpose = nativeArray2[index];
+
+                    Shopper shopper;
+                    if (this.m_Shopping.TryGetComponent(entity, out shopper))
+                    {
+                        // If time exceeds normalizedTime, remove Shopping component
+                        if (shopper.duration <= this.m_NormalizedTime)
+                        {
+                            //Mod.log.Info($"{entity.Index}: Shopping end time reached: {shopper.duration}, time: {this.m_NormalizedTime}");
+                            this.m_CommandBuffer.RemoveComponent<Shopper>(unfilteredChunkIndex, entity);
+                            this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
+                        }
+                    }
+                }
+            }
+
+            void IJobChunk.Execute(
+              in ArchetypeChunk chunk,
+              int unfilteredChunkIndex,
+              bool useEnabledMask,
+              in v128 chunkEnabledMask)
+            {
+                this.Execute(in chunk, unfilteredChunkIndex, useEnabledMask, in chunkEnabledMask);
+            }
+        }
+
 
         private struct Arrive
         {
@@ -754,6 +932,8 @@ namespace Time2Work
             [ReadOnly]
             public ComponentTypeHandle<HealthProblem> __Game_Citizens_HealthProblem_RO_ComponentTypeHandle;
             [ReadOnly]
+            public ComponentLookup<Shopper> __Game_Citizens_Shopping_RW_ComponentLookup;
+            [ReadOnly]
             public ComponentTypeHandle<Arrived> __Game_Citizens_Arrived_RO_ComponentTypeHandle;
             [ReadOnly]
             public ComponentLookup<Building> __Game_Buildings_Building_RO_ComponentLookup;
@@ -821,6 +1001,8 @@ namespace Time2Work
                 
                 this.__Game_Citizens_Worker_RO_ComponentLookup = state.GetComponentLookup<Worker>(true);
                 
+                this.__Game_Citizens_Shopping_RW_ComponentLookup = state.GetComponentLookup<Shopper>(false);
+
                 this.__Game_Buildings_PoliceStation_RO_ComponentLookup = state.GetComponentLookup<Game.Buildings.PoliceStation>(true);
                 
                 this.__Game_Buildings_Prison_RO_ComponentLookup = state.GetComponentLookup<Game.Buildings.Prison>(true);

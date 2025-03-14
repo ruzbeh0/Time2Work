@@ -17,8 +17,8 @@ namespace Time2Work
 {
     //[FileLocation(nameof(Time2Work))]
     [FileLocation($"ModsSettings\\{nameof(Time2Work)}\\{nameof(Time2Work)}")]
-    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, EventGroup, MinEventGroup, MaxEventGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup, OtherGroup)]
-    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, OtherGroup, ExternalGroup, ExpensesGroup, MinEventGroup, MaxEventGroup)]
+    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, ShoppingTimeGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, EventGroup, MinEventGroup, MaxEventGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup, OtherGroup)]
+    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, ShoppingTimeGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, OtherGroup, ExternalGroup, ExpensesGroup, MinEventGroup, MaxEventGroup)]
     public class Setting : ModSetting
     {
         public const string SettingsSection = "Settings";
@@ -46,6 +46,7 @@ namespace Time2Work
         public const string LeisureShoppingGroup = "LeisureShoppingGroup";
         public const string LeisureParksGroup = "LeisureParksGroup";
         public const string LeisureTravelGroup = "LeisureTravelGroup";
+        public const string ShoppingTimeGroup = "ShoppingTimeGroup";
         public const string SchoolTimeOffGroup = "SchoolTimeOffGroup";
         public const string SchoolTimeGroup = "SchoolTimeGroup";
         public const string School1WeekGroup = "School1WeekGroup";
@@ -421,6 +422,82 @@ namespace Time2Work
         [SettingsUISection(ShopLeisureSection, LeisureTravelGroup)]
         public float travel_sunday { get; set; }
 
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_beverages { get; set; } = 15;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_chemicals { get; set; } = 20;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_convenienceFood { get; set; } = 5;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_electronics { get; set; } = 45;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_software { get; set; } = 30;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_financial { get; set; } = 25;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_food { get; set; } = 40;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_furniture { get; set; } = 90;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_meals { get; set; } = 60;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_media { get; set; } = 20;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_paper { get; set; } = 15;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_petrochemicals { get; set; } = 5;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_pharmaceuticals { get; set; } = 10;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_plastics { get; set; } = 20;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_telecom { get; set; } = 30;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_textiles { get; set; } = 30;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_recreation { get; set; } = 120;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_entertainment { get; set; } = 90;
+
+        [SettingsUISlider(min = 5, max = 180, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
+        public int avg_time_vehicles { get; set; } = 120;
+
 
         [SettingsUISection(SchoolSection, SchoolTimeOffGroup)]
         public bool use_school_vanilla_timeoff { get; set; }
@@ -753,7 +830,7 @@ namespace Time2Work
                 { m_Setting.GetSettingsLocaleID(), "Realistic Trips" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SettingsSection), "Settings" },
                 { m_Setting.GetOptionTabLocaleID(Setting.WorkSection), "Work" },
-                { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Leisure" },
+                { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Shopping and Leisure" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SchoolSection), "School" },
                 { m_Setting.GetOptionTabLocaleID(Setting.Weeksection), "Week" },
                 { m_Setting.GetOptionTabLocaleID(Setting.EventSection), "Special Events" },
@@ -771,6 +848,7 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.LeisureShoppingGroup), "Shopping: Avg. Hours for for Leisure per day" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.LeisureParksGroup), "Parks: Avg. Hours for for Leisure per day" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.LeisureTravelGroup), "Travel: Avg. Hours for for Leisure per day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.ShoppingTimeGroup), "Avg. Shopping Time (minutes) for each Resource" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeOffGroup), "School Vacation Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeGroup), "School Start/End Time Settings" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.School1WeekGroup), "Elementary School Attendance by Day" },
@@ -986,6 +1064,45 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.max_event_avg_day)), $"Maximum number of events on Friday" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.max_event_weekend)), "Weekend" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.max_event_weekend)), $"Maximum number of events on the Wekend" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_beverages)), "Beverages" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_beverages)), $"Average time in minutes to shop for beverages." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_chemicals)), "Chemicals" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_chemicals)), $"Average time in minutes to shop for chemicals." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_convenienceFood)), "Convenience Food" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_convenienceFood)), $"Average time in minutes to shop for convenience food." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_electronics)), "Electronics" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_electronics)), $"Average time in minutes to shop for electronics." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_software)), "Software" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_software)), $"Average time in minutes to shop for software." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_financial)), "Financial" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_financial)), $"Average time in minutes to shop for financial services." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_food)), "Food" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_food)), $"Average time in minutes to shop for food." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_furniture)), "Furniture" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_furniture)), $"Average time in minutes to shop for furniture." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_meals)), "Meals" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_meals)), $"Average time in minutes to shop for meals." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_media)), "Media" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_media)), $"Average time in minutes to shop for media." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_paper)), "Paper" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_paper)), $"Average time in minutes to shop for paper products." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_petrochemicals)), "Petrochemicals" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_petrochemicals)), $"Average time in minutes to shop for petrochemicals." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_pharmaceuticals)), "Pharmaceuticals" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_pharmaceuticals)), $"Average time in minutes to shop for pharmaceuticals." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_plastics)), "Plastics" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_plastics)), $"Average time in minutes to shop for plastics." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_telecom)), "Telecom" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_telecom)), $"Average time in minutes to shop for telecom services." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_textiles)), "Textiles" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_textiles)), $"Average time in minutes to shop for textiles." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_recreation)), "Recreation" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_recreation)), $"Average time in minutes to shop for recreation items." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_entertainment)), "Entertainment" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_entertainment)), $"Average time in minutes to shop for entertainment." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_vehicles)), "Vehicles" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_vehicles)), $"Average time in minutes to shop for vehicles." },
+
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Average Day" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Weekday" },
@@ -1076,7 +1193,7 @@ namespace Time2Work
                 { m_Setting.GetSettingsLocaleID(), "Realistic Trips" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SettingsSection), "Configurações" },
                 { m_Setting.GetOptionTabLocaleID(Setting.WorkSection), "Emprego" },
-                { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Lazer" },
+                { m_Setting.GetOptionTabLocaleID(Setting.ShopLeisureSection), "Compras e Lazer" },
                 { m_Setting.GetOptionTabLocaleID(Setting.SchoolSection), "Escola" },
                 { m_Setting.GetOptionTabLocaleID(Setting.Weeksection), "Semana" },
                 { m_Setting.GetOptionTabLocaleID(Setting.EventSection), "Eventos Especiais" },
@@ -1094,6 +1211,7 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.LeisureShoppingGroup), "Compras: de horas de lazer por dia" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.LeisureParksGroup), "Parques: Média de horas de lazer por dia" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.LeisureTravelGroup), "Viagens: Média de horas de lazer por dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.ShoppingTimeGroup), "Temp medio de compras (minutos) para cada recurso" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeOffGroup), "Configurações de férias escolares" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.SchoolTimeGroup), "Configurações de horário de início/término das aulas nas escolas" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.School1WeekGroup), "Frequência escolar elementar por dia" },
@@ -1309,6 +1427,46 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.max_event_avg_day)), $"Número máximo de eventos na sexta-feira" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.max_event_weekend)), "Fim de Semana" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.max_event_weekend)), $"Número máximo de eventos no fim de semana" },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_beverages)), "Bebidas" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_beverages)), $"Tempo médio em minutos para comprar bebidas." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_chemicals)), "Produtos Químicos" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_chemicals)), $"Tempo médio em minutos para comprar produtos químicos." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_convenienceFood)), "Comida Pronta" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_convenienceFood)), $"Tempo médio em minutos para comprar comida pronta." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_electronics)), "Eletrônicos" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_electronics)), $"Tempo médio em minutos para comprar eletrônicos." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_software)), "Software" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_software)), $"Tempo médio em minutos para comprar software." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_financial)), "Serviços Financeiros" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_financial)), $"Tempo médio em minutos para comprar serviços financeiros." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_food)), "Alimentos" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_food)), $"Tempo médio em minutos para comprar alimentos." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_furniture)), "Móveis" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_furniture)), $"Tempo médio em minutos para comprar móveis." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_meals)), "Refeições" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_meals)), $"Tempo médio em minutos para comprar refeições." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_media)), "Mídia" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_media)), $"Tempo médio em minutos para comprar mídia." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_paper)), "Papel" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_paper)), $"Tempo médio em minutos para comprar produtos de papel." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_petrochemicals)), "Petroquímicos" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_petrochemicals)), $"Tempo médio em minutos para comprar petroquímicos." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_pharmaceuticals)), "Medicamentos" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_pharmaceuticals)), $"Tempo médio em minutos para comprar medicamentos." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_plastics)), "Plásticos" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_plastics)), $"Tempo médio em minutos para comprar plásticos." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_telecom)), "Telecomunicações" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_telecom)), $"Tempo médio em minutos para comprar serviços de telecomunicações." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_textiles)), "Têxteis" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_textiles)), $"Tempo médio em minutos para comprar têxteis." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_recreation)), "Recreação" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_recreation)), $"Tempo médio em minutos para comprar itens de recreação." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_entertainment)), "Entretenimento" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_entertainment)), $"Tempo médio em minutos para comprar entretenimento." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_vehicles)), "Veículos" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_vehicles)), $"Tempo médio em minutos para comprar veículos." },
+
+
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Dia Padrão" },
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.Weekday), "Dia da Semana" },

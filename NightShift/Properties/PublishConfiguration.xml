@@ -34,12 +34,13 @@ This section has several options to configure work travel behavior.
 * **Part Time Settings:** This setting only applies to the day shift. The workers that are part time will either work in the morning or afternoon. Since their shift is shorter, they will not take a lunch break.
 * **Remote Work Settings:** The portion of citizens that work remotely will stay at home and not go to work. They might still go out for a lunch break and then come back to work at home. Only workers with at least level 3 of education will work remotely and this only applied to Offices and City Services. The default value for remote work was calculated based on data from this link: https://www.forbes.com/advisor/business/remote-work-statistics/
 
-## Leisure
+## Leisure and Shopping
 
 This section has some options to configure shopping and leisure behavior.
 
 * **Disable Early Shopping or Leisure:** This option will significantly reduce shopping and leisure trips happening between Midnight and 6 AM. With this option, those trips will mostly start between 8 to 10 AM.
 * **Vacation and Holiday System:** The vanilla game simulation works as a combination of a Weekday and a Weekend, with work and schools trips having a certain probability of not happening assuming that that cim is taking a day off. The vanilla probability is around 60% of not going to work or school. With vacation and holidays default settings, that probability will be around 30% for work trips.
+* **Average Shopping Time for each Resource:** This option allows the configure the average shopping time in minutes for each resource. In the vanilla game, cims take will shop in an instant, with this option they will take longer to shop.
 
 ## School
 
@@ -128,14 +129,13 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="1.6.2" />
+	<ModVersion Value="1.7" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.2.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="75426" />
 	<ChangeLog>
-* Fixed bug where same location would host an event more than once in the same day
-* Added option to navigate to event
+* Added option to configure average shopping time for each resource
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />
