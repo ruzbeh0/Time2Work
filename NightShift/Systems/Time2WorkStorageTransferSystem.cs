@@ -12,6 +12,7 @@ using Game.Prefabs;
 using Game.Routes;
 using Game.Simulation;
 using Game.Tools;
+using Game.Vehicles;
 using System;
 using System.Runtime.CompilerServices;
 using Time2Work.Utils;
@@ -80,6 +81,9 @@ namespace Time2Work
         [UnityEngine.Scripting.Preserve]
         protected override void OnUpdate()
         {
+            this.__TypeHandle.__Game_Vehicles_DeliveryTruck_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.__Game_Vehicles_LayoutElement_RO_BufferLookup.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.__Game_Vehicles_GuestVehicle_RO_BufferLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Buildings_CargoTransportStation_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Prefabs_SpawnableBuildingData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Prefabs_BuildingData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
@@ -138,6 +142,7 @@ namespace Time2Work
             this.__TypeHandle.__Game_Pathfind_PathInformation_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Routes_RouteWaypoint_RO_BufferLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Buildings_Renter_RO_BufferLookup.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.__Game_Buildings_Building_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Net_ConnectionLane_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Net_PedestrianLane_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Net_TrackLane_RO_ComponentLookup.Update(ref this.CheckedStateRef);
@@ -159,6 +164,7 @@ namespace Time2Work
                 m_TrackLaneData = this.__TypeHandle.__Game_Net_TrackLane_RO_ComponentLookup,
                 m_PedestrianLaneData = this.__TypeHandle.__Game_Net_PedestrianLane_RO_ComponentLookup,
                 m_ConnectionLaneData = this.__TypeHandle.__Game_Net_ConnectionLane_RO_ComponentLookup,
+                m_Buildings = this.__TypeHandle.__Game_Buildings_Building_RO_ComponentLookup,
                 m_Renters = this.__TypeHandle.__Game_Buildings_Renter_RO_BufferLookup,
                 m_RouteWaypoints = this.__TypeHandle.__Game_Routes_RouteWaypoint_RO_BufferLookup,
                 m_PathInfos = this.__TypeHandle.__Game_Pathfind_PathInformation_RO_ComponentLookup,
@@ -233,6 +239,12 @@ namespace Time2Work
             [ReadOnly]
             public BufferLookup<StorageTransferRequest> m_StorageTransferRequests;
             [ReadOnly]
+            public BufferLookup<GuestVehicle> m_GuestVehicles;
+            [ReadOnly]
+            public BufferLookup<LayoutElement> m_LayoutElements;
+            [ReadOnly]
+            public ComponentLookup<Game.Vehicles.DeliveryTruck> m_DeliveryTrucks;
+            [ReadOnly]
             public ComponentLookup<ResourceData> m_ResourceDatas;
             [ReadOnly]
             public ComponentLookup<SpawnableBuildingData> m_SpawnableDatas;
@@ -252,10 +264,10 @@ namespace Time2Work
             public bool night_trucks;
 
             public void Execute(
-              in ArchetypeChunk chunk,
-              int unfilteredChunkIndex,
-              bool useEnabledMask,
-              in v128 chunkEnabledMask)
+        in ArchetypeChunk chunk,
+        int unfilteredChunkIndex,
+        bool useEnabledMask,
+        in v128 chunkEnabledMask)
             {
                 NativeArray<StorageTransfer> nativeArray1 = chunk.GetNativeArray<StorageTransfer>(ref this.m_TransferType);
                 NativeArray<Entity> nativeArray2 = chunk.GetNativeArray(this.m_EntityType);
@@ -271,7 +283,6 @@ namespace Time2Work
                     {
                         continue;
                     }
-
                     Entity entity1 = nativeArray2[index1];
                     StorageTransfer storageTransfer = nativeArray1[index1];
                     Entity prefab1 = nativeArray3[index1].m_Prefab;
@@ -296,39 +307,38 @@ namespace Time2Work
                                     int num3 = EconomyUtils.CountResources(this.m_StorageCompanyDatas[prefab2].m_StoredResources);
                                     int targetCapacity = this.GetStorageLimit(entity2, prefab2) / num3;
                                     DynamicBuffer<Game.Economy.Resources> resource = this.m_Resources[entity2];
-                                    long resources3 = (long)EconomyUtils.GetResources(storageTransfer.m_Resource, resource);
+                                    long num4 = (long)EconomyUtils.GetResources(storageTransfer.m_Resource, resource) - (long)VehicleUtils.GetAllBuyingResourcesTrucks(entity2, storageTransfer.m_Resource, this.m_DeliveryTrucks, this.m_GuestVehicles, this.m_LayoutElements);
                                     if (this.m_StorageTransferRequests.HasBuffer(entity2))
                                     {
-                                        long num4 = 0;
+                                        long num5 = 0;
                                         DynamicBuffer<StorageTransferRequest> storageTransferRequest1 = this.m_StorageTransferRequests[entity2];
                                         for (int index2 = 0; index2 < storageTransferRequest1.Length; ++index2)
                                         {
                                             StorageTransferRequest storageTransferRequest2 = storageTransferRequest1[index2];
                                             if (storageTransferRequest2.m_Resource == storageTransfer.m_Resource)
-                                                num4 += (storageTransferRequest2.m_Flags & StorageTransferFlags.Incoming) != (StorageTransferFlags)0 ? (long)storageTransferRequest2.m_Amount : (long)-storageTransferRequest2.m_Amount;
+                                                num5 += (storageTransferRequest2.m_Flags & StorageTransferFlags.Incoming) != (StorageTransferFlags)0 ? (long)storageTransferRequest2.m_Amount : (long)-storageTransferRequest2.m_Amount;
                                         }
-                                        resources3 += num4;
+                                        num4 += num5;
                                     }
                                     if (flag2 | flag1)
                                     {
                                         if (storageTransfer.m_Amount < 0)
-                                            storageTransfer.m_Amount = resources3 <= 0L ? 0 : -math.min((int)resources3, math.abs(storageTransfer.m_Amount));
+                                            storageTransfer.m_Amount = num4 <= 0L ? 0 : -math.min((int)num4, math.abs(storageTransfer.m_Amount));
                                     }
                                     else
                                     {
-                                        storageTransfer.m_Amount = Time2WorkStorageTransferSystem.CalculateTransferableAmount(storageTransfer.m_Amount, resources2, num2, (int)math.max(0L, resources3), targetCapacity);
+                                        storageTransfer.m_Amount = StorageTransferSystem.CalculateTransferableAmount(storageTransfer.m_Amount, resources2, num2, (int)math.max(0L, num4), targetCapacity);
                                     }
                                     DeliveryTruckSelectItem deliveryTruckSelectItem;
                                     this.m_DeliveryTruckSelectData.TrySelectItem(ref random, storageTransfer.m_Resource, math.abs(storageTransfer.m_Amount), out deliveryTruckSelectItem);
-
-                                    if (storageTransfer.m_Amount != 0 && (double)deliveryTruckSelectItem.m_Cost / (double)math.min(math.abs(storageTransfer.m_Amount), deliveryTruckSelectItem.m_Capacity) <= (double)Time2WorkStorageTransferSystem.kMaxTransportUnitCost)
+                                    if (storageTransfer.m_Amount != 0 && (double)deliveryTruckSelectItem.m_Cost / (double)math.min(math.abs(storageTransfer.m_Amount), deliveryTruckSelectItem.m_Capacity) <= (double)StorageTransferSystem.kMaxTransportUnitCost)
                                     {
-                                        int num5 = math.abs(storageTransfer.m_Amount) / deliveryTruckSelectItem.m_Capacity * deliveryTruckSelectItem.m_Capacity;
-                                        if (num5 != 0)
+                                        int num6 = math.abs(storageTransfer.m_Amount) / deliveryTruckSelectItem.m_Capacity * deliveryTruckSelectItem.m_Capacity;
+                                        if (num6 != 0)
                                         {
-                                            this.m_DeliveryTruckSelectData.TrySelectItem(ref random, storageTransfer.m_Resource, math.abs(storageTransfer.m_Amount) - num5, out deliveryTruckSelectItem);
-                                            if (math.abs(storageTransfer.m_Amount) - num5 > 0 && (double)(deliveryTruckSelectItem.m_Cost / (math.abs(storageTransfer.m_Amount) - num5)) > (double)Time2WorkStorageTransferSystem.kMaxTransportUnitCost)
-                                                storageTransfer.m_Amount = storageTransfer.m_Amount > 0 ? num5 : -num5;
+                                            this.m_DeliveryTruckSelectData.TrySelectItem(ref random, storageTransfer.m_Resource, math.abs(storageTransfer.m_Amount) - num6, out deliveryTruckSelectItem);
+                                            if (math.abs(storageTransfer.m_Amount) - num6 > 0 && (double)(deliveryTruckSelectItem.m_Cost / (math.abs(storageTransfer.m_Amount) - num6)) > (double)StorageTransferSystem.kMaxTransportUnitCost)
+                                                storageTransfer.m_Amount = storageTransfer.m_Amount > 0 ? num6 : -num6;
                                         }
                                         if (storageTransfer.m_Amount != 0)
                                         {
@@ -387,7 +397,6 @@ namespace Time2Work
                         spawnable = this.m_SpawnableDatas[prefab1];
                     }
                     Game.Prefabs.BuildingData building;
-
                     if (!this.m_SpawnableDatas.HasComponent(prefab1))
                     {
                         building = new Game.Prefabs.BuildingData()
@@ -401,7 +410,6 @@ namespace Time2Work
                     }
                     return local.GetAdjustedLimit(spawnable, building);
                 }
-
                 return this.m_OutsideConnections.HasComponent(entity) ? limit.m_Limit : 0;
             }
 
@@ -418,7 +426,6 @@ namespace Time2Work
                     m_State = PathFlags.Pending
                 });
                 this.m_CommandBuffer.AddBuffer<PathElement>(chunkIndex, storage);
-
                 float transportCost = EconomyUtils.GetTransportCost(1f, math.abs(amount), this.m_ResourceDatas[this.m_ResourcePrefabs[resource]].m_Weight, StorageTransferFlags.Car);
                 PathfindParameters parameters = new PathfindParameters()
                 {
@@ -447,7 +454,6 @@ namespace Time2Work
                 };
                 if (amount < 0)
                     CommonUtils.Swap<SetupQueueTarget>(ref a, ref b);
-
                 this.m_PathfindQueue.Enqueue(new SetupQueueItem(storage, parameters, a, b));
             }
 
@@ -490,6 +496,8 @@ namespace Time2Work
             [ReadOnly]
             public BufferLookup<PathElement> m_Paths;
             [ReadOnly]
+            public ComponentLookup<Building> m_Buildings;
+            [ReadOnly]
             public ComponentLookup<Curve> m_Curves;
             [ReadOnly]
             public ComponentLookup<Game.Objects.OutsideConnection> m_OutsideConnections;
@@ -510,10 +518,8 @@ namespace Time2Work
                     entity = this.m_OwnerData[entity].m_Owner;
                     if (this.m_StorageCompanies.HasComponent(entity))
                         return entity;
-
                     if (this.m_Renters.HasBuffer(entity))
                     {
-
                         DynamicBuffer<Renter> renter1 = this.m_Renters[entity];
                         for (int index = 0; index < renter1.Length; ++index)
                         {
@@ -534,12 +540,10 @@ namespace Time2Work
                     {
                         if (this.m_Renters.HasBuffer(entity))
                         {
-
                             DynamicBuffer<Renter> renter1 = this.m_Renters[entity];
                             for (int index = 0; index < renter1.Length; ++index)
                             {
                                 Entity renter2 = renter1[index].m_Renter;
-                                // ISSUE: reference to a compiler-generated field
                                 if (this.m_StorageCompanies.HasComponent(renter2))
                                     return renter2;
                             }
@@ -642,7 +646,6 @@ namespace Time2Work
                                     {
                                         Entity startCompany;
                                         Entity endCompany;
-
                                         this.GetStorageCompaniesFromSegment(target, out startCompany, out endCompany);
                                         if (startCompany != Entity.Null && startCompany != origin)
                                         {
@@ -656,7 +659,6 @@ namespace Time2Work
                                         flags |= StorageTransferFlags.Transport;
                                         if (endCompany != Entity.Null && endCompany != origin)
                                         {
-                                            // ISSUE: reference to a compiler-generated method
                                             num1 += this.AddCargoPathSection(origin, endCompany, path, num2, x - num2, flags, resource, amount, weight, distance);
                                             origin = endCompany;
                                             flags = (StorageTransferFlags)0;
@@ -684,6 +686,10 @@ namespace Time2Work
               Resource resource,
               int amount)
             {
+                // ISSUE: reference to a compiler-generated field
+                // ISSUE: reference to a compiler-generated field
+                if (this.m_Buildings.HasComponent(destination) && BuildingUtils.CheckOption(this.m_Buildings[destination], BuildingOption.Inactive))
+                    return;
                 bool flag = false;
                 for (int index = 0; index < requests.Length; ++index)
                 {
@@ -729,7 +735,9 @@ namespace Time2Work
             public void Execute()
             {
                 DynamicBuffer<TradeCost> tradeCost1 = this.m_TradeCosts[this.m_City];
+
                 Time2WorkStorageTransferSystem.StorageTransferEvent storageTransferEvent;
+
                 while (this.m_TransferQueue.TryDequeue(out storageTransferEvent))
                 {
                     if (this.m_PathInfos.HasComponent(storageTransferEvent.m_Source) && this.m_Paths.HasBuffer(storageTransferEvent.m_Source))
@@ -741,7 +749,6 @@ namespace Time2Work
                         TradeCost tradeCost4 = EconomyUtils.GetTradeCost(storageTransferEvent.m_Resource, tradeCost2);
                         TradeCost tradeCost5 = EconomyUtils.GetTradeCost(storageTransferEvent.m_Resource, tradeCost3);
                         float num2 = num1 / (1f + (float)math.abs(storageTransferEvent.m_Amount));
-
                         if (storageTransferEvent.m_Amount > 0)
                         {
                             tradeCost4.m_SellCost = math.lerp(tradeCost4.m_SellCost, num2 + tradeCost5.m_SellCost, 0.5f);
@@ -752,8 +759,8 @@ namespace Time2Work
                             tradeCost4.m_BuyCost = math.lerp(tradeCost4.m_BuyCost, num2 + tradeCost5.m_BuyCost, 0.5f);
                             tradeCost5.m_SellCost = math.lerp(tradeCost5.m_SellCost, num2 + tradeCost4.m_SellCost, 0.5f);
                         }
-
                         int amount = Mathf.RoundToInt(Time2WorkStorageTransferSystem.kStorageProfit * num1);
+
                         EconomyUtils.GetTradeCost(storageTransferEvent.m_Resource, tradeCost1);
                         if (!this.m_OutsideConnections.HasComponent(storageTransferEvent.m_Source))
                         {
@@ -779,6 +786,7 @@ namespace Time2Work
                         if (!this.m_OutsideConnections.HasComponent(storageTransferEvent.m_Destination))
                         {
                             EconomyUtils.SetTradeCost(storageTransferEvent.m_Resource, tradeCost5, tradeCost3, true);
+
                             if (this.m_Resources.HasBuffer(storageTransferEvent.m_Destination) && !this.m_CityServiceUpkeeps.HasComponent(storageTransferEvent.m_Destination))
                             {
                                 EconomyUtils.AddResources(Resource.Money, amount, this.m_Resources[storageTransferEvent.m_Destination]);
@@ -797,12 +805,15 @@ namespace Time2Work
                                 EconomyUtils.GetTradeCost(storageTransferEvent.m_Resource, tradeCost1);
                             }
                         }
-                        Game.Companies.StorageCompany storageCompany1 = this.m_StorageCompanies[storageTransferEvent.m_Source];
-                        storageCompany1.m_LastTradePartner = storageTransferEvent.m_Destination;
+                        Game.Companies.StorageCompany storageCompany1 = this.m_StorageCompanies[storageTransferEvent.m_Source] with
+                        {
+                            m_LastTradePartner = storageTransferEvent.m_Destination
+                        };
                         this.m_StorageCompanies[storageTransferEvent.m_Source] = storageCompany1;
-                        Game.Companies.StorageCompany storageCompany2 = this.m_StorageCompanies[storageTransferEvent.m_Destination];
-                        storageCompany2.m_LastTradePartner = storageTransferEvent.m_Source;
-
+                        Game.Companies.StorageCompany storageCompany2 = this.m_StorageCompanies[storageTransferEvent.m_Destination] with
+                        {
+                            m_LastTradePartner = storageTransferEvent.m_Source
+                        };
                         this.m_StorageCompanies[storageTransferEvent.m_Destination] = storageCompany2;
                     }
                 }
@@ -845,6 +856,12 @@ namespace Time2Work
             public ComponentLookup<SpawnableBuildingData> __Game_Prefabs_SpawnableBuildingData_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<Game.Buildings.CargoTransportStation> __Game_Buildings_CargoTransportStation_RO_ComponentLookup;
+            [ReadOnly]
+            public BufferLookup<GuestVehicle> __Game_Vehicles_GuestVehicle_RO_BufferLookup;
+            [ReadOnly]
+            public BufferLookup<LayoutElement> __Game_Vehicles_LayoutElement_RO_BufferLookup;
+            [ReadOnly]
+            public ComponentLookup<Game.Vehicles.DeliveryTruck> __Game_Vehicles_DeliveryTruck_RO_ComponentLookup;
             public BufferLookup<TradeCost> __Game_Companies_TradeCost_RW_BufferLookup;
             public ComponentLookup<Game.Companies.StorageCompany> __Game_Companies_StorageCompany_RW_ComponentLookup;
             [ReadOnly]
@@ -861,6 +878,8 @@ namespace Time2Work
             public ComponentLookup<Game.Net.PedestrianLane> __Game_Net_PedestrianLane_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<Game.Net.ConnectionLane> __Game_Net_ConnectionLane_RO_ComponentLookup;
+            [ReadOnly]
+            public ComponentLookup<Building> __Game_Buildings_Building_RO_ComponentLookup;
             [ReadOnly]
             public BufferLookup<Renter> __Game_Buildings_Renter_RO_BufferLookup;
             [ReadOnly]
@@ -894,6 +913,9 @@ namespace Time2Work
                 this.__Game_Prefabs_BuildingData_RO_ComponentLookup = state.GetComponentLookup<Game.Prefabs.BuildingData>(true);
                 this.__Game_Prefabs_SpawnableBuildingData_RO_ComponentLookup = state.GetComponentLookup<SpawnableBuildingData>(true);
                 this.__Game_Buildings_CargoTransportStation_RO_ComponentLookup = state.GetComponentLookup<Game.Buildings.CargoTransportStation>(true);
+                this.__Game_Vehicles_GuestVehicle_RO_BufferLookup = state.GetBufferLookup<GuestVehicle>(true);
+                this.__Game_Vehicles_LayoutElement_RO_BufferLookup = state.GetBufferLookup<LayoutElement>(true);
+                this.__Game_Vehicles_DeliveryTruck_RO_ComponentLookup = state.GetComponentLookup<Game.Vehicles.DeliveryTruck>(true);
                 this.__Game_Companies_TradeCost_RW_BufferLookup = state.GetBufferLookup<TradeCost>();
                 this.__Game_Companies_StorageCompany_RW_ComponentLookup = state.GetComponentLookup<Game.Companies.StorageCompany>();
                 this.__Game_Common_Owner_RO_ComponentLookup = state.GetComponentLookup<Owner>(true);
@@ -903,6 +925,7 @@ namespace Time2Work
                 this.__Game_Net_TrackLane_RO_ComponentLookup = state.GetComponentLookup<Game.Net.TrackLane>(true);
                 this.__Game_Net_PedestrianLane_RO_ComponentLookup = state.GetComponentLookup<Game.Net.PedestrianLane>(true);
                 this.__Game_Net_ConnectionLane_RO_ComponentLookup = state.GetComponentLookup<Game.Net.ConnectionLane>(true);
+                this.__Game_Buildings_Building_RO_ComponentLookup = state.GetComponentLookup<Building>(true);
                 this.__Game_Buildings_Renter_RO_BufferLookup = state.GetBufferLookup<Renter>(true);
                 this.__Game_Routes_RouteWaypoint_RO_BufferLookup = state.GetBufferLookup<RouteWaypoint>(true);
                 this.__Game_Pathfind_PathElement_RO_BufferLookup = state.GetBufferLookup<PathElement>(true);

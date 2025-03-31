@@ -134,7 +134,6 @@ namespace Time2Work.Systems
                             {
                                 continue;
                             } 
-                            //Mod.log.Info($"Special Event at: {this.World.GetOrCreateSystemManaged<PrefabSystem>().GetPrefabName(prefabRef.m_Prefab)} - Start Time:{specialEventdata.start_time}, Duration:{specialEventdata.duration}, Attraction: {attractivenessProvider.m_Attractiveness}");
 
                             SpecialEventInfo info = new SpecialEventInfo();
                             info.entity = ent;
@@ -145,6 +144,8 @@ namespace Time2Work.Systems
                             info.end_minutes = (int)(6 * (info.end_hour - (24f * (specialEventdata.start_time + specialEventdata.duration))));
                             m_Results[n] = info;
                             n++;
+
+                            //Mod.log.Info($"Special Event at: {info.event_location} - Start Hour:{info.start_hour}, Duration:{specialEventdata.duration}, Attraction: {attractivenessProvider.m_Attractiveness}");
                         }    
                     }
                 }

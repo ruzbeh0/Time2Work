@@ -1,6 +1,7 @@
 ﻿using Colossal;
 using Colossal.IO.AssetDatabase;
 using Colossal.IO.AssetDatabase.Internal;
+using Colossal.PSI.Environment;
 using Game;
 using Game.Modding;
 using Game.Prefabs;
@@ -9,6 +10,8 @@ using Game.UI;
 using Game.UI.Widgets;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using Time2Work.Systems;
 using Unity.Entities;
 using Unity.Entities.UniversalDelegates;
@@ -148,7 +151,6 @@ namespace Time2Work
         float[] travel_saturday_ = [0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f];
         float[] travel_sunday_ = [0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f];
         int[] traffic_reduction_ = [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
 
         public Setting(IMod mod) : base(mod)
         {

@@ -17,6 +17,7 @@ using static Time2Work.Setting;
 using Game.Settings;
 using Colossal.PSI.Environment;
 using System.Runtime.Remoting.Messaging;
+using UnityEngine;
 
 namespace Time2Work
 {
@@ -28,6 +29,7 @@ namespace Time2Work
         public static Setting m_Setting;
         public static int numCurrentEvents = 999;
         public static string version = "1.7";
+        public static string modPath;
         public static Mod Instance { get; private set; }
         internal ILog Log { get; private set; }
 
@@ -51,7 +53,10 @@ namespace Time2Work
             }
 
             if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
+            {
+                modPath = Path.GetDirectoryName(asset.path);
                 log.Info($"Current mod asset at {asset.path}");
+            }
 
             m_Setting = new Setting(this);
             //m_ModData = new ModData();
@@ -80,7 +85,7 @@ namespace Time2Work
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TrafficSpawnerAISystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.GoodsDeliveryRequestSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.CalendarEventLaunchSystem>().Enabled = false;
-            World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.StorageTransferSystem>().Enabled = false;
+            //World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.StorageTransferSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TourismSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TouristSpawnSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.AttractionSystem>().Enabled = false;
@@ -100,7 +105,7 @@ namespace Time2Work
             updateSystem.UpdateAt<Time2WorkStudentSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTrafficSpawnerAISystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkGoodsDeliveryRequestSystem>(SystemUpdatePhase.GameSimulation);
-            updateSystem.UpdateAt<Time2WorkStorageTransferSystem>(SystemUpdatePhase.GameSimulation);
+            //updateSystem.UpdateAt<Time2WorkStorageTransferSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<CompanyDisableNightNotificationSystem>(SystemUpdatePhase.GameSimulation);
             //updateSystem.UpdateAt<Time2WorkCalendarEventLaunchSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTourismSystem>(SystemUpdatePhase.GameSimulation);

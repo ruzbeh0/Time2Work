@@ -27,6 +27,8 @@ using Time2Work.Systems;
 using Colossal.Entities;
 using static Game.Prefabs.TriggerPrefabData;
 using Time2Work.Components;
+using Time2Work.Utils;
+using System;
 
 namespace Time2Work
 {
@@ -122,9 +124,13 @@ namespace Time2Work
             this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_Leisure_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup.Update(ref this.CheckedStateRef);
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
             JobHandle outJobHandle;
             JobHandle deps;
+
+            DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
+            int hour = currentDateTime.Hour;
 
             JobHandle jobHandle = new Time2WorkLeisureSystem.LeisureJob()
             {
@@ -164,6 +170,7 @@ namespace Time2Work
                 m_HouseholdCitizens = this.__TypeHandle.__Game_Citizens_HouseholdCitizen_RO_BufferLookup,
                 m_RenterBufs = this.__TypeHandle.__Game_Buildings_Renter_RO_BufferLookup,
                 m_ConsumptionDatas = this.__TypeHandle.__Game_Prefabs_ConsumptionData_RO_ComponentLookup,
+                m_Shopping = this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup,
                 m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                 m_SimulationFrame = this.m_SimulationSystem.frameIndex,
                 m_TimeOfDay = this.m_TimeSystem.normalizedTime,
@@ -206,7 +213,32 @@ namespace Time2Work
                 shopping_leisure = new float4(Mod.m_Setting.shopping_weekday, Mod.m_Setting.shopping_avgday, Mod.m_Setting.shopping_saturday, Mod.m_Setting.shopping_sunday),
                 park_leisure = new float4(Mod.m_Setting.park_weekday, Mod.m_Setting.park_avgday, Mod.m_Setting.park_saturday, Mod.m_Setting.park_sunday),
                 travel_leisure = new float4(Mod.m_Setting.travel_weekday, Mod.m_Setting.travel_avgday, Mod.m_Setting.travel_saturday, Mod.m_Setting.travel_sunday),
-                day = Time2WorkTimeSystem.GetDay(m_SimulationSystem.frameIndex, m_TimeDataQuery.GetSingleton<TimeData>(), Time2WorkTimeSystem.kTicksPerDay)
+                day = Time2WorkTimeSystem.GetDay(m_SimulationSystem.frameIndex, m_TimeDataQuery.GetSingleton<TimeData>(), Time2WorkTimeSystem.kTicksPerDay),
+                avg_time_beverages = Mod.m_Setting.avg_time_beverages,
+                avg_time_chemicals = Mod.m_Setting.avg_time_chemicals,
+                avg_time_convenienceFood = Mod.m_Setting.avg_time_convenienceFood,
+                avg_time_electronics = Mod.m_Setting.avg_time_electronics,
+                avg_time_software = Mod.m_Setting.avg_time_software,
+                avg_time_financial = Mod.m_Setting.avg_time_financial,
+                avg_time_food = Mod.m_Setting.avg_time_food,
+                avg_time_furniture = Mod.m_Setting.avg_time_furniture,
+                avg_time_meals = Mod.m_Setting.avg_time_meals,
+                avg_time_media = Mod.m_Setting.avg_time_media,
+                avg_time_paper = Mod.m_Setting.avg_time_paper,
+                avg_time_petrochemicals = Mod.m_Setting.avg_time_petrochemicals,
+                avg_time_pharmaceuticals = Mod.m_Setting.avg_time_pharmaceuticals,
+                avg_time_plastics = Mod.m_Setting.avg_time_plastics,
+                avg_time_telecom = Mod.m_Setting.avg_time_telecom,
+                avg_time_textiles = Mod.m_Setting.avg_time_textiles,
+                avg_time_recreation = Mod.m_Setting.avg_time_recreation,
+                avg_time_entertainment = Mod.m_Setting.avg_time_entertainment,
+                avg_time_vehicles = Mod.m_Setting.avg_time_vehicles,
+                //Meals = 0, Entertainment = 1,Shopping = 2,Park = 3,Travel = 4
+                meal_hourly_factor = LeisureProbabilityCalculator.GetMealsProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
+                entertainment_hourly_factor = LeisureProbabilityCalculator.GetEntertainmentProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
+                shopping_hourly_factor = LeisureProbabilityCalculator.GetShoppingProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
+                park_hourly_factor = LeisureProbabilityCalculator.GetParkProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
+                travel_hourly_factor = LeisureProbabilityCalculator.GetTravelProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour)
             }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobHandle.CombineDependencies(this.Dependency, JobHandle.CombineDependencies(outJobHandle, deps)));
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle);
             this.m_PathFindSetupSystem.AddQueueWriter(jobHandle);
@@ -401,6 +433,7 @@ namespace Time2Work
             public ComponentTypeSet m_PathfindTypes;
             [ReadOnly]
             public NativeList<ArchetypeChunk> m_HumanChunks;
+            public ComponentLookup<Shopper> m_Shopping;
             [ReadOnly]
             public ComponentLookup<CommercialProperty> CommercialPropertyLookup;
             [ReadOnly]
@@ -451,6 +484,30 @@ namespace Time2Work
             private float park_avghour;
             private float travel_avghour;
             public int day;
+            public int avg_time_beverages;
+            public int avg_time_chemicals;
+            public int avg_time_convenienceFood;
+            public int avg_time_electronics;
+            public int avg_time_software;
+            public int avg_time_financial;
+            public int avg_time_food;
+            public int avg_time_furniture;
+            public int avg_time_meals;
+            public int avg_time_media;
+            public int avg_time_paper;
+            public int avg_time_petrochemicals;
+            public int avg_time_pharmaceuticals;
+            public int avg_time_plastics;
+            public int avg_time_telecom;
+            public int avg_time_textiles;
+            public int avg_time_recreation;
+            public int avg_time_entertainment;
+            public int avg_time_vehicles;
+            public float meal_hourly_factor;
+            public float entertainment_hourly_factor;
+            public float shopping_hourly_factor;
+            public float travel_hourly_factor;
+            public float park_hourly_factor;
 
             private void SpendLeisure(
               int index,
@@ -469,10 +526,11 @@ namespace Time2Work
 
                 Entity prefab = this.m_PrefabRefs[providerEntity].m_Prefab;
 
+                Resource resource = Resource.NoResource;
                 if (!flag && this.m_IndustrialProcesses.HasComponent(prefab))
                 {
 
-                    Resource resource = this.m_IndustrialProcesses[prefab].m_Output.m_Resource;
+                    resource = this.m_IndustrialProcesses[prefab].m_Output.m_Resource;
                     if (resource != Resource.NoResource && this.m_Resources.HasBuffer(providerEntity) && EconomyUtils.GetResources(resource, this.m_Resources[providerEntity]) <= 0)
                         flag = true;
                 }
@@ -484,7 +542,9 @@ namespace Time2Work
                         m_Citizen = entity,
                         m_Provider = providerEntity
                     });
-                }
+                } 
+                
+
                 SpecialEventData specialEventdata;
 
                 bool leisureCounterCondition = citizen.m_LeisureCounter > (byte)250;
@@ -504,6 +564,47 @@ namespace Time2Work
 
                 this.m_CommandBuffer.RemoveComponent<Leisure>(index, entity);
             }
+
+            private void shoppingTime(int unfilteredChunkIndex, Entity entity, Citizen citizen, LeisureType leisureType)
+            {
+                Shopper shopper;
+                if (!this.m_Shopping.TryGetComponent(entity, out shopper))
+                {
+                    float shopping_time = 0f;
+                    switch (leisureType)
+                    {
+                        case LeisureType.Meals:
+                            shopping_time = avg_time_meals / 1440f;
+                            break;
+                        case LeisureType.Entertainment:
+                            shopping_time = avg_time_entertainment / 1440f;
+                            break;
+                        default:
+                            shopping_time = (avg_time_beverages+avg_time_chemicals+avg_time_convenienceFood+avg_time_electronics+avg_time_food+avg_time_media+avg_time_paper+avg_time_plastics) / (8*1440f);
+                            break;
+                    }
+
+                    uint seed = (uint)(citizen.m_PseudoRandom + 1000 * m_TimeOfDay);
+                    Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
+                    // Add + or - variation on shopping time by 30% of the time defined above
+                    float random_factor = 0.8f;
+                    if (shopping_time <= 10f / 1440f)
+                    {
+                        random_factor = 0.5f;
+                    }
+
+                    shopping_time += (float)(GaussianRandom.NextGaussianDouble(random2) * random_factor * shopping_time);
+                    float duration = this.m_TimeOfDay + shopping_time;
+                    if (duration > 1)
+                    {
+                        duration -= 1f;
+                    }
+
+                    //Mod.log.Info($"Add shopping: index:{entity.Index}, hour:{(int)Math.Round(this.m_TimeOfDay*24)}, type:{leisureType}");
+                    this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(duration));
+                }
+            }
+
 
             public void Execute(
               in ArchetypeChunk chunk,
@@ -554,6 +655,12 @@ namespace Time2Work
                     travel_avghour = travel_leisure.w;
                 }
 
+                meals_avghour *= meal_hourly_factor;
+                entertainment_avghour *= entertainment_hourly_factor;
+                shopping_avghour *= shopping_hourly_factor;
+                park_avghour *= park_hourly_factor;
+                travel_avghour *= travel_hourly_factor;
+
                 SpecialEventData specialEventdata;
 
                 for (int index = 0; index < nativeArray1.Length; ++index)
@@ -566,18 +673,6 @@ namespace Time2Work
                     Entity providerEntity = leisure.m_TargetAgent;
                     Entity entity2 = Entity.Null;
                     LeisureProviderData provider = new LeisureProviderData();
-
-                    //During special event parks will attract more people
-                    if (m_SpecialEventDatas.TryGetComponent(entity2, out specialEventdata))
-                    {
-                        if (specialEventdata.day == day)
-                        {
-                            if (m_TimeOfDay >= specialEventdata.start_time && m_TimeOfDay <= (specialEventdata.start_time + specialEventdata.duration))
-                            {
-                                park_avghour *= 5;
-                            }
-                        }
-                    }
 
                     if (leisure.m_TargetAgent != Entity.Null && this.m_CurrentBuildings.HasComponent(entity1))
                     {
@@ -618,6 +713,19 @@ namespace Time2Work
                             }
                         }
                     }
+
+                    //During special event parks will attract more people
+                    if (m_SpecialEventDatas.TryGetComponent(entity2, out specialEventdata))
+                    {
+                        if (specialEventdata.day == day)
+                        {
+                            if (m_TimeOfDay >= specialEventdata.start_time && m_TimeOfDay <= (specialEventdata.start_time + specialEventdata.duration))
+                            {
+                                park_avghour *= 5;
+                            }
+                        }
+                    }
+
                     if (entity2 != Entity.Null)
                     {
                         this.SpendLeisure(unfilteredChunkIndex, entity1, ref citizenData, ref leisure, providerEntity, provider, entity2, day);
@@ -738,7 +846,8 @@ namespace Time2Work
                                     if ((!this.m_Workers.HasComponent(entity1) || Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) || !Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction) ||
                                         (!Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) && Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction) && Time2WorkWorkerSystem.IsLunchTime(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))) && (!this.m_Students.HasComponent(entity1) || Time2WorkStudentSystem.IsTimeToStudy(citizenData, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay)))
                                     {
-                                        if (this.m_LeisureProviderDatas[this.m_PrefabRefs[destination].m_Prefab].m_Efficiency == 0)
+                                        provider = this.m_LeisureProviderDatas[this.m_PrefabRefs[destination].m_Prefab];
+                                        if (provider.m_Efficiency == 0)
                                             UnityEngine.Debug.LogWarning((object)string.Format("Warning: Leisure provider {0} has zero efficiency", (object)destination.Index));
                                         leisure.m_TargetAgent = destination;
                                         nativeArray2[index] = leisure;
@@ -752,12 +861,17 @@ namespace Time2Work
                                         {
                                             m_Target = destination
                                         });
+                                        if(leisure.m_TargetAgent != Entity.Null && this.m_CurrentBuildings.HasComponent(entity1))
+                                        {
+                                            shoppingTime(unfilteredChunkIndex, entity1, citizenData, provider.m_LeisureType);
+                                        }
                                     }
                                     else
                                     {
                                         if (this.m_Purposes.HasComponent(entity1) && (this.m_Purposes[entity1].m_Purpose == Game.Citizens.Purpose.Leisure || this.m_Purposes[entity1].m_Purpose == Game.Citizens.Purpose.Traveling))
                                         {
                                             this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity1);
+                                        
                                         }
                                         this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
                                         this.m_CommandBuffer.RemoveComponent(unfilteredChunkIndex, entity1, in this.m_PathfindTypes);
@@ -769,6 +883,7 @@ namespace Time2Work
                                     {
                                         if (this.m_Purposes.HasComponent(entity1) && (this.m_Purposes[entity1].m_Purpose == Game.Citizens.Purpose.Leisure || this.m_Purposes[entity1].m_Purpose == Game.Citizens.Purpose.Traveling))
                                         {
+                                            //Mod.log.Info($"Resource: {this.m_Purposes[entity1].m_Resource}");
                                             this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity1);
                                         }
                                         this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
@@ -968,6 +1083,7 @@ namespace Time2Work
               bool tourist)
             {
                 LeisureType leisureType = this.SelectLeisureType(household, tourist, citizenData, ref random);
+                //Mod.log.Info($"Leisure type: {leisureType.ToString()}, hour: {Math.Floor(24*m_TimeOfDay)}");
                 float num = (float)byte.MaxValue - (float)citizenData.m_LeisureCounter;
                 if (leisureType == LeisureType.Travel || leisureType == LeisureType.Sightseeing || leisureType == LeisureType.Attractions)
                 {
@@ -1136,6 +1252,8 @@ namespace Time2Work
             public BufferLookup<Game.Economy.Resources> __Game_Economy_Resources_RW_BufferLookup;
             public ComponentLookup<TaxPayer> __Game_Agents_TaxPayer_RW_ComponentLookup;
             [ReadOnly]
+            public ComponentLookup<Shopper> __Game_Citizens_Shopping_RW_ComponentLookup;
+            [ReadOnly]
             public ComponentLookup<HouseholdMember> __Game_Citizens_HouseholdMember_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<ResourceData> __Game_Prefabs_ResourceData_RO_ComponentLookup;
@@ -1196,6 +1314,7 @@ namespace Time2Work
                 this.__Game_Prefabs_ConsumptionData_RO_ComponentLookup = state.GetComponentLookup<ConsumptionData>(true);
                 this.__Game_Prefabs_ResourceData_RO_ComponentLookup = state.GetComponentLookup<ResourceData>(true);
                 this.__Game_Companies_ServiceCompanyData_RO_ComponentLookup = state.GetComponentLookup<ServiceCompanyData>(true);
+                this.__Game_Citizens_Shopping_RW_ComponentLookup = state.GetComponentLookup<Shopper>(false);
                 this.CommercialPropertyLookup = state.GetComponentLookup<CommercialProperty>(true);
                 this.IndustrialPropertyLookup = state.GetComponentLookup<IndustrialProperty>(true);
                 this.OfficePropertyLookup = state.GetComponentLookup<OfficeProperty>(true);

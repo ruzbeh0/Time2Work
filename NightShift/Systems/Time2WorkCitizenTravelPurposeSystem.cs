@@ -51,7 +51,7 @@ namespace Time2Work
             this.m_EndFrameBarrier = this.World.GetOrCreateSystemManaged<EndFrameBarrier>();
             this.m_ArrivedGroup = this.GetEntityQuery(ComponentType.ReadOnly<Citizen>(), ComponentType.ReadWrite<TravelPurpose>(), ComponentType.ReadWrite<TripNeeded>(), ComponentType.ReadOnly<CurrentBuilding>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>()); 
             this.m_StuckGroup = this.GetEntityQuery(ComponentType.ReadOnly<Citizen>(), ComponentType.ReadWrite<TravelPurpose>(), ComponentType.ReadWrite<TripNeeded>(), ComponentType.Exclude<CurrentTransport>(), ComponentType.Exclude<CurrentBuilding>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
-            this.m_ShoppingGroup = this.GetEntityQuery(ComponentType.ReadOnly<Citizen>(), ComponentType.ReadWrite<TravelPurpose>(), ComponentType.ReadWrite<Shopper>(), ComponentType.ReadOnly<CurrentBuilding>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
+            this.m_ShoppingGroup = this.GetEntityQuery(ComponentType.ReadOnly<Citizen>(), ComponentType.ReadWrite<TravelPurpose>(), ComponentType.ReadWrite<Shopper>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
             this.m_OutsideConnectionQuery = this.GetEntityQuery(ComponentType.ReadWrite<Game.Objects.OutsideConnection>(), ComponentType.Exclude<Game.Objects.ElectricityOutsideConnection>(), ComponentType.Exclude<Game.Objects.WaterPipeOutsideConnection>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
             this.m_ServiceBuildingQuery = this.GetEntityQuery(ComponentType.ReadWrite<CityServiceUpkeep>(), ComponentType.ReadWrite<Building>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Destroyed>(), ComponentType.Exclude<Temp>());
             this.m_EconomyParameterGroup = this.GetEntityQuery(ComponentType.ReadOnly<EconomyParameterData>());
@@ -424,88 +424,7 @@ namespace Time2Work
                                 continue;
                             case Game.Citizens.Purpose.Shopping:
 
-                                Shopper shopper;
-                                if (!this.m_Shopping.TryGetComponent(entity, out shopper))
-                                {
-                                    float shopping_time = 0f;
-                                    switch (travelPurpose.m_Resource)
-                                    {
-                                        case Resource.Beverages:
-                                            shopping_time = avg_time_beverages / 1440f;
-                                            break;
-                                        case Resource.Chemicals:
-                                            shopping_time = avg_time_chemicals / 1440f;
-                                            break;
-                                        case Resource.ConvenienceFood:
-                                            shopping_time = avg_time_convenienceFood / 1440f;
-                                            break;
-                                        case Resource.Electronics:
-                                            shopping_time = avg_time_electronics / 1440f;
-                                            break;
-                                        case Resource.Software:
-                                            shopping_time = avg_time_software / 1440f;
-                                            break;
-                                        case Resource.Financial:
-                                            shopping_time = avg_time_financial / 1440f;
-                                            break;
-                                        case Resource.Food:
-                                            shopping_time = avg_time_food / 1440f;
-                                            break;
-                                        case Resource.Furniture:
-                                            shopping_time = avg_time_furniture / 1440f;
-                                            break;
-                                        case Resource.Meals:
-                                            shopping_time = avg_time_meals / 1440f;
-                                            break;
-                                        case Resource.Media:
-                                            shopping_time = avg_time_media / 1440f;
-                                            break;
-                                        case Resource.Paper:
-                                            shopping_time = avg_time_paper / 1440f;
-                                            break;
-                                        case Resource.Petrochemicals:
-                                            shopping_time = avg_time_petrochemicals / 1440f;
-                                            break;
-                                        case Resource.Pharmaceuticals:
-                                            shopping_time = avg_time_pharmaceuticals / 1440f;
-                                            break;
-                                        case Resource.Plastics:
-                                            shopping_time = avg_time_plastics / 1440f;
-                                            break;
-                                        case Resource.Telecom:
-                                            shopping_time = avg_time_telecom / 1440f;
-                                            break;
-                                        case Resource.Textiles:
-                                            shopping_time = avg_time_textiles / 1440f;
-                                            break;
-                                        case Resource.Recreation:
-                                            shopping_time = avg_time_recreation / 1440f;
-                                            break;
-                                        case Resource.Entertainment:
-                                            shopping_time = avg_time_entertainment / 1440f;
-                                            break;
-                                        case Resource.Vehicles:
-                                            shopping_time = avg_time_vehicles / 1440f;
-                                            break;
-                                        default:
-                                            break;
-                                    }
-
-
-                                    Citizen citizen = this.m_Citizens[entity];
-                                    uint seed = (uint)(citizen.m_PseudoRandom + 1000 * m_NormalizedTime);
-                                    Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
-                                    // Add + or - variation on shopping time by 30% of the time defined above
-                                    float random_factor = 0.8f;
-                                    if(shopping_time <= 10f/1440f)
-                                    {
-                                       random_factor = 0.5f;
-                                    }
-
-                                    shopping_time += (float)(GaussianRandom.NextGaussianDouble(random2) * random_factor * shopping_time);
-                                    //Mod.log.Info($"{entity.Index}: Add Shopping, shopping time:{shopping_time}, resource:{travelPurpose.m_Resource}");
-                                    this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(this.m_NormalizedTime + shopping_time));
-                                }
+                                shoppingTime(unfilteredChunkIndex, entity, travelPurpose.m_Resource);
                                 continue;
                             case Game.Citizens.Purpose.GoingHome:
                                 
@@ -624,6 +543,97 @@ namespace Time2Work
                 }
             }
 
+            private void shoppingTime(int unfilteredChunkIndex, Entity entity, Resource resource)
+            {
+                Shopper shopper;
+                if (!this.m_Shopping.TryGetComponent(entity, out shopper))
+                {
+                    float shopping_time = 0f;
+                    switch (resource)
+                    {
+                        case Resource.Beverages:
+                            shopping_time = avg_time_beverages / 1440f;
+                            break;
+                        case Resource.Chemicals:
+                            shopping_time = avg_time_chemicals / 1440f;
+                            break;
+                        case Resource.ConvenienceFood:
+                            shopping_time = avg_time_convenienceFood / 1440f;
+                            break;
+                        case Resource.Electronics:
+                            shopping_time = avg_time_electronics / 1440f;
+                            break;
+                        case Resource.Software:
+                            shopping_time = avg_time_software / 1440f;
+                            break;
+                        case Resource.Financial:
+                            shopping_time = avg_time_financial / 1440f;
+                            break;
+                        case Resource.Food:
+                            shopping_time = avg_time_food / 1440f;
+                            break;
+                        case Resource.Furniture:
+                            shopping_time = avg_time_furniture / 1440f;
+                            break;
+                        case Resource.Meals:
+                            shopping_time = avg_time_meals / 1440f;
+                            break;
+                        case Resource.Media:
+                            shopping_time = avg_time_media / 1440f;
+                            break;
+                        case Resource.Paper:
+                            shopping_time = avg_time_paper / 1440f;
+                            break;
+                        case Resource.Petrochemicals:
+                            shopping_time = avg_time_petrochemicals / 1440f;
+                            break;
+                        case Resource.Pharmaceuticals:
+                            shopping_time = avg_time_pharmaceuticals / 1440f;
+                            break;
+                        case Resource.Plastics:
+                            shopping_time = avg_time_plastics / 1440f;
+                            break;
+                        case Resource.Telecom:
+                            shopping_time = avg_time_telecom / 1440f;
+                            break;
+                        case Resource.Textiles:
+                            shopping_time = avg_time_textiles / 1440f;
+                            break;
+                        case Resource.Recreation:
+                            shopping_time = avg_time_recreation / 1440f;
+                            break;
+                        case Resource.Entertainment:
+                            shopping_time = avg_time_entertainment / 1440f;
+                            break;
+                        case Resource.Vehicles:
+                            shopping_time = avg_time_vehicles / 1440f;
+                            break;
+                        default:
+                            break;
+                    }
+
+
+                    Citizen citizen = this.m_Citizens[entity];
+                    uint seed = (uint)(citizen.m_PseudoRandom + 1000 * m_NormalizedTime);
+                    Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
+                    // Add + or - variation on shopping time by 30% of the time defined above
+                    float random_factor = 0.8f;
+                    if (shopping_time <= 10f / 1440f)
+                    {
+                        random_factor = 0.5f;
+                    }
+
+                    shopping_time += (float)(GaussianRandom.NextGaussianDouble(random2) * random_factor * shopping_time);
+                    float duration = this.m_NormalizedTime + shopping_time;
+                    if (duration > 1)
+                    {
+                        duration -= 1f;
+                    }
+
+                    this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(duration));
+                }
+            }
+
             void IJobChunk.Execute(
               in ArchetypeChunk chunk,
               int unfilteredChunkIndex,
@@ -654,11 +664,8 @@ namespace Time2Work
             {
 
                 NativeArray<Entity> nativeArray1 = chunk.GetNativeArray(this.m_EntityType);
-
                 NativeArray<TravelPurpose> nativeArray2 = chunk.GetNativeArray<TravelPurpose>(ref this.m_TravelPurposeType);
 
-                NativeArray<CurrentBuilding> nativeArray3 = chunk.GetNativeArray<CurrentBuilding>(ref this.m_CurrentBuildingType);
-                
                 for (int index = 0; index < chunk.Count; ++index)
                 {
 
@@ -674,7 +681,7 @@ namespace Time2Work
                             //Mod.log.Info($"{entity.Index}: Shopping end time reached: {shopper.duration}, time: {this.m_NormalizedTime}");
                             this.m_CommandBuffer.RemoveComponent<Shopper>(unfilteredChunkIndex, entity);
                             this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
-                        }
+                        } 
                     }
                 }
             }

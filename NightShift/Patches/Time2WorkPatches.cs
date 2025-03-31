@@ -64,6 +64,20 @@ namespace Time2Work.Patches
             Traverse.Create(__instance).Field("m_Year").SetValue(t2wTimeSystem.year);
         }
 
+        [HarmonyPatch(typeof(StorageTransferSystem), "OnUpdate")]
+        [HarmonyPrefix]
+        public static bool StorageTransferSystem_OnUpdate_PreFix()
+        {
+            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+            if ((t2wTimeSystem.normalizedTime > 0.25f && (t2wTimeSystem.normalizedTime < 0.625f) && Mod.m_Setting.night_trucks))
+            {
+                return false;
+            } else
+            {
+                return true;
+            }
+        }
+
         [HarmonyPatch(typeof(TimeSystem), "GetYear")]
         [HarmonyPrefix]
         static bool TimeSystemPatches_GetYear(TimeSettingsData settings, TimeData data, ref int __result, TimeSystem __instance)
