@@ -109,7 +109,6 @@ const SpecialEvent: FC<SpecialEventLevelProps> = ({onClose, initialPosition, ...
 
 
 
-
     // Filter out events without a valid event_location
     const filteredSpecialEvents = useMemo(() => {
         return specialEvents.filter(event => {

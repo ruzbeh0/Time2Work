@@ -12,6 +12,7 @@ using Time2Work.Extensions;
 using Colossal.UI.Binding;
 using Game.Rendering;
 using Colossal.UI;
+using static Time2Work.Setting;
 
 namespace Time2Work.Systems
 {
@@ -87,7 +88,8 @@ namespace Time2Work.Systems
             AddBinding(m_uiResults = new RawValueBinding(kGroup, "specialEventDetails", delegate (IJsonWriter binder)
             {
                 binder.ArrayBegin(m_Results.Length);
-                for (int i = 0; i < m_Results.Length; i++)
+                int length = m_Results.Length;
+                for (int i = 0; i < length; i++)
                 {
                     WriteSpecialEventInfo(binder, m_Results[i]);
                 }
@@ -96,7 +98,11 @@ namespace Time2Work.Systems
 
             AddBinding(new TriggerBinding<Entity>(group, "NavigateTo", NavigateTo));
 
-            m_Results = new NativeArray<SpecialEventInfo>(4, Allocator.Persistent);
+            if (m_Results.IsCreated)
+                m_Results.Dispose();
+
+            int count = SpecialEventSystem.numberEvents;
+            m_Results = new NativeArray<SpecialEventInfo>(count, Allocator.Persistent);
 
         }
 
@@ -111,6 +117,7 @@ namespace Time2Work.Systems
             m_SimulationFrame = this.m_SimulationSystem.frameIndex;
             int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
 
+            //Mod.log.Info($"day: {day}, entities:{entities.Length}");
             foreach (var ent in entities)
             {
                 AttractivenessProvider attractivenessProvider;
@@ -151,6 +158,21 @@ namespace Time2Work.Systems
                 }
             }
 
+            // Check if we need to resize
+            if (!m_Results.IsCreated || m_Results.Length != nEvents)
+            {
+                // Dispose the old array if needed
+                if (m_Results.IsCreated)
+                {
+                    m_Results.Dispose();
+                }
+
+                // Allocate a new array with the updated size
+                m_Results = new NativeArray<SpecialEventInfo>(nEvents, Allocator.Persistent);
+
+                Mod.log.Info($"Reallocated m_Results with new count: {nEvents}");
+            }
+
             Mod.numCurrentEvents = n;
             m_uiResults.Update();
         }
@@ -168,7 +190,8 @@ namespace Time2Work.Systems
         protected override void OnDestroy()
         {
             _cameraUpdateSystem = null;
-
+            if (m_Results.IsCreated)
+                m_Results.Dispose();
             base.OnDestroy();
         }
 

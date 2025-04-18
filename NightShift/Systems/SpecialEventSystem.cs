@@ -29,7 +29,7 @@ namespace Time2Work.Systems
         private EntityQuery m_TimeDataQuery;
         private SimulationSystem m_SimulationSystem;
         private bool updated = false;
-        public static int numberEvents;
+        public static int numberEvents = 0;
         public static float3 startTime;
         public static float3 endTime;
 
@@ -87,7 +87,7 @@ namespace Time2Work.Systems
             if ((int)dayOfWeek > -1 && (hour == 0 && minute >= 4 && minute < 10 || !updated))
             {
                 updated = true;
-
+                Mod.log.Info($"Number of Events Today: {numberEvents}");
                 int i = 0;
                 foreach (var ent in entities)
                 {

@@ -600,8 +600,8 @@ namespace Time2Work
                         duration -= 1f;
                     }
 
-                    //Mod.log.Info($"Add shopping: index:{entity.Index}, hour:{(int)Math.Round(this.m_TimeOfDay*24)}, type:{leisureType}");
-                    this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(duration));
+                    //Mod.log.Info($"Add shopping: index:{entity.Index}, hour:{(int)Math.Round(this.m_TimeOfDay*24)}, type:{leisureType}, timeOfDay: {this.m_TimeOfDay}");
+                    this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(duration, this.m_TimeOfDay));
                 }
             }
 

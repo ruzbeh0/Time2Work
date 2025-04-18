@@ -55,7 +55,7 @@ namespace Time2Work
             }), (IWriter<Time2WorkTimeUISystem.TimeSettings>)new ValueWriter<Time2WorkTimeUISystem.TimeSettings>()));
             this.AddUpdateBinding((IUpdateBinding)new GetterValueBinding<int>("time", "ticks", (Func<int>)(() =>
             {
-                float num = 182.044449f*3f;
+                float num = 182.044449f * Mod.m_Setting.slow_time_factor;
                 return Mathf.FloorToInt(Mathf.Floor((float)(this.m_SimulationSystem.frameIndex - TimeData.GetSingleton(this.m_TimeDataQuery).m_FirstFrame) / num) * num);
             })));
             this.AddUpdateBinding((IUpdateBinding)new GetterValueBinding<int>("time", "day", (Func<int>)(() => (int)Math.Ceiling((double)Time2WorkTimeSystem.GetDay(this.m_SimulationSystem.frameIndex, TimeData.GetSingleton(this.m_TimeDataQuery))))));
@@ -171,7 +171,8 @@ namespace Time2Work
 
         public int GetTicks()
         {
-            float num = 182.044449f*3f;
+
+            float num = 182.044449f * Mod.m_Setting.slow_time_factor;
             return Mathf.FloorToInt(Mathf.Floor((float)(this.m_SimulationSystem.frameIndex - TimeData.GetSingleton(this.m_TimeDataQuery).m_FirstFrame) / num) * num);
         }
 

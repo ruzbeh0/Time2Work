@@ -2,12 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
 using Unity.Burst;
 
 namespace Time2Work.Utils;
 
-[BurstCompile]
+//[BurstCompile]
 public class LeisureProbabilityCalculator
 {
     // Base hourly profiles for a Weekday (hours 0-23) for each leisure type.

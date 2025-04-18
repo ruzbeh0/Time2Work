@@ -339,7 +339,7 @@ namespace Time2Work.Systems
                     }
                 }
 
-                Mod.log.Info($"Day of the Week: {dayOfWeek}, Day Type: {currentDayOfTheWeek}");
+                Mod.log.Info($"Day of the Week: {dayOfWeek}, Day Type: {currentDayOfTheWeek}, Month: {month}");
                 updateProbabilities();
                 Mod.log.Info($"Office Off Day Prob: {office_offdayprob}");
                 Mod.log.Info($"Commercial Off Day Prob: {commercial_offdayprob}");

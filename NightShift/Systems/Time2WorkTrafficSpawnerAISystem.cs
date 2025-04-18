@@ -1,10 +1,4 @@
-﻿// Decompiled with JetBrains decompiler
-// Type: Game.Simulation.Time4DeliveryTrafficSpawnerAISystem
-// Assembly: Game, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-// MVID: 3C8C3C1D-D7EB-4536-8BE0-6F4028D2725F
-// Assembly location: C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Game.dll
-
-using Colossal.Entities;
+﻿using Colossal.Entities;
 using Colossal.Mathematics;
 using Game;
 using Game.Citizens;
@@ -97,70 +91,73 @@ namespace Time2Work
         [UnityEngine.Scripting.Preserve]
         protected override void OnUpdate()
         {
-            JobHandle jobHandle1;
-
-            this.m_PersonalCarSelectData.PreUpdate((SystemBase)this, this.m_CityConfigurationSystem, this.m_PersonalCarQuery, Allocator.TempJob, out jobHandle1);
-            JobHandle jobHandle2;
-
-            this.m_TransportVehicleSelectData.PreUpdate((SystemBase)this, this.m_CityConfigurationSystem, this.m_TransportVehicleQuery, Allocator.TempJob, out jobHandle2);
-            JobHandle outJobHandle;
-            NativeList<ArchetypeChunk> archetypeChunkListAsync = this.m_CreaturePrefabQuery.ToArchetypeChunkListAsync((AllocatorManager.AllocatorHandle)Allocator.TempJob, out outJobHandle);
-            this.__TypeHandle.__Game_Prefabs_ActivityLocationElement_RO_BufferLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Pathfind_PathElement_RO_BufferLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Net_Curve_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Objects_Transform_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Pathfind_PathInformation_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Simulation_ServiceRequest_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Simulation_RandomTrafficRequest_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_ObjectData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_DeliveryTruckData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_TrafficSpawnerData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Simulation_ServiceDispatch_RW_BufferTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_ResidentData_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_CreatureData_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Buildings_TrafficSpawner_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
-
-            JobHandle jobHandle3 = new Time2WorkTrafficSpawnerAISystem.TrafficSpawnerTickJob()
+            if (m_BuildingQuery != null && !m_BuildingQuery.IsEmptyIgnoreFilter)
             {
-                m_EntityType = this.__TypeHandle.__Unity_Entities_Entity_TypeHandle,
-                m_TrafficSpawnerType = this.__TypeHandle.__Game_Buildings_TrafficSpawner_RO_ComponentTypeHandle,
-                m_PrefabRefType = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentTypeHandle,
-                m_CreatureDataType = this.__TypeHandle.__Game_Prefabs_CreatureData_RO_ComponentTypeHandle,
-                m_ResidentDataType = this.__TypeHandle.__Game_Prefabs_ResidentData_RO_ComponentTypeHandle,
-                m_ServiceDispatchType = this.__TypeHandle.__Game_Simulation_ServiceDispatch_RW_BufferTypeHandle,
-                m_PrefabTrafficSpawnerData = this.__TypeHandle.__Game_Prefabs_TrafficSpawnerData_RO_ComponentLookup,
-                m_PrefabRefData = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
-                m_PrefabDeliveryTruckData = this.__TypeHandle.__Game_Prefabs_DeliveryTruckData_RO_ComponentLookup,
-                m_PrefabObjectData = this.__TypeHandle.__Game_Prefabs_ObjectData_RO_ComponentLookup,
-                m_RandomTrafficRequestData = this.__TypeHandle.__Game_Simulation_RandomTrafficRequest_RO_ComponentLookup,
-                m_ServiceRequestData = this.__TypeHandle.__Game_Simulation_ServiceRequest_RO_ComponentLookup,
-                m_PathInformationData = this.__TypeHandle.__Game_Pathfind_PathInformation_RO_ComponentLookup,
-                m_TransformData = this.__TypeHandle.__Game_Objects_Transform_RO_ComponentLookup,
-                m_CurveData = this.__TypeHandle.__Game_Net_Curve_RO_ComponentLookup,
-                m_PathElements = this.__TypeHandle.__Game_Pathfind_PathElement_RO_BufferLookup,
-                m_ActivityLocationElements = this.__TypeHandle.__Game_Prefabs_ActivityLocationElement_RO_BufferLookup,
-                m_Loading = this.m_SimulationSystem.loadingProgress,
-                m_LeftHandTraffic = this.m_CityConfigurationSystem.leftHandTraffic,
-                m_RandomSeed = RandomSeed.Next(),
-                m_VehicleRequestArchetype = this.m_TrafficRequestArchetype,
-                m_HandleRequestArchetype = this.m_HandleRequestArchetype,
-                m_DeliveryTruckSelectData = this.m_VehicleCapacitySystem.GetDeliveryTruckSelectData(),
-                m_PersonalCarSelectData = this.m_PersonalCarSelectData,
-                m_TransportVehicleSelectData = this.m_TransportVehicleSelectData,
-                m_CreaturePrefabChunks = archetypeChunkListAsync,
-                m_CurrentLaneTypesRelative = this.m_CurrentLaneTypesRelative,
-                m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
-                m_NormalizedTime = this.m_TimeSystem.normalizedTime,
-                night_trucks = Mod.m_Setting.night_trucks
-            }.ScheduleParallel<Time2WorkTrafficSpawnerAISystem.TrafficSpawnerTickJob>(this.m_BuildingQuery, JobUtils.CombineDependencies(this.Dependency, jobHandle1, jobHandle2, outJobHandle));
-            this.m_PersonalCarSelectData.PostUpdate(jobHandle3);
-            this.m_TransportVehicleSelectData.PostUpdate(jobHandle3);
-            this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle3);
-            archetypeChunkListAsync.Dispose(jobHandle3);
-            this.Dependency = jobHandle3;
+                JobHandle jobHandle1;
+
+                this.m_PersonalCarSelectData.PreUpdate((SystemBase)this, this.m_CityConfigurationSystem, this.m_PersonalCarQuery, Allocator.TempJob, out jobHandle1);
+                JobHandle jobHandle2;
+
+                this.m_TransportVehicleSelectData.PreUpdate((SystemBase)this, this.m_CityConfigurationSystem, this.m_TransportVehicleQuery, Allocator.TempJob, out jobHandle2);
+                JobHandle outJobHandle;
+                NativeList<ArchetypeChunk> archetypeChunkListAsync = this.m_CreaturePrefabQuery.ToArchetypeChunkListAsync((AllocatorManager.AllocatorHandle)Allocator.TempJob, out outJobHandle);
+                this.__TypeHandle.__Game_Prefabs_ActivityLocationElement_RO_BufferLookup.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Pathfind_PathElement_RO_BufferLookup.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Net_Curve_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Objects_Transform_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Pathfind_PathInformation_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Simulation_ServiceRequest_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Simulation_RandomTrafficRequest_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Prefabs_ObjectData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Prefabs_DeliveryTruckData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Prefabs_TrafficSpawnerData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Simulation_ServiceDispatch_RW_BufferTypeHandle.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Prefabs_ResidentData_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Prefabs_CreatureData_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Game_Buildings_TrafficSpawner_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
+                this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
+
+                JobHandle jobHandle3 = new Time2WorkTrafficSpawnerAISystem.TrafficSpawnerTickJob()
+                {
+                    m_EntityType = this.__TypeHandle.__Unity_Entities_Entity_TypeHandle,
+                    m_TrafficSpawnerType = this.__TypeHandle.__Game_Buildings_TrafficSpawner_RO_ComponentTypeHandle,
+                    m_PrefabRefType = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentTypeHandle,
+                    m_CreatureDataType = this.__TypeHandle.__Game_Prefabs_CreatureData_RO_ComponentTypeHandle,
+                    m_ResidentDataType = this.__TypeHandle.__Game_Prefabs_ResidentData_RO_ComponentTypeHandle,
+                    m_ServiceDispatchType = this.__TypeHandle.__Game_Simulation_ServiceDispatch_RW_BufferTypeHandle,
+                    m_PrefabTrafficSpawnerData = this.__TypeHandle.__Game_Prefabs_TrafficSpawnerData_RO_ComponentLookup,
+                    m_PrefabRefData = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
+                    m_PrefabDeliveryTruckData = this.__TypeHandle.__Game_Prefabs_DeliveryTruckData_RO_ComponentLookup,
+                    m_PrefabObjectData = this.__TypeHandle.__Game_Prefabs_ObjectData_RO_ComponentLookup,
+                    m_RandomTrafficRequestData = this.__TypeHandle.__Game_Simulation_RandomTrafficRequest_RO_ComponentLookup,
+                    m_ServiceRequestData = this.__TypeHandle.__Game_Simulation_ServiceRequest_RO_ComponentLookup,
+                    m_PathInformationData = this.__TypeHandle.__Game_Pathfind_PathInformation_RO_ComponentLookup,
+                    m_TransformData = this.__TypeHandle.__Game_Objects_Transform_RO_ComponentLookup,
+                    m_CurveData = this.__TypeHandle.__Game_Net_Curve_RO_ComponentLookup,
+                    m_PathElements = this.__TypeHandle.__Game_Pathfind_PathElement_RO_BufferLookup,
+                    m_ActivityLocationElements = this.__TypeHandle.__Game_Prefabs_ActivityLocationElement_RO_BufferLookup,
+                    m_Loading = this.m_SimulationSystem.loadingProgress,
+                    m_LeftHandTraffic = this.m_CityConfigurationSystem.leftHandTraffic,
+                    m_RandomSeed = RandomSeed.Next(),
+                    m_VehicleRequestArchetype = this.m_TrafficRequestArchetype,
+                    m_HandleRequestArchetype = this.m_HandleRequestArchetype,
+                    m_DeliveryTruckSelectData = this.m_VehicleCapacitySystem.GetDeliveryTruckSelectData(),
+                    m_PersonalCarSelectData = this.m_PersonalCarSelectData,
+                    m_TransportVehicleSelectData = this.m_TransportVehicleSelectData,
+                    m_CreaturePrefabChunks = archetypeChunkListAsync,
+                    m_CurrentLaneTypesRelative = this.m_CurrentLaneTypesRelative,
+                    m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
+                    m_NormalizedTime = this.m_TimeSystem.normalizedTime,
+                    night_trucks = Mod.m_Setting.night_trucks
+                }.ScheduleParallel<Time2WorkTrafficSpawnerAISystem.TrafficSpawnerTickJob>(this.m_BuildingQuery, JobUtils.CombineDependencies(this.Dependency, jobHandle1, jobHandle2, outJobHandle));
+                this.m_PersonalCarSelectData.PostUpdate(jobHandle3);
+                this.m_TransportVehicleSelectData.PostUpdate(jobHandle3);
+                this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle3);
+                archetypeChunkListAsync.Dispose(jobHandle3);
+                this.Dependency = jobHandle3;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

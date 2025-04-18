@@ -105,7 +105,7 @@ namespace Time2Work
 
         public int GetTicks()
         {
-            float num = 182.044449f * 3f;
+            float num = 182.044449f * Mod.m_Setting.slow_time_factor;
             return Mathf.FloorToInt(Mathf.Floor((float)(this.m_SimulationSystem.frameIndex - TimeData.GetSingleton(this.m_TimeDataQuery).m_FirstFrame) / num) * num);
         }
     }

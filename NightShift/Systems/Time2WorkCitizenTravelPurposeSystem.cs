@@ -23,6 +23,7 @@ using Time2Work.Components;
 using static Game.Prefabs.TriggerPrefabData;
 using Game.Economy;
 using Time2Work.Utils;
+using Game.Events;
 
 #nullable disable
 namespace Time2Work
@@ -409,8 +410,17 @@ namespace Time2Work
                         this.m_CommandBuffer.SetComponentEnabled<Arrived>(unfilteredChunkIndex, entity, false);
                         switch (travelPurpose.m_Purpose)
                         {
-                            case Game.Citizens.Purpose.None:
                             case Game.Citizens.Purpose.Leisure:
+                                //Mod.log.Info($"index: {entity.Index}, arrived leisure: {travelPurpose.m_Resource}");
+                                Shopper shopper;
+                                if (this.m_Shopping.TryGetComponent(entity, out shopper))
+                                {
+                                    shopper.duration += (m_NormalizedTime - shopper.start_time);
+                                    this.m_CommandBuffer.SetComponent<Shopper>(unfilteredChunkIndex, entity, shopper);
+                                    //Mod.log.Info($"Shopper duration: {shopper.duration}, start time: {shopper.start_time}, current time: {m_NormalizedTime}");
+                                }
+                                continue;
+                            case Game.Citizens.Purpose.None:
                             case Game.Citizens.Purpose.Exporting:
                             case Game.Citizens.Purpose.MovingAway:
                             case Game.Citizens.Purpose.Safety:
@@ -423,7 +433,6 @@ namespace Time2Work
                                 this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
                                 continue;
                             case Game.Citizens.Purpose.Shopping:
-
                                 shoppingTime(unfilteredChunkIndex, entity, travelPurpose.m_Resource);
                                 continue;
                             case Game.Citizens.Purpose.GoingHome:

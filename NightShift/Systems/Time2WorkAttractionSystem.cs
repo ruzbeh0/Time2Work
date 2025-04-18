@@ -157,7 +157,7 @@ namespace Time2Work.Systems
             Count,
         }
 
-        [BurstCompile]
+        //[BurstCompile]
         private struct AttractivenessJob : IJobChunk
         {
             public EntityCommandBuffer.ParallelWriter ecb;
