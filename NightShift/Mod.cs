@@ -23,12 +23,12 @@ namespace Time2Work
 {
     public class Mod : IMod
     {
-        public static readonly string harmonyID = "Time2Work";
-        public static readonly string Id = "Time2Work";
-        public static ILog log = LogManager.GetLogger($"{nameof(Time2Work)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
+        public static readonly string harmonyID = "RealisticTrips";
+        public static readonly string Id = "RealisticTrips";
+        public static ILog log = LogManager.GetLogger($"RealisticTrips").SetShowsErrorsInUI(false);
         public static Setting m_Setting;
         public static int numCurrentEvents = 999;
-        public static string version = "1.7";
+        public static string version = "1.8.4";
         public static string modPath;
         public static Mod Instance { get; private set; }
         internal ILog Log { get; private set; }
@@ -63,7 +63,7 @@ namespace Time2Work
 
             foreach (var modInfo in GameManager.instance.modManager)
             {
-                if (modInfo.asset.name.Equals("RealPop") || modInfo.asset.name.Equals("InfoLoom"))
+                if (modInfo.asset.name.Equals("RealPop"))
                 {
                     Mod.log.Info($"Loaded mod with conflict: {modInfo.asset.name}");
                 }

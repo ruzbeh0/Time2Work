@@ -91,7 +91,7 @@ namespace Time2Work
         [UnityEngine.Scripting.Preserve]
         protected override void OnUpdate()
         {
-            if (m_BuildingQuery != null && !m_BuildingQuery.IsEmptyIgnoreFilter)
+            if (m_BuildingQuery != default && !m_BuildingQuery.IsEmptyIgnoreFilter)
             {
                 JobHandle jobHandle1;
 

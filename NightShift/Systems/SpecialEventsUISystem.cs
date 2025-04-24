@@ -13,6 +13,7 @@ using Colossal.UI.Binding;
 using Game.Rendering;
 using Colossal.UI;
 using static Time2Work.Setting;
+using System.Linq;
 
 namespace Time2Work.Systems
 {
@@ -37,23 +38,40 @@ namespace Time2Work.Systems
             public SpecialEventInfo() {}
         }
 
+        private static string SanitizeString(string input)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(input))
+                    return "Unknown";
+
+                return new string(input
+                    .Where(c => !char.IsControl(c) || c == '\n' || c == '\r')
+                    .ToArray());
+            }
+            catch (Exception ex)
+            {
+                Mod.log.Info($"SanitizeString failed with input: {input}: {ex.Message}");
+                return "Unknown";
+            }
+        }
+
+
+
         private static void WriteSpecialEventInfo(IJsonWriter writer, SpecialEventInfo info)
         {
+            string safeLocation = SanitizeString(info.event_location);
+
             writer.TypeBegin("SpecialEventInfo");
-            writer.PropertyName("entity");
-            writer.Write(info.entity);
-            writer.PropertyName("start_hour");
-            writer.Write(info.start_hour);
-            writer.PropertyName("start_minutes");
-            writer.Write(info.start_minutes);
-            writer.PropertyName("end_hour");
-            writer.Write(info.end_hour);
-            writer.PropertyName("end_minutes");
-            writer.Write(info.end_minutes);
-            writer.PropertyName("event_location");
-            writer.Write(info.event_location);
+            writer.PropertyName("entity"); writer.Write(info.entity);
+            writer.PropertyName("start_hour"); writer.Write(info.start_hour);
+            writer.PropertyName("start_minutes"); writer.Write(info.start_minutes);
+            writer.PropertyName("end_hour"); writer.Write(info.end_hour);
+            writer.PropertyName("end_minutes"); writer.Write(info.end_minutes);
+            writer.PropertyName("event_location"); writer.Write(safeLocation);
             writer.TypeEnd();
         }
+
 
         private const string kGroup = "specialEventInfo";
         protected const string group = "specialEvent";
@@ -87,9 +105,10 @@ namespace Time2Work.Systems
 
             AddBinding(m_uiResults = new RawValueBinding(kGroup, "specialEventDetails", delegate (IJsonWriter binder)
             {
+                if (!m_Results.IsCreated) return;
+
                 binder.ArrayBegin(m_Results.Length);
-                int length = m_Results.Length;
-                for (int i = 0; i < length; i++)
+                for (int i = 0; i < m_Results.Length; i++)
                 {
                     WriteSpecialEventInfo(binder, m_Results[i]);
                 }
@@ -117,6 +136,21 @@ namespace Time2Work.Systems
             m_SimulationFrame = this.m_SimulationSystem.frameIndex;
             int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
 
+            // Check if we need to resize
+            if (!m_Results.IsCreated || m_Results.Length != nEvents)
+            {
+                // Dispose the old array if needed
+                if (m_Results.IsCreated)
+                {
+                    m_Results.Dispose();
+                }
+
+                // Allocate a new array with the updated size
+                m_Results = new NativeArray<SpecialEventInfo>(nEvents, Allocator.Persistent);
+
+                Mod.log.Info($"Reallocated m_Results with new count: {nEvents}");
+            }
+
             //Mod.log.Info($"day: {day}, entities:{entities.Length}");
             foreach (var ent in entities)
             {
@@ -135,7 +169,7 @@ namespace Time2Work.Systems
 
                     if (EntityManager.TryGetComponent<SpecialEventData>(prefabRef.m_Prefab, out specialEventdata))
                     {
-                        if(specialEventdata.day == day && n < nEvents)
+                        if(specialEventdata.day == day && n < nEvents && n < m_Results.Length)
                         {
                             if(n > 0 && m_Results[n - 1].event_location == this.World.GetOrCreateSystemManaged<PrefabSystem>().GetPrefabName(prefabRef.m_Prefab))
                             {
@@ -149,28 +183,17 @@ namespace Time2Work.Systems
                             info.end_hour = (int)Math.Round(24f * (specialEventdata.start_time + specialEventdata.duration));
                             info.start_minutes = (int)(6 * (info.start_hour - (24f * (specialEventdata.start_time))));
                             info.end_minutes = (int)(6 * (info.end_hour - (24f * (specialEventdata.start_time + specialEventdata.duration))));
-                            m_Results[n] = info;
-                            n++;
-
+                            if (string.IsNullOrWhiteSpace(info.event_location) || SanitizeString(info.event_location) == "Unknown")
+                                Mod.log.Warn($"SpecialEvent has empty or invalid location for entity {ent.Index}");
+                            else
+                            {
+                                m_Results[n] = info;
+                                n++;
+                            }
                             //Mod.log.Info($"Special Event at: {info.event_location} - Start Hour:{info.start_hour}, Duration:{specialEventdata.duration}, Attraction: {attractivenessProvider.m_Attractiveness}");
                         }    
                     }
                 }
-            }
-
-            // Check if we need to resize
-            if (!m_Results.IsCreated || m_Results.Length != nEvents)
-            {
-                // Dispose the old array if needed
-                if (m_Results.IsCreated)
-                {
-                    m_Results.Dispose();
-                }
-
-                // Allocate a new array with the updated size
-                m_Results = new NativeArray<SpecialEventInfo>(nEvents, Allocator.Persistent);
-
-                Mod.log.Info($"Reallocated m_Results with new count: {nEvents}");
             }
 
             Mod.numCurrentEvents = n;

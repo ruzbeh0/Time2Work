@@ -23,7 +23,7 @@ namespace Time2Work
         private ValueBinding<string> _weekDay;
         private string dateOutput = "";
 
-        public string BindGroupName => Mod.harmonyID;
+        public string BindGroupName => nameof(Time2Work);
 
 
         private void Refresh()

@@ -87,7 +87,7 @@ namespace Time2Work.Systems
             if ((int)dayOfWeek > -1 && (hour == 0 && minute >= 4 && minute < 10 || !updated))
             {
                 updated = true;
-                Mod.log.Info($"Number of Events Today: {numberEvents}");
+                //Mod.log.Info($"Number of Events Today: {numberEvents}");
                 int i = 0;
                 foreach (var ent in entities)
                 {
