@@ -51,7 +51,7 @@ namespace Time2Work.Systems
             }
             catch (Exception ex)
             {
-                Mod.log.Info($"SanitizeString failed with input: {input}: {ex.Message}");
+                //Mod.log.Info($"SanitizeString failed with input: {input}: {ex.Message}");
                 return "Unknown";
             }
         }
@@ -105,15 +105,18 @@ namespace Time2Work.Systems
 
             AddBinding(m_uiResults = new RawValueBinding(kGroup, "specialEventDetails", delegate (IJsonWriter binder)
             {
-                if (!m_Results.IsCreated) return;
+                if (!m_Results.IsCreated)
+                    return;
 
-                binder.ArrayBegin(m_Results.Length);
-                for (int i = 0; i < m_Results.Length; i++)
+                int validCount = Mod.numCurrentEvents;  // <- Use how many you actually filled
+                binder.ArrayBegin(validCount);
+                for (int i = 0; i < validCount; i++)
                 {
                     WriteSpecialEventInfo(binder, m_Results[i]);
                 }
                 binder.ArrayEnd();
             }));
+
 
             AddBinding(new TriggerBinding<Entity>(group, "NavigateTo", NavigateTo));
 

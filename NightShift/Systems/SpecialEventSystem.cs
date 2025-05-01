@@ -98,7 +98,7 @@ namespace Time2Work.Systems
                         Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
                         int r = random2.NextInt(0,entities.Length);
 
-                        //Mod.log.Info($"seed:{seed}, r:{r}, enti:{entities.Length}, numberEvents:{numberEvents}, attr:{specialEventData.new_attraction}, n:{n}, day:{specialEventData.day}");
+                        
                         if (specialEventData.day != day && (n < numberEvents && (r < numberEvents || i == entities.Length - 1)))
                         {
                             if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
@@ -124,6 +124,7 @@ namespace Time2Work.Systems
                             startTime[n] = specialEventData.start_time;
                             endTime[n] = specialEventData.start_time + specialEventData.duration;
                             n++;
+                            //Mod.log.Info($"startTime:{startTime[n]}, endTime:{endTime[n]}, enti:{entities.Length}, numberEvents:{numberEvents}, attr:{specialEventData.new_attraction}, n:{n}, day:{specialEventData.day}");
                         } else
                         {
                             specialEventData.day = -1;
