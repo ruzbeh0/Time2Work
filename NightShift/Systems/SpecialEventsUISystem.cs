@@ -80,6 +80,8 @@ namespace Time2Work.Systems
         private RawValueBinding m_uiTransfersResults;
 
         private NativeArray<SpecialEventInfo> m_Results; // final results, will be filled via jobs and then written as output
+        private List<SpecialEventInfo> m_ValidResults = new();
+
 
         // 240209 Set gameMode to avoid errors in the Editor
         public override GameMode gameMode => GameMode.Game;
@@ -103,20 +105,15 @@ namespace Time2Work.Systems
             _cameraUpdateSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<CameraUpdateSystem>();
 
 
-            AddBinding(m_uiResults = new RawValueBinding(kGroup, "specialEventDetails", delegate (IJsonWriter binder)
-            {
-                if (!m_Results.IsCreated)
-                    return;
-
-                int validCount = Mod.numCurrentEvents;  // <- Use how many you actually filled
-                binder.ArrayBegin(validCount);
-                for (int i = 0; i < validCount; i++)
+            AddBinding(m_uiResults = new RawValueBinding(kGroup, "specialEventDetails", binder => {
+                binder.ArrayBegin(m_ValidResults?.Count ?? 0);
+                if (m_ValidResults != null)
                 {
-                    WriteSpecialEventInfo(binder, m_Results[i]);
+                    for (int i = 0; i < m_ValidResults.Count; i++)
+                        WriteSpecialEventInfo(binder, m_ValidResults[i]);
                 }
                 binder.ArrayEnd();
             }));
-
 
             AddBinding(new TriggerBinding<Entity>(group, "NavigateTo", NavigateTo));
 
@@ -138,6 +135,7 @@ namespace Time2Work.Systems
             Game.Common.TimeData m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
             m_SimulationFrame = this.m_SimulationSystem.frameIndex;
             int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
+            m_ValidResults.Clear();
 
             // Check if we need to resize
             if (!m_Results.IsCreated || m_Results.Length != nEvents)
@@ -191,6 +189,7 @@ namespace Time2Work.Systems
                             else
                             {
                                 m_Results[n] = info;
+                                m_ValidResults.Add(info);
                                 n++;
                             }
                             //Mod.log.Info($"Special Event at: {info.event_location} - Start Hour:{info.start_hour}, Duration:{specialEventdata.duration}, Attraction: {attractivenessProvider.m_Attractiveness}");
@@ -201,6 +200,8 @@ namespace Time2Work.Systems
 
             Mod.numCurrentEvents = n;
             m_uiResults.Update();
+
+            
         }
 
         public void NavigateTo(Entity entity)
