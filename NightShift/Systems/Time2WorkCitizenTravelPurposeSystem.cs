@@ -136,6 +136,7 @@ namespace Time2Work
                 m_EmergencyShelterData = this.__TypeHandle.__Game_Buildings_EmergencyShelter_RO_ComponentLookup,
                 m_Citizens = this.__TypeHandle.__Game_Citizens_Citizen_RO_ComponentLookup,
                 m_HealthProblems = this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentLookup,
+                CitizenScheduleLookup = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentLookup,
                 m_EconomyParameters = this.m_EconomyParameterGroup.GetSingleton<EconomyParameterData>(),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 m_ArriveQueue = nativeQueue.AsParallelWriter(),
@@ -314,6 +315,8 @@ namespace Time2Work
             public ComponentLookup<Citizen> m_Citizens;
             [ReadOnly]
             public ComponentLookup<HealthProblem> m_HealthProblems;
+            [ReadOnly]
+            public ComponentLookup<CitizenSchedule> CitizenScheduleLookup;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
             public NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive>.ParallelWriter m_ArriveQueue;
             public EconomyParameterData m_EconomyParameters;
@@ -379,16 +382,37 @@ namespace Time2Work
                     }
                     else if (travelPurpose.m_Purpose == Game.Citizens.Purpose.Sleeping)
                     {
-                        
-                        Citizen citizen = this.m_Citizens[entity];
-                        if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction))
+                        CitizenSchedule citizenSchedule;
+
+                        if (CitizenScheduleLookup.TryGetComponent(entity, out citizenSchedule))
                         {
-                            
-                            this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
-                            
-                            if (nativeArray3.Length != 0 && this.m_BuildingData.HasComponent(nativeArray3[index].m_CurrentBuilding))
+                            float2 time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
+                            Citizen citizen = this.m_Citizens[entity];
+
+                            float2 time2Sleep;
+                            if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, time2Work, out time2Sleep))
                             {
-                                this.m_ArriveQueue.Enqueue(new Time2WorkCitizenTravelPurposeSystem.Arrive(entity, nativeArray3[index].m_CurrentBuilding, Time2WorkCitizenTravelPurposeSystem.ArriveType.WakeUp));
+
+                                this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
+
+                                if (nativeArray3.Length != 0 && this.m_BuildingData.HasComponent(nativeArray3[index].m_CurrentBuilding))
+                                {
+                                    this.m_ArriveQueue.Enqueue(new Time2WorkCitizenTravelPurposeSystem.Arrive(entity, nativeArray3[index].m_CurrentBuilding, Time2WorkCitizenTravelPurposeSystem.ArriveType.WakeUp));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //If CitizenSchedule hasn't been created yet, use old code
+                            Citizen citizen = this.m_Citizens[entity];
+                            if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction))
+                            {
+                                this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
+
+                                if (nativeArray3.Length != 0 && this.m_BuildingData.HasComponent(nativeArray3[index].m_CurrentBuilding))
+                                {
+                                    this.m_ArriveQueue.Enqueue(new Time2WorkCitizenTravelPurposeSystem.Arrive(entity, nativeArray3[index].m_CurrentBuilding, Time2WorkCitizenTravelPurposeSystem.ArriveType.WakeUp));
+                                }
                             }
                         }
                     }
@@ -975,6 +999,8 @@ namespace Time2Work
             public ComponentLookup<Citizen> __Game_Citizens_Citizen_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<HealthProblem> __Game_Citizens_HealthProblem_RO_ComponentLookup;
+            [ReadOnly]
+            public ComponentLookup<CitizenSchedule> __Game_Citizens_CitizenSchedule_RO_ComponentLookup;
             public ComponentLookup<CitizenPresence> __Game_Buildings_CitizenPresence_RW_ComponentLookup;
             public BufferLookup<Patient> __Game_Buildings_Patient_RW_BufferLookup;
             public BufferLookup<Occupant> __Game_Buildings_Occupant_RW_BufferLookup;
@@ -1032,7 +1058,9 @@ namespace Time2Work
                 this.__Game_Citizens_Citizen_RO_ComponentLookup = state.GetComponentLookup<Citizen>(true);
                 
                 this.__Game_Citizens_HealthProblem_RO_ComponentLookup = state.GetComponentLookup<HealthProblem>(true);
-                
+
+                this.__Game_Citizens_CitizenSchedule_RO_ComponentLookup = state.GetComponentLookup<CitizenSchedule>(true);
+
                 this.__Game_Buildings_CitizenPresence_RW_ComponentLookup = state.GetComponentLookup<CitizenPresence>();
                 
                 this.__Game_Buildings_Patient_RW_BufferLookup = state.GetBufferLookup<Patient>();

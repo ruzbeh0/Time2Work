@@ -127,13 +127,16 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="1.8.6" />
+	<ModVersion Value="1.9" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.2.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="75426" />
 	<ChangeLog>
-* Fixed bug Special Event UI Bug
+* Refactored and improved many of this mod core systems
+* Added schedule information on the cim panel when clicking on a cim
+* Fixed bug that was using the vanilla version of isTodayOffDay, isTimeToStudy and isTimeToWork methods for cims that were attending meetings.
+* Fixed error when printing probabilities in new cities.
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

@@ -205,17 +205,25 @@ namespace Time2Work.Systems
                     if(iter == 0)
                     {
                         //Mod.log.Info($"Iteration: {iter}");
-                        Mod.log.Info($"Day Shift Workers %: {100 * current_day_prob}");
-                        Mod.log.Info($"Evening Shift Workers %: {100 * current_eve_prob}");
-                        Mod.log.Info($"Night Shift Workers %: {100 * current_night_prob}");
-                        Mod.log.Info($"Office Non Day Workers %: {100 * current_office_nonday_prob}");
-                        Mod.log.Info($"Commercial Non Day Workers %: {100 * current_commercial_nonday_prob}");
-                        Mod.log.Info($"Industry Non Day Workers %: {100 * current_industry_nonday_prob}");
-                        Mod.log.Info($"City Services Non Day Workers %: {100 * current_industry_nonday_prob}");
-                        Mod.m_Setting.average_commute = sum_last_commute * 24f / count;
-                        Mod.m_Setting.commute_top10per = (i * bin_min_size) / 60f;
-                        Mod.log.Info($"Average Commute Time (hours): {Mod.m_Setting.average_commute}");
-                        Mod.log.Info($"Commute Time Top 10% (hours): {Mod.m_Setting.commute_top10per}");
+                        try
+                        {
+                            Mod.log.Info($"Day Shift Workers %: {100 * current_day_prob}");
+                            Mod.log.Info($"Evening Shift Workers %: {100 * current_eve_prob}");
+                            Mod.log.Info($"Night Shift Workers %: {100 * current_night_prob}");
+                            Mod.log.Info($"Office Non Day Workers %: {100 * current_office_nonday_prob}");
+                            Mod.log.Info($"Commercial Non Day Workers %: {100 * current_commercial_nonday_prob}");
+                            Mod.log.Info($"Industry Non Day Workers %: {100 * current_industry_nonday_prob}");
+                            Mod.log.Info($"City Services Non Day Workers %: {100 * current_industry_nonday_prob}");
+                            Mod.m_Setting.average_commute = sum_last_commute * 24f / count;
+                            Mod.m_Setting.commute_top10per = (i * bin_min_size) / 60f;
+                            Mod.log.Info($"Average Commute Time (hours): {Mod.m_Setting.average_commute}");
+                            Mod.log.Info($"Commute Time Top 10% (hours): {Mod.m_Setting.commute_top10per}");
+                        }
+                        catch (Exception e)
+                        {
+                            Mod.log.Info($"Error printing Realistic Trips probabilities");
+                        }
+                        
                     }
 
                     if (!Mod.m_Setting.peak_spread)

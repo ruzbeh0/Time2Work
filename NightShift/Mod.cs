@@ -102,7 +102,6 @@ namespace Time2Work
             updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.EditorSimulation);
             updateSystem.UpdateAfter<Time2WorkTimeSystem>(SystemUpdatePhase.Deserialize);
-            updateSystem.UpdateAt<WeekSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<WorkPlaceShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<WorkerShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkCitizenBehaviorSystem>(SystemUpdatePhase.GameSimulation);
@@ -110,6 +109,7 @@ namespace Time2Work
             updateSystem.UpdateAt<Time2WorkWorkerSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkLeisureSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkStudentSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAfter<WeekSystem>(SystemUpdatePhase.GameSimulation);
             if (m_Setting.night_trucks)
             {
                 updateSystem.UpdateAt<Time2WorkTrafficSpawnerAISystem>(SystemUpdatePhase.GameSimulation);
@@ -125,6 +125,7 @@ namespace Time2Work
             updateSystem.UpdateAfter<SpecialEventSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<SpecialEventsUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkTimeUISystem>(SystemUpdatePhase.UIUpdate);
+            updateSystem.UpdateAt<CitizenScheduleUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkStatisticsUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAfter<TimeSettingsMultiplierSystem>(SystemUpdatePhase.PrefabUpdate);

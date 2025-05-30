@@ -59,7 +59,7 @@ namespace Time2Work
                 return Mathf.FloorToInt(Mathf.Floor((float)(this.m_SimulationSystem.frameIndex - TimeData.GetSingleton(this.m_TimeDataQuery).m_FirstFrame) / num) * num);
             })));
             this.AddUpdateBinding((IUpdateBinding)new GetterValueBinding<int>("time", "day", (Func<int>)(() => (int)Math.Ceiling((double)Time2WorkTimeSystem.GetDay(this.m_SimulationSystem.frameIndex, TimeData.GetSingleton(this.m_TimeDataQuery))))));
-            Mod.log.Info(this.m_TimeSystem.normalizedTime);
+            //Mod.log.Info(this.m_TimeSystem.normalizedTime);
             this.AddUpdateBinding((IUpdateBinding)new GetterValueBinding<LightingSystem.State>("time", "lightingState", (Func<LightingSystem.State>)(() =>
             {
                 LightingSystem.State state = this.m_LightingSystem.state;

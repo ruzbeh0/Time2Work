@@ -22,45 +22,11 @@ namespace Time2Work.Systems
         private static int year;
         private static bool updated = false;
         private static Setting.months month;
+        private bool initialized = false;
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            currentDayOfTheWeek = Mod.m_Setting.dt_simulation;
-
-            DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
-            hour = currentDateTime.Hour;
-            dayOfYear = currentDateTime.DayOfYear;
-            year = currentDateTime.Year;
-            int day = Mathf.FloorToInt(dayOfYear / (float)Mod.m_Setting.daysPerMonth);
-            month = (Setting.months)((day % 12 + 12) % 12 + 1);
-
-            int dow = ((dayOfYear + 12 * (year - 1953)) % 7);
-
-            dayOfWeekTemp = (DayOfWeek)dow;
-
-            //Mod.log.Info($"dayOfYear:{dayOfYear},year:{year},dayOfWeekTemp:{dayOfWeekTemp},updated:{updated}");
-
-            if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.AverageDay))
-            {
-                dayOfWeekTemp = DayOfWeek.Friday;
-                if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Weekday))
-                {
-                    dayOfWeekTemp = DayOfWeek.Monday;
-                }
-                else
-                {
-                    if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Saturday))
-                    {
-                        dayOfWeekTemp = DayOfWeek.Saturday;
-                    } else if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Sunday))
-                    {
-                        dayOfWeekTemp = DayOfWeek.Sunday;
-                    }
-                }
-            }
-
-            updateProbabilities();
         }
 
         public override int GetUpdateInterval(SystemUpdatePhase phase)
@@ -140,7 +106,7 @@ namespace Time2Work.Systems
                 cityservices_offdayprob = 100 - getTimeOffProbByDayOfWeek();
 
                 // Weekday
-                
+
                 office_offdayprob.x *= Mod.m_Setting.office_weekday_pct / 100f;
                 office_offdayprob.x = Math.Max(100 - office_offdayprob.x, 5f);
 
@@ -153,9 +119,9 @@ namespace Time2Work.Systems
                 cityservices_offdayprob.x *= Mod.m_Setting.cityServices_weekday_pct / 100f;
 
                 cityservices_offdayprob.x = Math.Max(100 - cityservices_offdayprob.x, 5f);
-                
+
                 // Average Day / Friday
-                
+
                 office_offdayprob.y *= Mod.m_Setting.office_avgday_pct / 100f;
                 office_offdayprob.y = Math.Max(100 - office_offdayprob.y, 5f);
 
@@ -167,9 +133,9 @@ namespace Time2Work.Systems
 
                 cityservices_offdayprob.y *= Mod.m_Setting.cityServices_avgday_pct / 100f;
                 cityservices_offdayprob.y = Math.Max(100 - cityservices_offdayprob.y, 5f);
-                
+
                 // Saturday
-                
+
                 office_offdayprob.z *= Mod.m_Setting.office_sat_pct / 100f;
                 office_offdayprob.z = Math.Max(100 - office_offdayprob.z, 5f);
 
@@ -181,7 +147,7 @@ namespace Time2Work.Systems
 
                 cityservices_offdayprob.z *= Mod.m_Setting.cityServices_sat_pct / 100f;
                 cityservices_offdayprob.z = Math.Min(100 - cityservices_offdayprob.z, 95f);
-                
+
                 // Sunday
 
                 office_offdayprob.w *= Mod.m_Setting.office_sun_pct / 100f;
@@ -206,7 +172,7 @@ namespace Time2Work.Systems
             {
                 //float holiday_prob = (Mod.m_Setting.school_vacation_per_year + Mod.m_Setting.holidays_per_year) / 365f;
                 float holiday_prob = (Mod.m_Setting.holidays_per_year) / 365f;
-                if(month.Equals(Mod.m_Setting.school_vacation_month1) ||
+                if (month.Equals(Mod.m_Setting.school_vacation_month1) ||
                     month.Equals(Mod.m_Setting.school_vacation_month2))
                 {
                     holiday_prob = 1;
@@ -214,29 +180,29 @@ namespace Time2Work.Systems
                 if (currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.AverageDay))
                 {
                     //Value for an average day/Friday
-                    school_offdayprob.x = 1 - (1 - holiday_prob) *(Mod.m_Setting.school_lv1_avgday_pct) / 100f;
+                    school_offdayprob.x = 1 - (1 - holiday_prob) * (Mod.m_Setting.school_lv1_avgday_pct) / 100f;
                     school_offdayprob.y = 1 - (1 - holiday_prob) * (Mod.m_Setting.school_lv2_avgday_pct) / 100f;
                     school_offdayprob.z = 1 - (1 - holiday_prob) * (Mod.m_Setting.school_lv34_avgday_pct) / 100f;
                 }
                 else if (currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.Saturday))
                 {
-                    school_offdayprob.x =  1 - (1 - holiday_prob) *(Mod.m_Setting.school_lv1_saturday_pct) / 100f;
-                    school_offdayprob.y =  1 - (1 - holiday_prob) *(Mod.m_Setting.school_lv2_saturday_pct) / 100f;
+                    school_offdayprob.x = 1 - (1 - holiday_prob) * (Mod.m_Setting.school_lv1_saturday_pct) / 100f;
+                    school_offdayprob.y = 1 - (1 - holiday_prob) * (Mod.m_Setting.school_lv2_saturday_pct) / 100f;
                     school_offdayprob.z = 1 - (1 - holiday_prob) * (Mod.m_Setting.school_lv34_saturday_pct) / 100f;
                 }
                 else if (currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.Sunday))
                 {
-                    school_offdayprob.x =  1 - (1 - holiday_prob) *(Mod.m_Setting.school_lv1_sunday_pct) / 100f;
-                    school_offdayprob.y =  1 - (1 - holiday_prob) *(Mod.m_Setting.school_lv2_sunday_pct) / 100f;
+                    school_offdayprob.x = 1 - (1 - holiday_prob) * (Mod.m_Setting.school_lv1_sunday_pct) / 100f;
+                    school_offdayprob.y = 1 - (1 - holiday_prob) * (Mod.m_Setting.school_lv2_sunday_pct) / 100f;
                     school_offdayprob.z = 1 - (1 - holiday_prob) * (Mod.m_Setting.school_lv34_sunday_pct) / 100f;
                 }
                 else
                 {
                     if (currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.Weekday))
                     {
-                        school_offdayprob.x =  1 - (1 - holiday_prob) *( Mod.m_Setting.school_lv1_weekday_pct) / 100f;
-                        school_offdayprob.y =  1 - (1 - holiday_prob) *( Mod.m_Setting.school_lv2_weekday_pct) / 100f;
-                        school_offdayprob.z = 1 - (1 - holiday_prob) * ( Mod.m_Setting.school_lv34_weekday_pct) / 100f;
+                        school_offdayprob.x = 1 - (1 - holiday_prob) * (Mod.m_Setting.school_lv1_weekday_pct) / 100f;
+                        school_offdayprob.y = 1 - (1 - holiday_prob) * (Mod.m_Setting.school_lv2_weekday_pct) / 100f;
+                        school_offdayprob.z = 1 - (1 - holiday_prob) * (Mod.m_Setting.school_lv34_weekday_pct) / 100f;
                     }
                 }
 
@@ -257,14 +223,14 @@ namespace Time2Work.Systems
             month = (Setting.months)((day % 12 + 12) % 12 + 1);
 
 
-            if ((hour == 0 && !updated) || dayOfWeekTemp < 0 || currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.sevendayweek))
+            if (!initialized || (hour == 0 && !updated) || dayOfWeekTemp < 0 || currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.sevendayweek))
             {
                 int dow = ((dayOfYear + 12 * (year - 1953)) % 7);
                 dayOfWeekTemp = (DayOfWeek)dow;
                 if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.AverageDay))
                 {
                     dayOfWeekTemp = DayOfWeek.Friday;
-                    if(Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Weekday))
+                    if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Weekday))
                     {
                         dayOfWeekTemp = DayOfWeek.Monday;
                     } else
@@ -283,7 +249,7 @@ namespace Time2Work.Systems
             }
 
             //The day of the week actually changes at 3 AM since this is the hour with least activity
-            if (hour == 3 && minute < 4 || currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.sevendayweek))
+            if (!initialized || hour == 3 && minute < 4 || currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.sevendayweek))
             {
                 if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.sevendayweek))
                 {
@@ -347,6 +313,7 @@ namespace Time2Work.Systems
                 Mod.log.Info($"City Services Day Prob: {cityservices_offdayprob}");
                 Mod.log.Info($"School Off Day Prob: {school_offdayprob}");
                 updated = false;
+                initialized = true;
             } 
         }
     }

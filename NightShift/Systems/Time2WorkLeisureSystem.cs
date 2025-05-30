@@ -125,6 +125,7 @@ namespace Time2Work
             this.__TypeHandle.__Game_Citizens_Leisure_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.__Game_Citizens_CitizenSchedule_RW_ComponentLookup.Update(ref this.CheckedStateRef);
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
             JobHandle outJobHandle;
             JobHandle deps;
@@ -171,6 +172,7 @@ namespace Time2Work
                 m_RenterBufs = this.__TypeHandle.__Game_Buildings_Renter_RO_BufferLookup,
                 m_ConsumptionDatas = this.__TypeHandle.__Game_Prefabs_ConsumptionData_RO_ComponentLookup,
                 m_Shopping = this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup,
+                m_CitizenSchedule = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RW_ComponentLookup,
                 m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                 m_SimulationFrame = this.m_SimulationSystem.frameIndex,
                 m_TimeOfDay = this.m_TimeSystem.normalizedTime,
@@ -185,7 +187,7 @@ namespace Time2Work
                 m_RandomSeed = RandomSeed.Next(),
                 m_PathfindTypes = this.m_PathfindTypes,
                 m_HumanChunks = this.m_ResidentPrefabQuery.ToArchetypeChunkListAsync((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle),
-                m_PathfindQueue = this.m_PathFindSetupSystem.GetQueue((object)this, 64).AsParallelWriter(),
+                m_PathfindQueue = this.m_PathFindSetupSystem.GetQueue((object)this, 512).AsParallelWriter(),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 m_MeetingQueue = this.m_AddMeetingSystem.GetMeetingQueue(out deps).AsParallelWriter(),
                 m_LeisureQueue = this.m_LeisureQueue.AsParallelWriter(),
@@ -233,6 +235,7 @@ namespace Time2Work
                 avg_time_recreation = Mod.m_Setting.avg_time_recreation,
                 avg_time_entertainment = Mod.m_Setting.avg_time_entertainment,
                 avg_time_vehicles = Mod.m_Setting.avg_time_vehicles,
+                remote_work_prob = Mod.m_Setting.remote_percentage,
                 //Meals = 0, Entertainment = 1,Shopping = 2,Park = 3,Travel = 4
                 meal_hourly_factor = LeisureProbabilityCalculator.GetMealsProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
                 entertainment_hourly_factor = LeisureProbabilityCalculator.GetEntertainmentProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
@@ -444,6 +447,7 @@ namespace Time2Work
             public ComponentLookup<PropertyRenter> PropertyRenterLookup;
             [ReadOnly]
             public ComponentLookup<PrefabRef> PrefabRefLookup;
+            public ComponentLookup<CitizenSchedule> m_CitizenSchedule;
             public EconomyParameterData m_EconomyParameters;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
             public NativeQueue<SetupQueueItem>.ParallelWriter m_PathfindQueue;
@@ -508,6 +512,7 @@ namespace Time2Work
             public float shopping_hourly_factor;
             public float travel_hourly_factor;
             public float park_hourly_factor;
+            public int remote_work_prob;
 
             private void SpendLeisure(
               int index,
@@ -843,8 +848,60 @@ namespace Time2Work
 
                                     }
 
-                                    if ((!this.m_Workers.HasComponent(entity1) || Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) || !Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction) ||
-                                        (!Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay) && Time2WorkWorkerSystem.IsTimeToWork(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction) && Time2WorkWorkerSystem.IsLunchTime(citizenData, this.m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay))) && (!this.m_Students.HasComponent(entity1) || Time2WorkStudentSystem.IsTimeToStudy(citizenData, this.m_Students[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay)))
+                                    int day = Time2WorkTimeSystem.GetDay(m_SimulationFrame, m_TimeData, ticksPerDay);
+                                    float2 time2Lunch = new float2(-1, -1);
+                                    float2 time2Work = new float2(-1, -1);
+                                    bool dayOff = dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay, day);
+                                    bool lunchTime = false;
+                                    bool workTime = false;
+                                    bool studyTime = false;
+                                    bool workFromHome = false;
+                                    CitizenSchedule citizenSchedule;
+
+                                    bool createOrUpdate = true;
+                                    if (m_CitizenSchedule.TryGetComponent(entity1, out citizenSchedule))
+                                    {
+                                        if (citizenSchedule.day == day)
+                                        {
+                                            time2Lunch = new float2(citizenSchedule.start_lunch, citizenSchedule.end_lunch);
+                                            time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
+                                            workFromHome = citizenSchedule.work_from_home;
+                                            lunchTime = Time2WorkWorkerSystem.IsLunchTime(this.m_TimeOfDay, time2Lunch);
+                                            workTime = Time2WorkWorkerSystem.IsTimeToWork(this.m_TimeOfDay, time2Work);
+                                            createOrUpdate = true;
+                                        }
+                                    }
+
+                                    if (createOrUpdate)
+                                    {
+                                        lunchTime = Time2WorkWorkerSystem.IsLunchTime(citizenData, worker, ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay, out time2Lunch);
+                                        float start_work = 0f;
+                                        if (this.m_Workers.HasComponent(entity1))
+                                        {
+                                            workTime = Time2WorkWorkerSystem.IsTimeToWork(citizenData, m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction, out time2Work, out start_work);
+                                            workFromHome = Time2WorkWorkerSystem.IsTodayWorkFromHome(citizenData, this.m_SimulationFrame, this.m_TimeData, ticksPerDay, remote_work_prob);
+                                        }
+                                        else if (this.m_Students.HasComponent(entity1))
+                                        {
+                                            float startStudy = default;
+                                            workTime = Time2WorkStudentSystem.IsTimeToStudy(citizenData, m_Students[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay, out time2Work, out startStudy);
+                                            studyTime = workTime;
+                                        }
+
+                                        citizenSchedule = new CitizenSchedule(dayOff, time2Work.x, start_work, time2Work.y, time2Lunch.x, time2Lunch.y, workFromHome, day);
+
+                                        if (m_CitizenSchedule.HasComponent(entity1))
+                                        {
+                                            m_CommandBuffer.SetComponent<CitizenSchedule>(unfilteredChunkIndex, entity1, citizenSchedule);
+                                        }
+                                        else
+                                        {
+                                            m_CommandBuffer.AddComponent<CitizenSchedule>(unfilteredChunkIndex, entity1, citizenSchedule);
+                                        }
+                                    }
+
+                                    if ((!this.m_Workers.HasComponent(entity1) || dayOff || !workTime ||
+                                        (!dayOff && workTime && lunchTime)) && (!this.m_Students.HasComponent(entity1) || studyTime))
                                     {
                                         provider = this.m_LeisureProviderDatas[this.m_PrefabRefs[destination].m_Prefab];
                                         if (provider.m_Efficiency == 0)
@@ -861,7 +918,7 @@ namespace Time2Work
                                         {
                                             m_Target = destination
                                         });
-                                        if(leisure.m_TargetAgent != Entity.Null && this.m_CurrentBuildings.HasComponent(entity1))
+                                        if (leisure.m_TargetAgent != Entity.Null && this.m_CurrentBuildings.HasComponent(entity1))
                                         {
                                             shoppingTime(unfilteredChunkIndex, entity1, citizenData, provider.m_LeisureType);
                                         }
@@ -871,7 +928,7 @@ namespace Time2Work
                                         if (this.m_Purposes.HasComponent(entity1) && (this.m_Purposes[entity1].m_Purpose == Game.Citizens.Purpose.Leisure || this.m_Purposes[entity1].m_Purpose == Game.Citizens.Purpose.Traveling))
                                         {
                                             this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity1);
-                                        
+
                                         }
                                         this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
                                         this.m_CommandBuffer.RemoveComponent(unfilteredChunkIndex, entity1, in this.m_PathfindTypes);
@@ -1224,6 +1281,7 @@ namespace Time2Work
             [ReadOnly]
             public BufferLookup<Game.Economy.Resources> __Game_Economy_Resources_RO_BufferLookup;
             public ComponentLookup<Citizen> __Game_Citizens_Citizen_RW_ComponentLookup;
+            public ComponentLookup<CitizenSchedule> __Game_Citizens_CitizenSchedule_RW_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<CarData> __Game_Prefabs_CarData_RO_ComponentLookup;
             [ReadOnly]
@@ -1296,6 +1354,7 @@ namespace Time2Work
                 this.__Game_Citizens_SpecialEventData_RO_ComponentLookup = state.GetComponentLookup<SpecialEventData>(true);
                 this.__Game_Economy_Resources_RO_BufferLookup = state.GetBufferLookup<Game.Economy.Resources>(true);
                 this.__Game_Citizens_Citizen_RW_ComponentLookup = state.GetComponentLookup<Citizen>();
+                this.__Game_Citizens_CitizenSchedule_RW_ComponentLookup = state.GetComponentLookup<CitizenSchedule>();
                 this.__Game_Prefabs_CarData_RO_ComponentLookup = state.GetComponentLookup<CarData>(true);
                 this.__Game_Prefabs_ObjectGeometryData_RO_ComponentLookup = state.GetComponentLookup<ObjectGeometryData>(true);
                 this.__Game_Prefabs_HumanData_RO_ComponentLookup = state.GetComponentLookup<HumanData>(true);
