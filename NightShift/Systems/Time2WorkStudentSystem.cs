@@ -140,7 +140,7 @@ namespace Time2Work
             {
                 offdayprob = offdayprob3.y;
             }
-            if (student.m_Level > 2)
+            if (student.m_Level >= 2)
             {
                 offdayprob = offdayprob3.z;
             }

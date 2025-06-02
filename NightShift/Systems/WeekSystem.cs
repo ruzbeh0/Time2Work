@@ -22,7 +22,7 @@ namespace Time2Work.Systems
         private static int year;
         private static bool updated = false;
         private static Setting.months month;
-        private bool initialized = false;
+        public static  bool initialized = false;
 
         protected override void OnCreate()
         {

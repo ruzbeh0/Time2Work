@@ -137,6 +137,7 @@ There are also other four plots comparing the three day types: Weekday, Average 
 * Added schedule information on the cim panel when clicking on a cim
 * Fixed bug that was using the vanilla version of isTodayOffDay, isTimeToStudy and isTimeToWork methods for cims that were attending meetings.
 * Fixed error when printing probabilities in new cities.
+* Fixed error on school start end times being applied incorrectly to colleges
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

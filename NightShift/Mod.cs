@@ -134,6 +134,7 @@ namespace Time2Work
             updateSystem.UpdateAfter<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabUpdate);
             updateSystem.UpdateBefore<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabReferences);
             CitizenScheduleSection citizenScheduleSection = World.DefaultGameObjectInjectionWorld?.GetOrCreateSystemManaged<CitizenScheduleSection>();
+            updateSystem.UpdateAt<CitizenScheduleSystem>(SystemUpdatePhase.GameSimulation);
 
             //Harmony
             var harmony = new Harmony(harmonyID);
@@ -144,14 +145,6 @@ namespace Time2Work
             foreach (var patchedMethod in patchedMethods)
             {
                 log.Info($"Patched method: {patchedMethod.Module.Name}:{patchedMethod.Name}");
-            }
-
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                foreach (var type in asm.GetTypes())
-                {
-                    Mod.log.Info(type.FullName);
-                }
             }
         }
 
