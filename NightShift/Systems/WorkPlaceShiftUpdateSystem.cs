@@ -3,6 +3,7 @@ using Game;
 using Game.Citizens;
 using Game.Companies;
 using Game.Prefabs;
+using Game.Common;
 using Game.Simulation;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Entities;
+using Game.Tools;
 
 namespace Time2Work.Systems
 {
@@ -31,7 +33,12 @@ namespace Time2Work.Systems
             {
                 All = new[] {
                     ComponentType.ReadWrite<WorkplaceData>()
-                }
+                },
+                None =
+                    [
+                        ComponentType.Exclude<Deleted>(),
+                        ComponentType.Exclude<Temp>()
+                    ],
             });
 
             RequireForUpdate(_query);

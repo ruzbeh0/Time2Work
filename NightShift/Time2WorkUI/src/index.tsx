@@ -6,6 +6,8 @@ import timeControlsStyles from 'mods/time-controls.module.scss';
 import mod from "../mod.json";
 import { useValue, bindValue, trigger } from "cs2/api";
 import RealisticTripsMenu from "./mods/RealisticTripsContent/RealisticTripsMenu";
+import { VanillaComponentResolver } from "mods/VanillaComponentResolver/VanillaComponentResolver";
+import { CitizenScheduleSection } from './mods/CitizenScheduleSection';
 
 
 const coTimeControlsStyles: Record<string, string> = getModule(
@@ -14,6 +16,7 @@ const coTimeControlsStyles: Record<string, string> = getModule(
 );
 
 export const register: ModRegistrar = moduleRegistry => {
+    VanillaComponentResolver.setRegistry(moduleRegistry);
     moduleRegistry.extend(
         'game-ui/game/components/toolbar/bottom/time-controls/time-controls.tsx',
         'TimeControls',
@@ -23,6 +26,8 @@ export const register: ModRegistrar = moduleRegistry => {
             </TimeControlsPortal>
         )
     );
+    moduleRegistry.extend("game-ui/game/components/selected-info-panel/selected-info-sections/selected-info-sections.tsx", 'selectedInfoSectionComponents', CitizenScheduleSection);
+
 
     moduleRegistry.extend(
         'game-ui/game/components/toolbar/bottom/time-controls/time-controls.module.scss',

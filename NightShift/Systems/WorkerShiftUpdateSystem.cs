@@ -2,9 +2,11 @@
 using Game;
 using Game.Buildings;
 using Game.Citizens;
+using Game.Common;
 using Game.Companies;
 using Game.Prefabs;
 using Game.Simulation;
+using Game.Tools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,7 +39,12 @@ namespace Time2Work.Systems
             {
                 All = new[] {
                     ComponentType.ReadWrite<Worker>()
-                }
+                },
+                None =
+                    [
+                        ComponentType.Exclude<Deleted>(),
+                        ComponentType.Exclude<Temp>()
+                    ],
             });
 
             RequireForUpdate(_query);

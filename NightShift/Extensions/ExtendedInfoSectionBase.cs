@@ -5,13 +5,10 @@ namespace Time2Work.Extensions
     using System;
     using Colossal.UI.Binding;
     using Game.UI.InGame;
-    using Time2Work.Extensions;
-    using Time2Work.Systems;
-    using Time2Work;
 
     public abstract partial class ExtendedInfoSectionBase : InfoSectionBase
     {
-        public ValueBindingHelper<T> CreateBinding<T>(string key, T initialValue, Action<int> onPropertySelected)
+        public ValueBindingHelper<T> CreateBinding<T>(string key, T initialValue)
         {
             var helper = new ValueBindingHelper<T>(new(Mod.Id, key, initialValue, new GenericUIWriter<T>()));
 

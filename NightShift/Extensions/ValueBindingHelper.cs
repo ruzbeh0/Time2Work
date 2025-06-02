@@ -8,7 +8,6 @@ namespace Time2Work.Extensions
     public class ValueBindingHelper<T>
     {
         private readonly Action<T> _updateCallBack;
-        internal Action<int> OnValueChanged;
 
         public ValueBinding<T> Binding { get; }
 

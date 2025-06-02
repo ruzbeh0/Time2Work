@@ -1,30 +1,31 @@
 ﻿using Colossal.IO.AssetDatabase;
 using Colossal.Logging;
+using Colossal.PSI.Environment;
+using Colossal.UI;
 using Game;
 using Game.Modding;
 using Game.SceneFlow;
 using Game.Serialization;
+using Game.Settings;
 using Game.Simulation;
-using Unity.Entities;
-using HarmonyLib;
-using System.Linq;
-using System.IO;
-using Colossal.UI;
 using Game.UI.InGame;
+using HarmonyLib;
+using System;
+using System.IO;
+using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using Time2Work.Systems;
+using Unity.Entities;
+using UnityEngine;
 using static Colossal.Json.DiffUtility;
 using static Time2Work.Setting;
-using Game.Settings;
-using Colossal.PSI.Environment;
-using System.Runtime.Remoting.Messaging;
-using UnityEngine;
 
 namespace Time2Work
 {
     public class Mod : IMod
     {
         public static readonly string harmonyID = "RealisticTrips";
-        public static readonly string Id = "RealisticTrips";
+        public static readonly string Id = "Time2Work";
         public static ILog log = LogManager.GetLogger($"RealisticTrips").SetShowsErrorsInUI(false);
         public static Setting m_Setting;
         public static int numCurrentEvents = 999;
@@ -125,13 +126,14 @@ namespace Time2Work
             updateSystem.UpdateAfter<SpecialEventSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<SpecialEventsUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkTimeUISystem>(SystemUpdatePhase.UIUpdate);
-            updateSystem.UpdateAt<CitizenScheduleUISystem>(SystemUpdatePhase.UIUpdate);
+            //updateSystem.UpdateAt<CitizenScheduleUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkStatisticsUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAfter<TimeSettingsMultiplierSystem>(SystemUpdatePhase.PrefabUpdate);
             updateSystem.UpdateBefore<TimeSettingsMultiplierSystem>(SystemUpdatePhase.PrefabReferences);
             updateSystem.UpdateAfter<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabUpdate);
             updateSystem.UpdateBefore<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabReferences);
+            CitizenScheduleSection citizenScheduleSection = World.DefaultGameObjectInjectionWorld?.GetOrCreateSystemManaged<CitizenScheduleSection>();
 
             //Harmony
             var harmony = new Harmony(harmonyID);
@@ -142,6 +144,14 @@ namespace Time2Work
             foreach (var patchedMethod in patchedMethods)
             {
                 log.Info($"Patched method: {patchedMethod.Module.Name}:{patchedMethod.Name}");
+            }
+
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                foreach (var type in asm.GetTypes())
+                {
+                    Mod.log.Info(type.FullName);
+                }
             }
         }
 
