@@ -11,7 +11,7 @@ namespace Time2Work.Components
 {
     public struct CitizenSchedule : IComponentData, IQueryTypeParameter, ISerializable
     {
-        public int version = 1;
+        public int version = 2;
         public int day = -1000;
         public bool dayoff = default;
         public float go_to_work = default;
@@ -20,20 +20,11 @@ namespace Time2Work.Components
         public float start_lunch = default;
         public float end_lunch = default;
         public bool work_from_home = false;
+        public int work_type = default;
 
-        public CitizenSchedule(bool dayoff, float go_to_work, float start_work, float end_work, float start_lunch, float end_lunch, bool work_from_home, int day)
+        public CitizenSchedule()
         {
-            this.dayoff = dayoff;
-            this.go_to_work = go_to_work;
-            this.start_work = start_work;
-            this.end_work = end_work;
-            this.day = day;
-            this.start_lunch = start_lunch;
-            this.end_lunch = end_lunch;
-            this.work_from_home = work_from_home;
         }
-
-       
 
         public void Serialize<TWriter>(TWriter writer) where TWriter : IWriter
         {
@@ -46,6 +37,7 @@ namespace Time2Work.Components
             writer.Write(start_lunch);
             writer.Write(end_lunch);
             writer.Write(work_from_home);
+            writer.Write(work_type);
         }
 
         public void Deserialize<TReader>(TReader reader) where TReader : IReader
@@ -59,6 +51,10 @@ namespace Time2Work.Components
             reader.Read(out start_lunch);
             reader.Read(out end_lunch);
             reader.Read(out work_from_home);
+            if(version > 1)
+            {
+                reader.Read(out work_type);
+            }
         }
     }
 }

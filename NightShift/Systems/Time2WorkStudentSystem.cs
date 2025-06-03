@@ -61,7 +61,7 @@ namespace Time2Work
             {
                 offdayprob = offdayprob3.y;
             }
-            if (student.m_Level > 2)
+            if (student.m_Level >= 2)
             {
                 offdayprob = offdayprob3.z;
             }
@@ -150,6 +150,13 @@ namespace Time2Work
             timeToStudy = Time2WorkStudentSystem.GetTimeToStudy(citizen, student, ref economyParameters, school_start_time, school_end_time, ticksPerDay, out startStudy);
             if (Unity.Mathematics.Random.CreateFromIndex((uint)citizen.m_PseudoRandom + (uint)day).NextInt(100) <= num)
                 return false;
+            return (double)timeToStudy.x >= (double)timeToStudy.y ? (double)timeOfDay >= (double)timeToStudy.x || (double)timeOfDay <= (double)timeToStudy.y : (double)timeOfDay >= (double)timeToStudy.x && (double)timeOfDay <= (double)timeToStudy.y;
+        }
+
+        public static bool IsTimeToStudy(
+          float2 timeToStudy,
+          float timeOfDay)
+        {
             return (double)timeToStudy.x >= (double)timeToStudy.y ? (double)timeOfDay >= (double)timeToStudy.x || (double)timeOfDay <= (double)timeToStudy.y : (double)timeOfDay >= (double)timeToStudy.x && (double)timeOfDay <= (double)timeToStudy.y;
         }
 
@@ -391,9 +398,7 @@ namespace Time2Work
                         {
                             time2Lunch = new float2(citizenSchedule.start_lunch, citizenSchedule.end_lunch);
                             time2Study = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
-                            workFromHome = citizenSchedule.work_from_home;
-                            lunchTime = Time2WorkWorkerSystem.IsLunchTime(this.m_TimeOfDay, time2Lunch);
-                            workTime = Time2WorkWorkerSystem.IsTimeToWork(this.m_TimeOfDay, time2Study);
+                            workTime = Time2WorkStudentSystem.IsTimeToStudy(time2Study, this.m_TimeOfDay);
                             createOrUpdate = false;
                         }
                     }

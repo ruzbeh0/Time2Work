@@ -134,7 +134,7 @@ namespace Time2Work
             updateSystem.UpdateAfter<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabUpdate);
             updateSystem.UpdateBefore<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabReferences);
             CitizenScheduleSection citizenScheduleSection = World.DefaultGameObjectInjectionWorld?.GetOrCreateSystemManaged<CitizenScheduleSection>();
-            updateSystem.UpdateAt<CitizenScheduleSystem>(SystemUpdatePhase.GameSimulation);
+            //updateSystem.UpdateAt<CitizenScheduleSystem>(SystemUpdatePhase.GameSimulation);
 
             //Harmony
             var harmony = new Harmony(harmonyID);
