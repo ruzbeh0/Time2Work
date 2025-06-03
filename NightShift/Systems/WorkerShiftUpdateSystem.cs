@@ -20,7 +20,6 @@ namespace Time2Work.Systems
 {
     public partial class WorkerShiftUpdateSystem : GameSystemBase
     {
-        private Dictionary<Entity, Worker> _WorkerToData = new Dictionary<Entity, Worker>();
         public ComponentLookup<PrefabRef> PrefabRefLookup;
         public ComponentLookup<CommercialProperty> CommercialPropertyLookup;
         public ComponentLookup<IndustrialProperty> IndustrialPropertyLookup;
@@ -108,11 +107,7 @@ namespace Time2Work.Systems
                 {
                     Worker data;
 
-                    if (!_WorkerToData.TryGetValue(worker, out data))
-                    {
-                        data = EntityManager.GetComponentData<Worker>(worker);
-                        _WorkerToData.Add(worker, data);
-                    } 
+                    data = EntityManager.GetComponentData<Worker>(worker);
 
                     if (data.m_Shift == Workshift.Day)
                     {
@@ -284,34 +279,27 @@ namespace Time2Work.Systems
                      {
                          Worker data;
 
-                         if (_WorkerToData.TryGetValue(worker, out data))
-                         {
-                            //data = EntityManager.GetComponentData<Worker>(worker);
-                            double day_prob = (1 - (eveningWorkPlaceShare + nightWorkPlaceShare));
+                         data = EntityManager.GetComponentData<Worker>(worker);
+                         double day_prob = (1 - (eveningWorkPlaceShare + nightWorkPlaceShare));
 
-                            float prob = random.NextFloat();
-                            float prob2 = random.NextFloat();
-                            if (iter % 2 == 0)
-                             {
-                                 adjustBasedOnShifts(eveningWorkPlaceShare, nightWorkPlaceShare, day_prob, day_prob2, ref data, prob, prob2, current_day_prob);
-                             }
-                             else 
-                             {
-                                 //Adjust based on workplace
-                                 adjustBasedOnWorkType(eveningWorkPlaceShare, nightWorkPlaceShare, office_day_prob2, commercial_day_prob2, industry_day_prob2, cityservices_day_prob2, ref data, prob, prob2);
-                             }
+                         float prob = random.NextFloat();
+                         float prob2 = random.NextFloat();
+                         if (iter % 2 == 0)
+                          {
+                              adjustBasedOnShifts(eveningWorkPlaceShare, nightWorkPlaceShare, day_prob, day_prob2, ref data, prob, prob2, current_day_prob);
+                          }
+                          else 
+                          {
+                              //Adjust based on workplace
+                              adjustBasedOnWorkType(eveningWorkPlaceShare, nightWorkPlaceShare, office_day_prob2, commercial_day_prob2, industry_day_prob2, cityservices_day_prob2, ref data, prob, prob2);
+                          }
 
-                            updateCounters(ref data, ref new_sum_day_shift, ref new_sum_evening_shift, ref new_sum_night_shift, ref new_sum_office_nonday_shift, ref new_sum_commercial_nonday_shift, ref new_sum_industry_nonday_shift, ref new_sum_cityservices_nonday_shift, ref new_sum_office_day_shift, ref new_sum_commercial_day_shift, ref new_sum_industry_day_shift, ref new_sum_cityservices_day_shift);
+                         updateCounters(ref data, ref new_sum_day_shift, ref new_sum_evening_shift, ref new_sum_night_shift, ref new_sum_office_nonday_shift, ref new_sum_commercial_nonday_shift, ref new_sum_industry_nonday_shift, ref new_sum_cityservices_nonday_shift, ref new_sum_office_day_shift, ref new_sum_commercial_day_shift, ref new_sum_industry_day_shift, ref new_sum_cityservices_day_shift);
 
-                             if (iter == iterations - 1)
-                             {
-                                 EntityManager.SetComponentData(worker, data);
-                             } else
-                             {
-                                 _WorkerToData.Remove(worker);
-                                 _WorkerToData.Add(worker, data);
-                             }
-                         } 
+                          if (iter == iterations - 1)
+                          {
+                              EntityManager.SetComponentData(worker, data);
+                          } 
                      }
 
 

@@ -29,6 +29,7 @@ using static Game.Prefabs.TriggerPrefabData;
 using Time2Work.Components;
 using Time2Work.Utils;
 using System;
+using static Time2Work.Time2WorkWorkerSystem;
 
 namespace Time2Work
 {
@@ -771,111 +772,14 @@ namespace Time2Work
                                 {
                                     float offdayprob = 60f;
                                     int parttime_prob = part_time_prob;
-                                    if (m_Workers.TryGetComponent(entity1, out var worker))
-                                    {
-                                        if (PrefabRefLookup.TryGetComponent(worker.m_Workplace, out var prefab1))
-                                        {
-                                            if (PropertyRenterLookup.TryGetComponent(worker.m_Workplace, out var propertyRenter))
-                                            {
-                                                //x = weekday, y = friday, z = saturday, w = sunday
-                                                if (CommercialPropertyLookup.HasComponent(propertyRenter.m_Property))
-                                                {
-                                                    //Mod.log.Info($"Commercial Property");
-                                                    if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
-                                                    {
-                                                        offdayprob = commercial_offdayprob.x;
-                                                    }
-                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
-                                                    {
-                                                        offdayprob = commercial_offdayprob.y;
-                                                    }
-                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
-                                                    {
-                                                        offdayprob = commercial_offdayprob.z;
-                                                        parttime_prob = 100;
-                                                    }
-                                                    else
-                                                    {
-                                                        offdayprob = commercial_offdayprob.w;
-                                                        parttime_prob = 100;
-                                                    }
-                                                }
-                                                if (IndustrialPropertyLookup.HasComponent(propertyRenter.m_Property))
-                                                {
-                                                    if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
-                                                    {
-                                                        offdayprob = industry_offdayprob.x;
-                                                    }
-                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
-                                                    {
-                                                        offdayprob = industry_offdayprob.y;
-                                                    }
-                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
-                                                    {
-                                                        offdayprob = industry_offdayprob.z;
-                                                        parttime_prob = 100;
-                                                    }
-                                                    else
-                                                    {
-                                                        offdayprob = industry_offdayprob.w;
-                                                        parttime_prob = 100;
-                                                    }
-                                                }
-                                                if (OfficePropertyLookup.HasComponent(propertyRenter.m_Property))
-                                                {
-                                                    if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
-                                                    {
-                                                        offdayprob = office_offdayprob.x;
-                                                    }
-                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
-                                                    {
-                                                        offdayprob = office_offdayprob.y;
-                                                    }
-                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
-                                                    {
-                                                        offdayprob = office_offdayprob.z;
-                                                        parttime_prob = 100;
-                                                    }
-                                                    else
-                                                    {
-                                                        offdayprob = office_offdayprob.w;
-                                                        parttime_prob = 100;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    if ((int)dow == (int)Setting.DTSimulationEnum.Weekday)
-                                                    {
-                                                        offdayprob = cityservices_offdayprob.x;
-                                                    }
-                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.AverageDay)
-                                                    {
-                                                        offdayprob = cityservices_offdayprob.y;
-                                                    }
-                                                    else if ((int)dow == (int)Setting.DTSimulationEnum.Saturday)
-                                                    {
-                                                        offdayprob = cityservices_offdayprob.z;
-                                                        parttime_prob = 100;
-                                                    }
-                                                    else
-                                                    {
-                                                        offdayprob = cityservices_offdayprob.w;
-                                                        parttime_prob = 100;
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                    }
-
+                                    WorkType work = 0;
                                     int day = Time2WorkTimeSystem.GetDay(m_SimulationFrame, m_TimeData, ticksPerDay);
                                     float2 time2Lunch = new float2(-1, -1);
                                     float2 time2Work = new float2(-1, -1);
-                                    bool dayOff = dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay, day);
-                                    bool lunchTime = false;
-                                    bool workTime = false;
-                                    bool studyTime = false;
-                                    bool workFromHome = false;
+                                    bool dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay, day);
+                                    bool lunchTime = default;
+                                    bool workTime = default;
+                                    bool workFromHome = default;
                                     float start_work = 0f;
                                     CitizenSchedule citizenSchedule;
 
@@ -886,14 +790,24 @@ namespace Time2Work
                                     if (chunkHasSchedule)
                                     {
                                         citizenSchedule = nativeArray6[index];
+                                        citizenSchedule = nativeArray6[index];
+                                        time2Lunch = new float2(citizenSchedule.start_lunch, citizenSchedule.end_lunch);
+                                        time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
+                                        workFromHome = citizenSchedule.work_from_home;
+                                        lunchTime = Time2WorkWorkerSystem.IsLunchTime(this.m_TimeOfDay, time2Lunch);
+                                        workTime = Time2WorkWorkerSystem.IsTimeToWork(this.m_TimeOfDay, time2Work);
+                                        start_work = citizenSchedule.start_work;
+                                        dayOff = citizenSchedule.dayoff;
+
                                         if (citizenSchedule.day == day)
                                         {
-                                            time2Lunch = new float2(citizenSchedule.start_lunch, citizenSchedule.end_lunch);
-                                            time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
-                                            workFromHome = citizenSchedule.work_from_home;
-                                            lunchTime = Time2WorkWorkerSystem.IsLunchTime(this.m_TimeOfDay, time2Lunch);
-                                            workTime = Time2WorkWorkerSystem.IsTimeToWork(this.m_TimeOfDay, time2Work);
-                                            start_work = citizenSchedule.start_work;
+                                            if (this.m_Workers.HasComponent(entity1))
+                                            {
+                                                GetWorkTypeProbabilities(work, dow, out offdayprob, out parttime_prob, commercial_offdayprob,
+                                                                                                                   industry_offdayprob, office_offdayprob, cityservices_offdayprob, out remote_work_prob);
+                                                dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay, day);
+
+                                            }
 
                                             //DayOff changes in the early hours of the day. So checking if that happened
                                             if (dayOff != citizenSchedule.dayoff)
@@ -911,6 +825,13 @@ namespace Time2Work
                                             //Only recalculate work/lunch hours every 5 days
                                             if (day - citizenSchedule.day < 5)
                                             {
+                                                if (this.m_Workers.HasComponent(entity1))
+                                                {
+                                                    GetWorkTypeProbabilities(work, dow, out offdayprob, out parttime_prob, commercial_offdayprob,
+                                                                                                                            industry_offdayprob, office_offdayprob, cityservices_offdayprob, out remote_work_prob);
+                                                    dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay, day);
+
+                                                }
                                                 recalculate_worktime = false;
                                             }
                                         }
@@ -926,15 +847,17 @@ namespace Time2Work
                                         {
                                             if (this.m_Workers.HasComponent(entity1) && recalculate_worktime)
                                             {
+                                                //Find out what type of job worker has
+                                                work = GetWorkerOffDayAndPartTimeProb(PrefabRefLookup, PropertyRenterLookup, CommercialPropertyLookup, IndustrialPropertyLookup,
+                                                    OfficePropertyLookup, m_Workers[entity1], out offdayprob, part_time_prob, out parttime_prob, commercial_offdayprob,
+                                                    industry_offdayprob, office_offdayprob, cityservices_offdayprob, dow, out remote_work_prob);
+                                                dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay, day);
                                                 lunchTime = Time2WorkWorkerSystem.IsLunchTime(citizenData, m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay, out time2Lunch);
                                                 workTime = Time2WorkWorkerSystem.IsTimeToWork(citizenData, m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction, out time2Work, out start_work);
-                                            }
-
-                                            if (this.m_Workers.HasComponent(entity1))
-                                            {
                                                 workFromHome = Time2WorkWorkerSystem.IsTodayWorkFromHome(citizenData, this.m_SimulationFrame, this.m_TimeData, ticksPerDay, remote_work_prob);
                                             }
-                                            else if (this.m_Students.HasComponent(entity1))
+
+                                            if (this.m_Students.HasComponent(entity1))
                                             {
                                                 float startStudy = default;
                                                 workTime = Time2WorkStudentSystem.IsTimeToStudy(citizenData, m_Students[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay, out time2Work, out startStudy);
@@ -961,7 +884,7 @@ namespace Time2Work
                                     }
 
                                     if ((!this.m_Workers.HasComponent(entity1) || dayOff || !workTime ||
-                                        (!dayOff && workTime && lunchTime)) && (!this.m_Students.HasComponent(entity1) || studyTime))
+                                        (!dayOff && workTime && lunchTime)) && (!this.m_Students.HasComponent(entity1) || this.m_Students.HasComponent(entity1) && workTime))
                                     {
                                         provider = this.m_LeisureProviderDatas[this.m_PrefabRefs[destination].m_Prefab];
                                         if (provider.m_Efficiency == 0)

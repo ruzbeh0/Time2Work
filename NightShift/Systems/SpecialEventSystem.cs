@@ -56,88 +56,99 @@ namespace Time2Work.Systems
         {
             var entities = _query.ToEntityArray(Allocator.Temp);
 
-            Game.Common.TimeData m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
-            m_SimulationFrame = this.m_SimulationSystem.frameIndex;
-            int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
-            DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
-            int hour = currentDateTime.Hour;
-            int minute = currentDateTime.Minute;
-            System.DayOfWeek dayOfWeek = (System.DayOfWeek)WeekSystem.getDayOfWeekInt();
-            Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex((uint)day*100);
-            int n = 0;
-
-            int min = Mod.m_Setting.min_event_weekday;
-            int max = Mod.m_Setting.max_event_weekday;
-
-            if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
+            try
             {
-                min = Mod.m_Setting.min_event_weekend;
-                max = Mod.m_Setting.max_event_weekend;
-            }
-            else if (dayOfWeek.Equals(DayOfWeek.Friday))
-            {
-                min = Mod.m_Setting.min_event_avg_day;
-                max = Mod.m_Setting.max_event_avg_day;
-            }
+                Game.Common.TimeData m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
+                m_SimulationFrame = this.m_SimulationSystem.frameIndex;
+                int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
+                DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
+                int hour = currentDateTime.Hour;
+                int minute = currentDateTime.Minute;
+                System.DayOfWeek dayOfWeek = (System.DayOfWeek)WeekSystem.getDayOfWeekInt();
+                Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex((uint)day * 100);
+                int n = 0;
 
-            numberEvents = random.NextInt(min, max + 1);
+                int min = Mod.m_Setting.min_event_weekday;
+                int max = Mod.m_Setting.max_event_weekday;
 
-            //Mod.log.Info($"dayOfWeek:{dayOfWeek}, day: {day}, hour:{hour}, minute:{minute}, numberEvents:{numberEvents}, entities:{entities.Length}, min: {min}, max: {max}");
-
-            if ((int)dayOfWeek > -1 && (hour == 0 && minute >= 4 && minute < 10 || !updated))
-            {
-                updated = true;
-                //Mod.log.Info($"Number of Events Today: {numberEvents}");
-                int i = 0;
-                foreach (var ent in entities)
+                if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
                 {
-                    SpecialEventData specialEventData;
-                    if(EntityManager.TryGetComponent(ent, out specialEventData))
-                    {
-                        uint seed = (uint)(specialEventData.new_attraction / 100 + day * day);
-                        Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
-                        int r = random2.NextInt(0,entities.Length);
+                    min = Mod.m_Setting.min_event_weekend;
+                    max = Mod.m_Setting.max_event_weekend;
+                }
+                else if (dayOfWeek.Equals(DayOfWeek.Friday))
+                {
+                    min = Mod.m_Setting.min_event_avg_day;
+                    max = Mod.m_Setting.max_event_avg_day;
+                }
 
-                        
-                        if (specialEventData.day != day && (n < numberEvents && (r < numberEvents || i == entities.Length - 1)))
+                numberEvents = random.NextInt(min, max + 1);
+
+                //Mod.log.Info($"dayOfWeek:{dayOfWeek}, day: {day}, hour:{hour}, minute:{minute}, numberEvents:{numberEvents}, entities:{entities.Length}, min: {min}, max: {max}");
+
+                if ((int)dayOfWeek > -1 && (hour == 0 && minute >= 4 && minute < 10 || !updated))
+                {
+                    updated = true;
+                    //Mod.log.Info($"Number of Events Today: {numberEvents}");
+                    int i = 0;
+                    foreach (var ent in entities)
+                    {
+                        SpecialEventData specialEventData;
+                        if (EntityManager.TryGetComponent(ent, out specialEventData))
                         {
-                            if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
+                            uint seed = (uint)(specialEventData.new_attraction / 100 + day * day);
+                            Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
+                            int r = random2.NextInt(0, entities.Length);
+
+
+                            if (specialEventData.day != day && (n < numberEvents && (r < numberEvents || i == entities.Length - 1)))
                             {
-                                specialEventData.start_time = random.NextInt(8, 20) / 24f;
-                                specialEventData.duration = random.NextInt(2, 5) / 24f;
+                                if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
+                                {
+                                    specialEventData.start_time = random.NextInt(8, 20) / 24f;
+                                    specialEventData.duration = random.NextInt(2, 5) / 24f;
+                                }
+                                else
+                                {
+                                    float time = (float)GaussianRandom.NextGaussianDouble(random);
+                                    if (time > 0)
+                                    {
+                                        time *= 4;
+                                    }
+                                    else
+                                    {
+                                        time *= 8;
+                                    }
+                                    int timeint = (int)time;
+                                    specialEventData.start_time = Math.Max(8, Math.Min((timeint + 16f), 20)) / 24f;
+                                    specialEventData.duration = random.NextInt(2, 4) / 24f;
+                                }
+                                specialEventData.day = day;
+                                startTime[n] = specialEventData.start_time;
+                                endTime[n] = specialEventData.start_time + specialEventData.duration;
+                                n++;
+                                //Mod.log.Info($"startTime:{startTime[n]}, endTime:{endTime[n]}, enti:{entities.Length}, numberEvents:{numberEvents}, attr:{specialEventData.new_attraction}, n:{n}, day:{specialEventData.day}");
                             }
                             else
                             {
-                                float time = (float)GaussianRandom.NextGaussianDouble(random);
-                                if(time > 0)
-                                {
-                                    time *= 4;
-                                } else
-                                {
-                                    time *= 8;
-                                }
-                                int timeint = (int) time;
-                                specialEventData.start_time = Math.Max(8,Math.Min((timeint + 16f),20)) / 24f;
-                                specialEventData.duration = random.NextInt(2, 4) / 24f;
+                                specialEventData.day = -1;
                             }
-                            specialEventData.day = day;
-                            startTime[n] = specialEventData.start_time;
-                            endTime[n] = specialEventData.start_time + specialEventData.duration;
-                            n++;
-                            //Mod.log.Info($"startTime:{startTime[n]}, endTime:{endTime[n]}, enti:{entities.Length}, numberEvents:{numberEvents}, attr:{specialEventData.new_attraction}, n:{n}, day:{specialEventData.day}");
-                        } else
-                        {
-                            specialEventData.day = -1;
+                            EntityManager.SetComponentData(ent, specialEventData);
                         }
-                        EntityManager.SetComponentData(ent, specialEventData);
+                        i++;
                     }
-                    i++;
-                }
-                if(n == numberEvents)
-                {
-                    updated = true;
+                    if (n == numberEvents)
+                    {
+                        updated = true;
+                    }
                 }
             }
+            finally
+            {
+                entities.Dispose();
+
+            }
+            
         }
 
         public override int GetUpdateInterval(SystemUpdatePhase phase) => 16;
