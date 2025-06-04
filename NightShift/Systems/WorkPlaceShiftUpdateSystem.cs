@@ -21,7 +21,8 @@ namespace Time2Work.Systems
     {
         private EntityQuery _query;
 
-        private bool updated = false;
+        private int lastUpdatedDay = -1;
+
 
         protected override void OnCreate()
         {
@@ -58,17 +59,11 @@ namespace Time2Work.Systems
             DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
             int day = currentDateTime.Day;
             //Only run every other day
-            if (day % 2 == 0 && currentDateTime.Hour == 3 && currentDateTime.Minute < 4 && !updated)
+            if (day % 2 == 0 && currentDateTime.Hour == 3 && currentDateTime.Minute < 4 && lastUpdatedDay != day)
             {
                 calculateWorkShifts();
-                updated = true;
-            } else
-            {
-                if (currentDateTime.Hour == 3 && currentDateTime.Minute < 10)
-                {
-                    updated = false;
-                }
-            }
+                lastUpdatedDay = day;
+            } 
         }
 
         private void calculateWorkShifts()

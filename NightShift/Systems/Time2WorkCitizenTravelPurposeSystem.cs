@@ -50,7 +50,25 @@ namespace Time2Work
             this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>(); 
             this.m_CityStatisticsSystem = this.World.GetOrCreateSystemManaged<CityStatisticsSystem>(); 
             this.m_EndFrameBarrier = this.World.GetOrCreateSystemManaged<EndFrameBarrier>();
-            this.m_ArrivedGroup = this.GetEntityQuery(ComponentType.ReadOnly<Citizen>(), ComponentType.ReadWrite<TravelPurpose>(), ComponentType.ReadWrite<TripNeeded>(), ComponentType.ReadOnly<CurrentBuilding>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>()); 
+            this.m_ArrivedGroup = this.GetEntityQuery(new EntityQueryDesc()
+            {
+                All = new ComponentType[4]
+             {
+                   ComponentType.ReadOnly<Citizen>(),
+                   ComponentType.ReadWrite<TravelPurpose>(),
+                   ComponentType.ReadWrite<TripNeeded>(),
+                   ComponentType.ReadOnly<CurrentBuilding>(),
+             },
+                Any = new ComponentType[1]
+               {
+                    ComponentType.ReadOnly<CitizenSchedule>(),
+               },
+                None = new ComponentType[2]
+             {
+                ComponentType.Exclude<Deleted>(),
+                ComponentType.Exclude<Temp>()
+             }
+            });
             this.m_StuckGroup = this.GetEntityQuery(ComponentType.ReadOnly<Citizen>(), ComponentType.ReadWrite<TravelPurpose>(), ComponentType.ReadWrite<TripNeeded>(), ComponentType.Exclude<CurrentTransport>(), ComponentType.Exclude<CurrentBuilding>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
             this.m_ShoppingGroup = this.GetEntityQuery(ComponentType.ReadOnly<Citizen>(), ComponentType.ReadWrite<TravelPurpose>(), ComponentType.ReadWrite<Shopper>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
             this.m_OutsideConnectionQuery = this.GetEntityQuery(ComponentType.ReadWrite<Game.Objects.OutsideConnection>(), ComponentType.Exclude<Game.Objects.ElectricityOutsideConnection>(), ComponentType.Exclude<Game.Objects.WaterPipeOutsideConnection>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
@@ -67,54 +85,23 @@ namespace Time2Work
             
             
             this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Citizens_Citizen_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Buildings_EmergencyShelter_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Buildings_DeathcareFacility_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Buildings_Hospital_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Buildings_Prison_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Buildings_PoliceStation_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Citizens_Worker_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Citizens_Student_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Companies_WorkProvider_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Buildings_School_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Buildings_Building_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Citizens_Arrived_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Citizens_TravelPurpose_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Citizens_CurrentBuilding_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
 
             Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob jobData = new Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob()
             {
@@ -136,7 +123,7 @@ namespace Time2Work
                 m_EmergencyShelterData = this.__TypeHandle.__Game_Buildings_EmergencyShelter_RO_ComponentLookup,
                 m_Citizens = this.__TypeHandle.__Game_Citizens_Citizen_RO_ComponentLookup,
                 m_HealthProblems = this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentLookup,
-                CitizenScheduleLookup = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentLookup,
+                m_CitizenSchedule = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle,
                 m_EconomyParameters = this.m_EconomyParameterGroup.GetSingleton<EconomyParameterData>(),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 m_ArriveQueue = nativeQueue.AsParallelWriter(),
@@ -214,30 +201,17 @@ namespace Time2Work
                 m_ArriveQueue = nativeQueue
             }.Schedule<Time2WorkCitizenTravelPurposeSystem.ArriveJob>(JobHandle.CombineDependencies(this.Dependency, deps));
             nativeQueue.Dispose(jobHandle1);
-            
-            
             this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Buildings_Building_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Agents_MovingAway_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Citizens_Household_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            
-            
             this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-
             this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup.Update(ref this.CheckedStateRef);
-
             this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            
-            
+            this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
+
+
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
             JobHandle outJobHandle1;
             JobHandle outJobHandle2;
@@ -316,7 +290,7 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<HealthProblem> m_HealthProblems;
             [ReadOnly]
-            public ComponentLookup<CitizenSchedule> CitizenScheduleLookup;
+            public ComponentTypeHandle<CitizenSchedule> m_CitizenSchedule;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
             public NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive>.ParallelWriter m_ArriveQueue;
             public EconomyParameterData m_EconomyParameters;
@@ -367,6 +341,8 @@ namespace Time2Work
                 NativeArray<CurrentBuilding> nativeArray3 = chunk.GetNativeArray<CurrentBuilding>(ref this.m_CurrentBuildingType);
                 Random random = this.m_RandomSeed.GetRandom(unfilteredChunkIndex);
 
+                NativeArray<CitizenSchedule> nativeArray6 = chunk.GetNativeArray<CitizenSchedule>(ref this.m_CitizenSchedule);
+
                 bool flag1 = chunk.Has<HealthProblem>(ref this.m_HealthProblemType);
                 for (int index = 0; index < chunk.Count; ++index)
                 {
@@ -383,9 +359,11 @@ namespace Time2Work
                     else if (travelPurpose.m_Purpose == Game.Citizens.Purpose.Sleeping)
                     {
                         CitizenSchedule citizenSchedule;
+                        bool chunkHasSchedule = chunk.Has(ref m_CitizenSchedule);
 
-                        if (CitizenScheduleLookup.TryGetComponent(entity, out citizenSchedule))
+                        if (chunkHasSchedule)
                         {
+                            citizenSchedule = nativeArray6[index];
                             float2 time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
                             Citizen citizen = this.m_Citizens[entity];
 
@@ -967,6 +945,8 @@ namespace Time2Work
             [ReadOnly]
             public EntityTypeHandle __Unity_Entities_Entity_TypeHandle;
             [ReadOnly]
+            public ComponentTypeHandle<CitizenSchedule> __Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle;
+            [ReadOnly]
             public ComponentTypeHandle<CurrentBuilding> __Game_Citizens_CurrentBuilding_RO_ComponentTypeHandle;
             public ComponentTypeHandle<TravelPurpose> __Game_Citizens_TravelPurpose_RW_ComponentTypeHandle;
             [ReadOnly]
@@ -1026,7 +1006,7 @@ namespace Time2Work
                 this.__Unity_Entities_Entity_TypeHandle = state.GetEntityTypeHandle();
                 
                 this.__Game_Citizens_CurrentBuilding_RO_ComponentTypeHandle = state.GetComponentTypeHandle<CurrentBuilding>(true);
-                
+                this.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle = state.GetComponentTypeHandle<CitizenSchedule>(true);
                 this.__Game_Citizens_TravelPurpose_RW_ComponentTypeHandle = state.GetComponentTypeHandle<TravelPurpose>();
                 
                 this.__Game_Citizens_HealthProblem_RO_ComponentTypeHandle = state.GetComponentTypeHandle<HealthProblem>(true);

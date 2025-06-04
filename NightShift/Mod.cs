@@ -118,11 +118,11 @@ namespace Time2Work
             updateSystem.UpdateAt<Time2WorkGoodsDeliveryRequestSystem>(SystemUpdatePhase.GameSimulation);
             //updateSystem.UpdateAt<Time2WorkStorageTransferSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<CompanyDisableNightNotificationSystem>(SystemUpdatePhase.GameSimulation);
-            //updateSystem.UpdateAt<Time2WorkCalendarEventLaunchSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTourismSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTouristSpawnSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkAttractionSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<EconomyParameterUpdaterSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAt<CitizenScheduleSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAfter<SpecialEventSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<SpecialEventsUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkTimeUISystem>(SystemUpdatePhase.UIUpdate);
@@ -134,7 +134,7 @@ namespace Time2Work
             updateSystem.UpdateAfter<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabUpdate);
             updateSystem.UpdateBefore<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabReferences);
             CitizenScheduleSection citizenScheduleSection = World.DefaultGameObjectInjectionWorld?.GetOrCreateSystemManaged<CitizenScheduleSection>();
-            //updateSystem.UpdateAt<CitizenScheduleSystem>(SystemUpdatePhase.GameSimulation);
+            
 
             //Harmony
             var harmony = new Harmony(harmonyID);

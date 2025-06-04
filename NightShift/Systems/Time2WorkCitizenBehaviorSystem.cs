@@ -202,23 +202,24 @@ namespace Time2Work
             this.m_PopulationQuery = this.GetEntityQuery(ComponentType.ReadOnly<Population>());
             this.m_CitizenQuery = this.GetEntityQuery(new EntityQueryDesc()
             {
-                All = new ComponentType[4]
+                All = new ComponentType[5]
              {
                    ComponentType.ReadWrite<Citizen>(),
                    ComponentType.ReadOnly<CurrentBuilding>(),
                    ComponentType.ReadOnly<HouseholdMember>(),
                    ComponentType.ReadOnly<UpdateFrame>(),
+                   ComponentType.ReadOnly<CitizenSchedule>(),
              },
-                Any = new ComponentType[1]
+                Any = new ComponentType[0]
                {
-                    ComponentType.ReadWrite<CitizenSchedule>(),
+                    
                },
                 None = new ComponentType[4]
              {
-                ComponentType.ReadOnly<TravelPurpose>(),
-                ComponentType.ReadOnly<ResourceBuyer>(),
-                ComponentType.ReadOnly<Deleted>(),
-                ComponentType.ReadOnly<Temp>(),
+                ComponentType.Exclude<TravelPurpose>(),
+                ComponentType.Exclude<ResourceBuyer>(),
+                ComponentType.Exclude<Deleted>(),
+                ComponentType.Exclude<Temp>(),
              }
             });
             this.m_OutsideConnectionQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Objects.OutsideConnection>(), ComponentType.Exclude<Game.Objects.ElectricityOutsideConnection>(), ComponentType.Exclude<Game.Objects.WaterPipeOutsideConnection>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
@@ -1166,119 +1167,18 @@ namespace Time2Work
                                                 {
                                                     if (!this.m_AttendingMeetings.HasComponent(entity1) || !this.AttendMeeting(unfilteredChunkIndex, entity1, ref citizen, household, currentBuilding, trips, ref random))
                                                     {
-                                                        float offdayprob = 60f;
-                                                        int parttime_prob = part_time_prob;
-                                                        WorkType work = 0;
                                                         int day = Time2WorkTimeSystem.GetDay(m_SimulationFrame, m_TimeData, ticksPerDay);
-                                                        float2 time2Lunch = new float2(-1, -1);
-                                                        float2 time2Work = new float2(-1, -1);
-                                                        bool dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob, ticksPerDay, day);
-                                                        bool lunchTime = default;
-                                                        bool workTime = default;
-                                                        bool workFromHome = default;
-                                                        float start_work = 0f;
-                                                        CitizenSchedule citizenSchedule;
 
-                                                        bool createOrUpdate = true;
-                                                        bool recalculate = true;
-                                                        bool recalculate_worktime = true;
-                                                        bool chunkHasSchedule = chunk.Has(ref m_CitizenSchedule);
-                                                        if (chunkHasSchedule)
-                                                        {
-                                                            citizenSchedule = nativeArray6[index];
-                                                            citizenSchedule = nativeArray6[index];
-                                                            time2Lunch = new float2(citizenSchedule.start_lunch, citizenSchedule.end_lunch);
-                                                            time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
-                                                            workFromHome = citizenSchedule.work_from_home;
-                                                            lunchTime = Time2WorkWorkerSystem.IsLunchTime(this.m_NormalizedTime, time2Lunch);
-                                                            workTime = Time2WorkWorkerSystem.IsTimeToWork(this.m_NormalizedTime, time2Work);
-                                                            start_work = citizenSchedule.start_work;
-                                                            dayOff = citizenSchedule.dayoff;
+                                                        CitizenSchedule citizenSchedule = nativeArray6[index];
+                                                        float2 time2Lunch = new float2(citizenSchedule.start_lunch, citizenSchedule.end_lunch);
+                                                        float2 time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
+                                                        bool workFromHome = citizenSchedule.work_from_home;
+                                                        bool lunchTime = Time2WorkWorkerSystem.IsLunchTime(this.m_NormalizedTime, time2Lunch);
+                                                        bool workTime = Time2WorkWorkerSystem.IsTimeToWork(this.m_NormalizedTime, time2Work);
+                                                        float start_work = citizenSchedule.start_work;
+                                                        bool dayOff = citizenSchedule.dayoff;
 
-                                                            if (citizenSchedule.day == day)
-                                                            {
-                                                                if (this.m_Workers.HasComponent(entity1))
-                                                                {
-                                                                    GetWorkTypeProbabilities(work, dow, out offdayprob, out parttime_prob, commercial_offdayprob,
-                                                                                                                                       industry_offdayprob, office_offdayprob, cityservices_offdayprob, out remote_work_prob);
-                                                                    dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob, ticksPerDay, day);
-
-                                                                }
-
-                                                                //DayOff changes in the early hours of the day. So checking if that happened
-                                                                if (dayOff != citizenSchedule.dayoff)
-                                                                {
-                                                                    citizenSchedule.dayoff = dayOff;
-                                                                    recalculate = false;
-                                                                } else
-                                                                {
-                                                                    createOrUpdate = false;
-                                                                }   
-                                                            }
-                                                            else
-                                                            {
-                                                                //Only recalculate work/lunch hours every 5 days
-                                                                if (day - citizenSchedule.day < 5)
-                                                                {
-                                                                    if(this.m_Workers.HasComponent(entity1))
-                                                                    {
-                                                                        GetWorkTypeProbabilities(work, dow, out offdayprob, out parttime_prob, commercial_offdayprob,
-                                                                                                                                                industry_offdayprob, office_offdayprob, cityservices_offdayprob, out remote_work_prob);
-                                                                        dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob, ticksPerDay, day);
-
-                                                                    }
-                                                                    recalculate_worktime = false;
-                                                                }
-                                                            }
-                                                        }
-                                                        else
-                                                        {
-                                                            citizenSchedule = new CitizenSchedule();
-                                                        }
-
-                                                        if (createOrUpdate)
-                                                        {
-                                                            if(recalculate)
-                                                            {
-                                                                if (this.m_Workers.HasComponent(entity1) && recalculate_worktime)
-                                                                {
-                                                                    //Find out what type of job worker has
-                                                                    work = GetWorkerOffDayAndPartTimeProb(PrefabRefLookup, PropertyRenterLookup, CommercialPropertyLookup, IndustrialPropertyLookup,
-                                                                        OfficePropertyLookup, m_Workers[entity1], out offdayprob, part_time_prob, out parttime_prob, commercial_offdayprob,
-                                                                        industry_offdayprob, office_offdayprob, cityservices_offdayprob, dow, out remote_work_prob);
-                                                                    dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_NormalizedTime, offdayprob, ticksPerDay, day);
-                                                                    lunchTime = Time2WorkWorkerSystem.IsLunchTime(citizen, m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay, out time2Lunch);
-                                                                    workTime = Time2WorkWorkerSystem.IsTimeToWork(citizen, m_Workers[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction, out time2Work, out start_work);
-                                                                    workFromHome = Time2WorkWorkerSystem.IsTodayWorkFromHome(citizen, this.m_SimulationFrame, this.m_TimeData, ticksPerDay, remote_work_prob);
-                                                                }
-                                                                
-                                                                if (this.m_Students.HasComponent(entity1))
-                                                                {
-                                                                    float startStudy = default;
-                                                                    workTime = Time2WorkStudentSystem.IsTimeToStudy(citizen, m_Students[entity1], ref this.m_EconomyParameters, this.m_NormalizedTime, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay, out time2Work, out startStudy);
-                                                                }
-                                                            }
-                                                            
-                                                            citizenSchedule.dayoff = dayOff;
-                                                            citizenSchedule.start_work = time2Work.x;
-                                                            citizenSchedule.go_to_work = start_work;
-                                                            citizenSchedule.end_work = time2Work.y;
-                                                            citizenSchedule.start_lunch = time2Lunch.x;
-                                                            citizenSchedule.end_lunch = time2Lunch.y;
-                                                            citizenSchedule.work_from_home = workFromHome;
-                                                            citizenSchedule.day = day;
-                                                            if (chunkHasSchedule)
-                                                            {
-                                                                nativeArray6[index] = citizenSchedule;
-                                                            }
-                                                            else
-                                                            {
-                                                                m_CommandBuffer.AddComponent<CitizenSchedule>(unfilteredChunkIndex, entity1, citizenSchedule);
-                                                            }
-
-                                                        }
-
-                                                        if (this.m_Workers.HasComponent(entity1) && !dayOff && workTime || this.m_Students.HasComponent(entity1) && workTime)
+                                                        if (this.m_Workers.HasComponent(entity1) && !dayOff && workTime || this.m_Students.HasComponent(entity1) && workTime && !dayOff)
                                                         {
                                                            
                                                             //Filtering work times that correspond to part time shifts. Those do not take lunch breaks

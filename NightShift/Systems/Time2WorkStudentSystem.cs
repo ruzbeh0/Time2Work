@@ -213,26 +213,30 @@ namespace Time2Work
             this.m_EndFrameBarrier = this.World.GetOrCreateSystemManaged<EndFrameBarrier>();
             this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
             this.m_SimulationSystem = this.World.GetOrCreateSystemManaged<SimulationSystem>();
-            this.m_StudentQuery = this.GetEntityQuery(new EntityQueryDesc()
+            this.m_StudentQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Citizens.Student>(), ComponentType.ReadOnly<Citizen>(), ComponentType.ReadOnly<TravelPurpose>(), ComponentType.ReadOnly<CurrentBuilding>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
+
+            this.m_GotoSchoolQuery = this.GetEntityQuery(new EntityQueryDesc()
             {
                 All = new ComponentType[4]
              {
                    ComponentType.ReadOnly<Game.Citizens.Student>(),
                    ComponentType.ReadOnly<Citizen>(),
-                   ComponentType.ReadOnly<TravelPurpose>(),
-                   ComponentType.ReadOnly<CurrentBuilding>()
+                   ComponentType.ReadOnly<CurrentBuilding>(),
+                   ComponentType.ReadOnly<CitizenSchedule>()
              },
-                Any = new ComponentType[1]
+                Any = new ComponentType[0]
                {
-                    ComponentType.ReadWrite<CitizenSchedule>(),
+
                },
-                None = new ComponentType[2]
+                None = new ComponentType[5]
              {
+                ComponentType.Exclude<ResourceBuyer>(),
+                ComponentType.Exclude<TravelPurpose>(),
+                ComponentType.Exclude<HealthProblem>(),
                 ComponentType.Exclude<Deleted>(),
                 ComponentType.Exclude<Temp>(),
              }
             });
-            this.m_GotoSchoolQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Citizens.Student>(), ComponentType.ReadOnly<Citizen>(), ComponentType.ReadOnly<CurrentBuilding>(), ComponentType.Exclude<ResourceBuyer>(), ComponentType.Exclude<TravelPurpose>(), ComponentType.Exclude<HealthProblem>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
             this.m_EconomyParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<EconomyParameterData>());
             this.m_TimeDataQuery = this.GetEntityQuery(ComponentType.ReadOnly<TimeData>());
             this.m_PopulationQuery = this.GetEntityQuery(ComponentType.ReadOnly<Population>());
@@ -256,7 +260,7 @@ namespace Time2Work
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Buildings_School_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Common_Target_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Citizens_CitizenSchedule_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
 
             JobHandle deps;
 
@@ -264,7 +268,7 @@ namespace Time2Work
             {
                 m_EntityType = this.__TypeHandle.__Unity_Entities_Entity_TypeHandle,
                 m_CitizenType = this.__TypeHandle.__Game_Citizens_Citizen_RO_ComponentTypeHandle,
-                m_CitizenSchedule = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RW_ComponentTypeHandle,
+                m_CitizenSchedule = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle,
                 m_CurrentBuildingType = this.__TypeHandle.__Game_Citizens_CurrentBuilding_RO_ComponentTypeHandle,
                 m_StudentType = this.__TypeHandle.__Game_Citizens_Student_RO_ComponentTypeHandle,
                 m_TripType = this.__TypeHandle.__Game_Citizens_TripNeeded_RW_BufferTypeHandle,
@@ -378,60 +382,12 @@ namespace Time2Work
                     Entity entity1 = nativeArray1[index];
                     Citizen citizen = nativeArray2[index];
 
-                    int day = Time2WorkTimeSystem.GetDay(m_Frame, m_TimeData, ticksPerDay);
-                    float2 time2Lunch = new float2(-1, -1);
-                    float2 time2Study = new float2(-1, -1);
-                    bool dayOff = false;
-                    bool lunchTime = default;
-                    bool workTime = default;
-                    bool workFromHome = default;
-                    float startStudy = default;
-                    bool studyTime = default;
-                    CitizenSchedule citizenSchedule;
-                    
-                    bool createOrUpdate = true;
-                    bool chunkHasSchedule = chunk.Has(ref m_CitizenSchedule);
-                    if (chunkHasSchedule)
-                    {
-                        citizenSchedule = nativeArray6[index];
-                        if (citizenSchedule.day == day)
-                        {
-                            time2Lunch = new float2(citizenSchedule.start_lunch, citizenSchedule.end_lunch);
-                            time2Study = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
-                            workTime = Time2WorkStudentSystem.IsTimeToStudy(time2Study, this.m_TimeOfDay);
-                            createOrUpdate = false;
-                        }
-                    }
-                    else
-                    {
-                        citizenSchedule = new CitizenSchedule();
-                    }
+                    CitizenSchedule citizenSchedule = nativeArray6[index];
+                    float2 time2Study = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
+                    bool studyTime = Time2WorkStudentSystem.IsTimeToStudy(time2Study, this.m_TimeOfDay);
+                    bool dayOff = citizenSchedule.dayoff;
 
-                    if (createOrUpdate)
-                    {
-                        lunchTime = false;
-                        studyTime = Time2WorkStudentSystem.IsTimeToStudy(citizen, nativeArray3[index], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_Frame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay, out time2Study, out startStudy);
-                        workFromHome = false;
-
-                        citizenSchedule.dayoff = dayOff;
-                        citizenSchedule.start_work = time2Study.x;
-                        citizenSchedule.go_to_work = startStudy;
-                        citizenSchedule.end_work = time2Study.y;
-                        citizenSchedule.start_lunch = time2Lunch.x;
-                        citizenSchedule.end_lunch = time2Lunch.y;
-                        citizenSchedule.work_from_home = workFromHome;
-                        citizenSchedule.day = day;
-                        if (chunkHasSchedule)
-                        {
-                            nativeArray6[index] = citizenSchedule;
-                        }
-                        else
-                        {
-                            m_CommandBuffer.AddComponent<CitizenSchedule>(unfilteredChunkIndex, entity1, citizenSchedule);
-                        }
-                    }
-
-                    if (studyTime)
+                    if (!dayOff && studyTime)
                     {
                         DynamicBuffer<TripNeeded> dynamicBuffer = bufferAccessor[index];
                         if (!this.m_Attendings.HasComponent(entity1) && (citizen.m_State & CitizenFlags.MovingAwayReachOC) == CitizenFlags.None)
@@ -565,7 +521,7 @@ namespace Time2Work
 
         private struct TypeHandle
         {
-            public ComponentTypeHandle<CitizenSchedule> __Game_Citizens_CitizenSchedule_RW_ComponentTypeHandle;
+            public ComponentTypeHandle<CitizenSchedule> __Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle;
             [ReadOnly]
             public EntityTypeHandle __Unity_Entities_Entity_TypeHandle;
             [ReadOnly]
@@ -602,7 +558,7 @@ namespace Time2Work
             public void __AssignHandles(ref SystemState state)
             {
                 this.__Unity_Entities_Entity_TypeHandle = state.GetEntityTypeHandle();
-                this.__Game_Citizens_CitizenSchedule_RW_ComponentTypeHandle = state.GetComponentTypeHandle<CitizenSchedule>();
+                this.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle = state.GetComponentTypeHandle<CitizenSchedule>(true);
                 this.__Game_Citizens_Citizen_RO_ComponentTypeHandle = state.GetComponentTypeHandle<Citizen>(true);
                 this.__Game_Citizens_CurrentBuilding_RO_ComponentTypeHandle = state.GetComponentTypeHandle<CurrentBuilding>(true);
                 this.__Game_Citizens_Student_RO_ComponentTypeHandle = state.GetComponentTypeHandle<Game.Citizens.Student>(true);

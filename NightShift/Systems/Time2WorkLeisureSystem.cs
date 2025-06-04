@@ -75,11 +75,11 @@ namespace Time2Work
                    ComponentType.ReadWrite<Citizen>(),
                    ComponentType.ReadWrite<Leisure>(),
                    ComponentType.ReadWrite<TripNeeded>(),
-                   ComponentType.ReadWrite<CurrentBuilding>()
+                   ComponentType.ReadWrite<CurrentBuilding>(),
              },
                 Any = new ComponentType[1]
                {
-                    ComponentType.ReadWrite<CitizenSchedule>(),
+                    ComponentType.ReadOnly<CitizenSchedule>(),
                },
                 None = new ComponentType[3]
              {
@@ -145,7 +145,7 @@ namespace Time2Work
             this.__TypeHandle.__Game_Citizens_Leisure_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Citizens_CitizenSchedule_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
             JobHandle outJobHandle;
             JobHandle deps;
@@ -156,7 +156,7 @@ namespace Time2Work
             JobHandle jobHandle = new Time2WorkLeisureSystem.LeisureJob()
             {
                 m_EntityType = this.__TypeHandle.__Unity_Entities_Entity_TypeHandle,
-                m_CitizenSchedule = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RW_ComponentTypeHandle,
+                m_CitizenSchedule = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle,
                 m_LeisureType = this.__TypeHandle.__Game_Citizens_Leisure_RW_ComponentTypeHandle,
                 m_HouseholdMemberType = this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentTypeHandle,
                 m_UpdateFrameType = this.__TypeHandle.__Game_Simulation_UpdateFrame_SharedComponentTypeHandle,
@@ -783,13 +783,9 @@ namespace Time2Work
                                     float start_work = 0f;
                                     CitizenSchedule citizenSchedule;
 
-                                    bool createOrUpdate = true;
-                                    bool recalculate = true;
-                                    bool recalculate_worktime = true;
                                     bool chunkHasSchedule = chunk.Has(ref m_CitizenSchedule);
                                     if (chunkHasSchedule)
                                     {
-                                        citizenSchedule = nativeArray6[index];
                                         citizenSchedule = nativeArray6[index];
                                         time2Lunch = new float2(citizenSchedule.start_lunch, citizenSchedule.end_lunch);
                                         time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
@@ -799,88 +795,11 @@ namespace Time2Work
                                         start_work = citizenSchedule.start_work;
                                         dayOff = citizenSchedule.dayoff;
 
-                                        if (citizenSchedule.day == day)
+                                        if (this.m_Workers.HasComponent(entity1))
                                         {
-                                            if (this.m_Workers.HasComponent(entity1))
-                                            {
-                                                GetWorkTypeProbabilities(work, dow, out offdayprob, out parttime_prob, commercial_offdayprob,
-                                                                                                                   industry_offdayprob, office_offdayprob, cityservices_offdayprob, out remote_work_prob);
-                                                dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay, day);
-
-                                            }
-
-                                            //DayOff changes in the early hours of the day. So checking if that happened
-                                            if (dayOff != citizenSchedule.dayoff)
-                                            {
-                                                citizenSchedule.dayoff = dayOff;
-                                                recalculate = false;
-                                            }
-                                            else
-                                            {
-                                                createOrUpdate = false;
-                                            }
+                                            GetWorkTypeProbabilities(work, dow, out offdayprob, out parttime_prob, commercial_offdayprob,                                                                    industry_offdayprob, office_offdayprob, cityservices_offdayprob, out remote_work_prob);
+                                            dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay, day);
                                         }
-                                        else
-                                        {
-                                            //Only recalculate work/lunch hours every 5 days
-                                            if (day - citizenSchedule.day < 5)
-                                            {
-                                                if (this.m_Workers.HasComponent(entity1))
-                                                {
-                                                    GetWorkTypeProbabilities(work, dow, out offdayprob, out parttime_prob, commercial_offdayprob,
-                                                                                                                            industry_offdayprob, office_offdayprob, cityservices_offdayprob, out remote_work_prob);
-                                                    dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay, day);
-
-                                                }
-                                                recalculate_worktime = false;
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        citizenSchedule = new CitizenSchedule();
-                                    }
-
-                                    if (createOrUpdate)
-                                    {
-                                        if (recalculate)
-                                        {
-                                            if (this.m_Workers.HasComponent(entity1) && recalculate_worktime)
-                                            {
-                                                //Find out what type of job worker has
-                                                work = GetWorkerOffDayAndPartTimeProb(PrefabRefLookup, PropertyRenterLookup, CommercialPropertyLookup, IndustrialPropertyLookup,
-                                                    OfficePropertyLookup, m_Workers[entity1], out offdayprob, part_time_prob, out parttime_prob, commercial_offdayprob,
-                                                    industry_offdayprob, office_offdayprob, cityservices_offdayprob, dow, out remote_work_prob);
-                                                dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay, day);
-                                                lunchTime = Time2WorkWorkerSystem.IsLunchTime(citizenData, m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, this.m_SimulationFrame, this.m_TimeData, ticksPerDay, out time2Lunch);
-                                                workTime = Time2WorkWorkerSystem.IsTimeToWork(citizenData, m_Workers[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, parttime_prob, commute_top10, overtime, part_time_reduction, out time2Work, out start_work);
-                                                workFromHome = Time2WorkWorkerSystem.IsTodayWorkFromHome(citizenData, this.m_SimulationFrame, this.m_TimeData, ticksPerDay, remote_work_prob);
-                                            }
-
-                                            if (this.m_Students.HasComponent(entity1))
-                                            {
-                                                float startStudy = default;
-                                                workTime = Time2WorkStudentSystem.IsTimeToStudy(citizenData, m_Students[entity1], ref this.m_EconomyParameters, this.m_TimeOfDay, this.m_SimulationFrame, this.m_TimeData, population, school_offdayprob, school_start_time, school_end_time, ticksPerDay, out time2Work, out startStudy);
-                                            }
-                                        }
-
-                                        citizenSchedule.dayoff = dayOff;
-                                        citizenSchedule.start_work = time2Work.x;
-                                        citizenSchedule.go_to_work = start_work;
-                                        citizenSchedule.end_work = time2Work.y;
-                                        citizenSchedule.start_lunch = time2Lunch.x;
-                                        citizenSchedule.end_lunch = time2Lunch.y;
-                                        citizenSchedule.work_from_home = workFromHome;
-                                        citizenSchedule.day = day;
-                                        if (chunkHasSchedule)
-                                        {
-                                            nativeArray6[index] = citizenSchedule;
-                                        }
-                                        else
-                                        {
-                                            m_CommandBuffer.AddComponent<CitizenSchedule>(unfilteredChunkIndex, entity1, citizenSchedule);
-                                        }
-
                                     }
 
                                     if ((!this.m_Workers.HasComponent(entity1) || dayOff || !workTime ||
@@ -1224,7 +1143,7 @@ namespace Time2Work
         {
             [ReadOnly]
             public EntityTypeHandle __Unity_Entities_Entity_TypeHandle;
-            public ComponentTypeHandle<CitizenSchedule> __Game_Citizens_CitizenSchedule_RW_ComponentTypeHandle;
+            public ComponentTypeHandle<CitizenSchedule> __Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle;
             public ComponentTypeHandle<Leisure> __Game_Citizens_Leisure_RW_ComponentTypeHandle;
             [ReadOnly]
             public ComponentTypeHandle<HouseholdMember> __Game_Citizens_HouseholdMember_RO_ComponentTypeHandle;
@@ -1315,7 +1234,7 @@ namespace Time2Work
             public void __AssignHandles(ref SystemState state)
             {
                 this.__Unity_Entities_Entity_TypeHandle = state.GetEntityTypeHandle();
-                this.__Game_Citizens_CitizenSchedule_RW_ComponentTypeHandle = state.GetComponentTypeHandle<CitizenSchedule>();
+                this.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle = state.GetComponentTypeHandle<CitizenSchedule>(true);
                 this.__Game_Citizens_Leisure_RW_ComponentTypeHandle = state.GetComponentTypeHandle<Leisure>();
                 this.__Game_Citizens_HouseholdMember_RO_ComponentTypeHandle = state.GetComponentTypeHandle<HouseholdMember>(true);
                 this.__Game_Simulation_UpdateFrame_SharedComponentTypeHandle = state.GetSharedComponentTypeHandle<UpdateFrame>();
