@@ -20,6 +20,7 @@ namespace Time2Work.Systems
         private static int minute;
         private static int dayOfYear;
         private static int year;
+        private int lastUpdatedDay = -1;
         private static bool updated = false;
         private static Setting.months month;
         public static  bool initialized = false;
@@ -249,7 +250,7 @@ namespace Time2Work.Systems
             }
 
             //The day of the week actually changes at 3 AM since this is the hour with least activity
-            if (!initialized || hour == 3 && minute < 4 || currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.sevendayweek))
+            if (!initialized || (hour == 3 && minute < 4 && lastUpdatedDay != day) || currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.sevendayweek))
             {
                 if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.sevendayweek))
                 {
@@ -312,7 +313,7 @@ namespace Time2Work.Systems
                 Mod.log.Info($"Industry Off Day Prob: {industry_offdayprob}");
                 Mod.log.Info($"City Services Day Prob: {cityservices_offdayprob}");
                 Mod.log.Info($"School Off Day Prob: {school_offdayprob}");
-                updated = false;
+                lastUpdatedDay = day;
                 initialized = true;
             } 
         }

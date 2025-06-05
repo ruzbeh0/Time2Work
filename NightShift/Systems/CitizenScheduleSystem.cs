@@ -37,6 +37,7 @@ namespace Time2Work.Systems
         private EntityQuery m_AllCitizenScheduleQuery;
         private EntityQuery m_NewCitizenScheduleQuery;
         private EntityQuery m_TimeDataQuery;
+        private EntityQuery m_EconomyParameterQuery;
         private SimulationSystem m_SimulationSystem;
         private Time2WorkTimeSystem m_TimeSystem;
         private EndFrameBarrier m_EndFrameBarrier;
@@ -57,6 +58,7 @@ namespace Time2Work.Systems
             this.m_SimulationSystem = this.World.GetOrCreateSystemManaged<SimulationSystem>();
             this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
             this.m_EndFrameBarrier = this.World.GetOrCreateSystemManaged<EndFrameBarrier>();
+            this.m_EconomyParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<EconomyParameterData>());
             this.m_AllCitizenScheduleQuery = this.GetEntityQuery(new EntityQueryDesc()
             {
                 All = new ComponentType[2]
@@ -108,7 +110,7 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
-            DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
+            DateTime currentDateTime = m_TimeSystem.GetCurrentDateTime();
             int day = currentDateTime.Day;
 
             //Mod.log.Info("CitizenScheduleSystem OnUpdate");
@@ -132,7 +134,7 @@ namespace Time2Work.Systems
             if (currentDateTime.Hour == 3 && currentDateTime.Minute > 4 && currentDateTime.Minute < 9 && lastUpdatedDay != day)
             {
                 //Refresh All Schedules
-                Mod.log.Info("Recalculating All Schedules");
+                Mod.log.Info($"Recalculating All Schedules - Normalized Time:{m_TimeSystem.normalizedTime}");
                 CitizenScheduleSystem.AllCitizenScheduleJob jobDataAll = new CitizenScheduleSystem.AllCitizenScheduleJob()
                     {
                         m_CitizenType = this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentTypeHandle,
@@ -153,6 +155,7 @@ namespace Time2Work.Systems
                         m_SimulationFrame = this.m_SimulationSystem.frameIndex,
                         m_NormalizedTime = this.m_TimeSystem.normalizedTime,
                         m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>(),
+                        m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                         lunch_break_pct = Mod.m_Setting.lunch_break_percentage,
                         office_offdayprob = WeekSystem.getOfficeOffDayProb(),
                         commercial_offdayprob = WeekSystem.getCommercialOffDayProb(),
@@ -182,6 +185,7 @@ namespace Time2Work.Systems
             }
             else
             {
+                //Mod.log.Info($"Recalculating New Schedules - Normalized Time:{m_TimeSystem.normalizedTime}, st: {(float)Mod.m_Setting.work_start_time}, et:{(float)Mod.m_Setting.work_end_time}");
                 CitizenScheduleSystem.NewCitizenScheduleJob jobDataNew = new CitizenScheduleSystem.NewCitizenScheduleJob()
                 {
                     m_CitizenType = this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentTypeHandle,
@@ -202,6 +206,7 @@ namespace Time2Work.Systems
                     m_SimulationFrame = this.m_SimulationSystem.frameIndex,
                     m_NormalizedTime = this.m_TimeSystem.normalizedTime,
                     m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>(),
+                    m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                     lunch_break_pct = Mod.m_Setting.lunch_break_percentage,
                     office_offdayprob = WeekSystem.getOfficeOffDayProb(),
                     commercial_offdayprob = WeekSystem.getCommercialOffDayProb(),

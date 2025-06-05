@@ -28,7 +28,7 @@ namespace Time2Work.Systems
 
         private EntityQuery _query;
 
-        private bool updated = false;
+        private int lastUpdatedDay = -1;
 
         protected override void OnCreate()
         {
@@ -316,7 +316,6 @@ namespace Time2Work.Systems
                      }
                 }
             }
-            updated = true;
         }
 
         private void updateCounters(ref Worker data, ref float new_sum_day_shift, ref float new_sum_evening_shift, ref float new_sum_night_shift, ref float new_sum_office_nonday_shift, ref float new_sum_commercial_nonday_shift, ref float new_sum_industry_nonday_shift, ref float new_sum_cityservices_nonday_shift, ref float new_sum_office_day_shift, ref float new_sum_commercial_day_shift, ref float new_sum_industry_day_shift, ref float new_sum_cityservices_day_shift)
@@ -527,16 +526,10 @@ namespace Time2Work.Systems
             DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
             int day = currentDateTime.Day;
             //Only run every other day
-            if (currentDateTime.Hour == 3 && currentDateTime.Minute < 4 && !updated)
+            if (currentDateTime.Hour == 3 && currentDateTime.Minute < 4 && lastUpdatedDay != day)
             {
                 calculateShifts(4);
-            }
-            else
-            {
-                if (currentDateTime.Hour == 3 && currentDateTime.Minute < 10)
-                {
-                    updated = false;
-                }
+                lastUpdatedDay = day;
             }
         }
     }

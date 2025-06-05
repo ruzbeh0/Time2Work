@@ -62,7 +62,7 @@ namespace Time2Work.Utils
             int parttime_prob = partTimeProb;
             WorkType work = 0;
 
-            bool dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref economy, simulationFrame, timeData, population, normalizedTime, offdayprob, ticksPerDay, day);
+            bool dayOff = false;
 
             if (workers.HasComponent(entity))
             {
@@ -74,6 +74,7 @@ namespace Time2Work.Utils
                 dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref economy, simulationFrame, timeData, population, normalizedTime, offdayprob, ticksPerDay, day);
                 Time2WorkWorkerSystem.IsLunchTime(citizen, workers[entity], ref economy, normalizedTime, lunchBreakPct, simulationFrame, timeData, ticksPerDay, out time2Lunch);
                 Time2WorkWorkerSystem.IsTimeToWork(citizen, workers[entity], ref economy, normalizedTime, lunchBreakPct, workStart, workEnd, delayFactor, ticksPerDay, parttime_prob, commuteTop10, overtime, partTimeReduction, out time2Work, out startWork);
+                //Mod.log.Info($"{citizen.m_PseudoRandom},{workers[entity].m_Shift},{economy.m_WorkDayStart},{normalizedTime},{lunchBreakPct},{workStart},{workEnd},{delayFactor},{ticksPerDay},{parttime_prob},{commuteTop10},{overtime},{partTimeReduction},{time2Work},{startWork}");
                 workFromHome = Time2WorkWorkerSystem.IsTodayWorkFromHome(citizen, simulationFrame, timeData, ticksPerDay, remoteWorkProb);
 
                 schedule.work_type = (int)work;
