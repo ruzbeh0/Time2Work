@@ -190,7 +190,15 @@ namespace Time2Work
 
             if (worker.m_Shift == Workshift.Day)
             {
-                return new float2((float)(lunch_median + startOnTime), (float)(lunch_median + lunch_duration + endOnTime));
+                float start_lunch = (float)(lunch_median + startOnTime);
+                float end_lunch = (float)(lunch_median + lunch_duration + endOnTime);
+                float diff = end_lunch - start_lunch;
+                //Don't allow lunch break that is less than 30 minutes
+                if(diff < 0.2f)
+                {
+                    end_lunch = start_lunch + 0.2f;
+                }
+                return new float2(start_lunch, end_lunch);
             }
             else
             {

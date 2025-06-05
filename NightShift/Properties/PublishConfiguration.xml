@@ -10,6 +10,10 @@
 	<LongDescription>
 This mod has several options to configure the travel behavior of the population. There is also a feature to change the simulation to follow a weekly schedule, with travel patterns changing based on each day of the week. And there is another option to slow down time and make the day longer - without changing the simulation speed.
 
+## New on Version 1.9
+
+Cim Schedule Panel with work/study hours is available when clicking on a cim
+
 ## Settings
 
 The main settings menu allows the user to select predefined settings - which will change all the options of this mod. They are:
@@ -111,7 +115,7 @@ In one of the screenshots above there are four plots comparing the mod in its de
 There are also other four plots comparing the three day types: Weekday, Average Day and Weekend.
 	</LongDescription>
 	<!--Thumbnail-->
-	<Thumbnail Value="Properties/Thumbnail2.jpg" />
+	<Thumbnail Value="Properties/Thumbnail3.png" />
 	<!--Screenshot, can be set multiple times-->
 	<Screenshot Value="Properties/specialevents.png" />
 	<Screenshot Value="Properties/screenshot_hbw.png" />
@@ -135,10 +139,13 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<ChangeLog>
 * Refactored and improved many of this mod core systems
 * Added schedule information on the cim panel when clicking on a cim
+* Updated lunch break calculations to have a minimum of 30 minutes
 * Fixed bug that was using the vanilla version of isTodayOffDay, isTimeToStudy and isTimeToWork methods for cims that were attending meetings.
 * Fixed error when printing probabilities in new cities.
 * Fixed error on school start end times being applied incorrectly to colleges
 * Fixed memory leak on SpecialEventSystem
+* Fixed bug that was causing vanilla school start and end hours to be applied
+* Changed logo of the mod
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

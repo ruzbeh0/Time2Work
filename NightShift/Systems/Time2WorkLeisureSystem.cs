@@ -77,9 +77,9 @@ namespace Time2Work
                    ComponentType.ReadWrite<TripNeeded>(),
                    ComponentType.ReadWrite<CurrentBuilding>(),
              },
-                Any = new ComponentType[1]
+                Any = new ComponentType[0]
                {
-                    ComponentType.ReadOnly<CitizenSchedule>(),
+
                },
                 None = new ComponentType[3]
              {
@@ -145,7 +145,7 @@ namespace Time2Work
             this.__TypeHandle.__Game_Citizens_Leisure_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.CitizenScheduleLookup.Update(ref this.CheckedStateRef);
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
             JobHandle outJobHandle;
             JobHandle deps;
@@ -156,7 +156,7 @@ namespace Time2Work
             JobHandle jobHandle = new Time2WorkLeisureSystem.LeisureJob()
             {
                 m_EntityType = this.__TypeHandle.__Unity_Entities_Entity_TypeHandle,
-                m_CitizenSchedule = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle,
+                CitizenScheduleLookup = this.__TypeHandle.CitizenScheduleLookup,
                 m_LeisureType = this.__TypeHandle.__Game_Citizens_Leisure_RW_ComponentTypeHandle,
                 m_HouseholdMemberType = this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentTypeHandle,
                 m_UpdateFrameType = this.__TypeHandle.__Game_Simulation_UpdateFrame_SharedComponentTypeHandle,
@@ -380,7 +380,8 @@ namespace Time2Work
         [BurstCompile]
         private struct LeisureJob : IJobChunk
         {
-            public ComponentTypeHandle<CitizenSchedule> m_CitizenSchedule;
+            [ReadOnly]
+            public ComponentLookup<CitizenSchedule> CitizenScheduleLookup;
             public ComponentTypeHandle<Leisure> m_LeisureType;
             [ReadOnly]
             public EntityTypeHandle m_EntityType;
@@ -643,7 +644,6 @@ namespace Time2Work
                 NativeArray<Leisure> nativeArray2 = chunk.GetNativeArray<Leisure>(ref this.m_LeisureType);
                 NativeArray<HouseholdMember> nativeArray3 = chunk.GetNativeArray<HouseholdMember>(ref this.m_HouseholdMemberType);
                 BufferAccessor<TripNeeded> bufferAccessor = chunk.GetBufferAccessor<TripNeeded>(ref this.m_TripType);
-                NativeArray<CitizenSchedule> nativeArray6 = chunk.GetNativeArray<CitizenSchedule>(ref this.m_CitizenSchedule);
                 int population = this.m_PopulationData[this.m_PopulationEntity].m_Population;
                 Unity.Mathematics.Random random = this.m_RandomSeed.GetRandom(unfilteredChunkIndex);
 
@@ -770,23 +770,18 @@ namespace Time2Work
                                 Entity destination = pathInfo.m_Destination;
                                 if ((this.m_PropertyRenters.HasComponent(destination) || this.m_PrefabRefs.HasComponent(destination)) && !this.m_Targets.HasComponent(entity1))
                                 {
-                                    float offdayprob = 60f;
-                                    int parttime_prob = part_time_prob;
-                                    WorkType work = 0;
-                                    int day = Time2WorkTimeSystem.GetDay(m_SimulationFrame, m_TimeData, ticksPerDay);
-                                    float2 time2Lunch = new float2(-1, -1);
-                                    float2 time2Work = new float2(-1, -1);
-                                    bool dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay, day);
-                                    bool lunchTime = default;
-                                    bool workTime = default;
-                                    bool workFromHome = default;
+                                    float2 time2Lunch = new float2(-1f, -1f);
+                                    float2 time2Work = new float2(-1f, -1f);
+                                    bool workFromHome = false;
+                                    bool lunchTime = false;
+                                    bool workTime = false;
                                     float start_work = 0f;
-                                    CitizenSchedule citizenSchedule;
+                                    bool dayOff = false;
 
-                                    bool chunkHasSchedule = chunk.Has(ref m_CitizenSchedule);
-                                    if (chunkHasSchedule)
+                                    bool hasSchedule = this.CitizenScheduleLookup.HasComponent(entity1);
+                                    if (hasSchedule)
                                     {
-                                        citizenSchedule = nativeArray6[index];
+                                        CitizenSchedule citizenSchedule = this.CitizenScheduleLookup[entity1];
                                         time2Lunch = new float2(citizenSchedule.start_lunch, citizenSchedule.end_lunch);
                                         time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
                                         workFromHome = citizenSchedule.work_from_home;
@@ -794,12 +789,6 @@ namespace Time2Work
                                         workTime = Time2WorkWorkerSystem.IsTimeToWork(this.m_TimeOfDay, time2Work);
                                         start_work = citizenSchedule.start_work;
                                         dayOff = citizenSchedule.dayoff;
-
-                                        if (this.m_Workers.HasComponent(entity1))
-                                        {
-                                            GetWorkTypeProbabilities(work, dow, out offdayprob, out parttime_prob, commercial_offdayprob,                                                                    industry_offdayprob, office_offdayprob, cityservices_offdayprob, out remote_work_prob);
-                                            dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizenData, ref this.m_EconomyParameters, this.m_SimulationFrame, this.m_TimeData, population, this.m_TimeOfDay, offdayprob, ticksPerDay, day);
-                                        }
                                     }
 
                                     if ((!this.m_Workers.HasComponent(entity1) || dayOff || !workTime ||
@@ -1229,6 +1218,8 @@ namespace Time2Work
             public ComponentLookup<PropertyRenter> PropertyRenterLookup;
             [ReadOnly]
             public ComponentLookup<PrefabRef> PrefabRefLookup;
+            [ReadOnly]
+            public ComponentLookup<CitizenSchedule> CitizenScheduleLookup;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void __AssignHandles(ref SystemState state)
@@ -1281,6 +1272,7 @@ namespace Time2Work
                 this.OfficePropertyLookup = state.GetComponentLookup<OfficeProperty>(true);
                 this.PropertyRenterLookup = state.GetComponentLookup<PropertyRenter>(true);
                 this.PrefabRefLookup = state.GetComponentLookup<PrefabRef>(true);
+                this.CitizenScheduleLookup = state.GetComponentLookup<CitizenSchedule>(true);
             }
         }
     }

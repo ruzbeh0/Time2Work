@@ -305,7 +305,6 @@ namespace Time2Work.Systems
 
                      if (iter == iterations - 1)
                      {
-                        Mod.log.Info($"New Day Shift Workers %: {new_sum_day_shift},{new_sum_day_shift},{new_sum_evening_shift},{new_sum_night_shift}");
                         Mod.log.Info($"New Day Shift Workers %: {100 * new_sum_day_shift / (new_sum_day_shift + new_sum_evening_shift + new_sum_night_shift)}");
                          Mod.log.Info($"New Evening Shift Workers %: {100 * new_sum_evening_shift / (new_sum_day_shift + new_sum_evening_shift + new_sum_night_shift)}");
                          Mod.log.Info($"New Night Shift Workers %: {100 * new_sum_night_shift / (new_sum_day_shift + new_sum_evening_shift + new_sum_night_shift)}");

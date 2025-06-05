@@ -31,6 +31,7 @@ using static Time2Work.Time2WorkWorkerSystem;
 
 namespace Time2Work.Systems
 {
+    [UpdateAfter(typeof(WeekSystem))]
     public partial class CitizenScheduleSystem : GameSystemBase
     {
 
@@ -110,6 +111,12 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
+            if (!WeekSystem.initialized)
+            {
+                return; // Skip update until WeekSystem has run
+            }
+
+
             DateTime currentDateTime = m_TimeSystem.GetCurrentDateTime();
             int day = currentDateTime.Day;
 
