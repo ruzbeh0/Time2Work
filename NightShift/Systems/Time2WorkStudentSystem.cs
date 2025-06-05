@@ -43,44 +43,14 @@ namespace Time2Work
             return (float)(citizen.GetPseudoRandom(CitizenPseudoRandom.WorkOffset).NextInt((int)(21845* (ticksPerDay / TimeSystem.kTicksPerDay))) - ((int)10922*(ticksPerDay/TimeSystem.kTicksPerDay))) / ticksPerDay;
         }
 
-        public static bool IsTimeToStudy(
-          Citizen citizen,
-          Game.Citizens.Student student,
-          ref EconomyParameterData economyParameters,
-          float timeOfDay,
-          uint frame,
-          TimeData timeData,
-          int population,
-          float3 offdayprob3,
-          int3 school_start_time,
-          int3 school_end_time,
-          int ticksPerDay)
-        {
-            float offdayprob = offdayprob3.x;
-            if (student.m_Level == 1)
-            {
-                offdayprob = offdayprob3.y;
-            }
-            if (student.m_Level >= 2)
-            {
-                offdayprob = offdayprob3.z;
-            }
-            //int num = (int)Math.Round(offdayprob);
-            int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
-            int day = Time2WorkTimeSystem.GetDay(frame, timeData, ticksPerDay);
-            float2 timeToStudy = Time2WorkStudentSystem.GetTimeToStudy(citizen, student, ref economyParameters, school_start_time, school_end_time, ticksPerDay);
-            if (Unity.Mathematics.Random.CreateFromIndex((uint)citizen.m_PseudoRandom + (uint)day).NextInt(100) <= num)
-                return false;
-            return (double)timeToStudy.x >= (double)timeToStudy.y ? (double)timeOfDay >= (double)timeToStudy.x || (double)timeOfDay <= (double)timeToStudy.y : (double)timeOfDay >= (double)timeToStudy.x && (double)timeOfDay <= (double)timeToStudy.y;
-        }
-
         public static float2 GetTimeToStudy(
           Citizen citizen,
           Game.Citizens.Student student,
           ref EconomyParameterData economyParameters,
           int3 school_start_time_,
           int3 school_end_time_,
-          int ticksPerDay)
+          int ticksPerDay,
+          out float start_school)
         {
             //x = elementary schoo, y = high school, z = college and university
             int school_start_time = school_start_time_.z;
@@ -112,6 +82,8 @@ namespace Time2Work
             startTimeOffset += startOnTime;
             endTimeOffset += endOnTime;
 
+            start_school = math.frac(economyParameters.m_WorkDayStart + studyOffset + startTimeOffset);
+
             float num1 = 60f * student.m_LastCommuteTime;
             if ((double)num1 < 60.0)
                 num1 = 1800f;
@@ -120,20 +92,16 @@ namespace Time2Work
             return new float2(math.frac(economyParameters.m_WorkDayStart + studyOffset + startTimeOffset - num2), math.frac(economyParameters.m_WorkDayEnd + studyOffset + endTimeOffset));
         }
 
-        public static bool IsTimeToStudy(
+        public static bool IsStudyDayOff(
           Citizen citizen,
           Game.Citizens.Student student,
           ref EconomyParameterData economyParameters,
-          float timeOfDay,
-          uint frame,
-          TimeData timeData,
+          int day,
           int population,
           float3 offdayprob3,
           int3 school_start_time,
           int3 school_end_time,
-          int ticksPerDay,
-          out float2 timeToStudy,
-          out float startStudy)
+          int ticksPerDay)
         {
             float offdayprob = offdayprob3.x;
             if(student.m_Level == 1)
@@ -146,11 +114,9 @@ namespace Time2Work
             }
             //int num = (int)Math.Round(offdayprob);
             int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
-            int day = Time2WorkTimeSystem.GetDay(frame, timeData, ticksPerDay);
-            timeToStudy = Time2WorkStudentSystem.GetTimeToStudy(citizen, student, ref economyParameters, school_start_time, school_end_time, ticksPerDay, out startStudy);
             if (Unity.Mathematics.Random.CreateFromIndex((uint)citizen.m_PseudoRandom + (uint)day).NextInt(100) <= num)
-                return false;
-            return (double)timeToStudy.x >= (double)timeToStudy.y ? (double)timeOfDay >= (double)timeToStudy.x || (double)timeOfDay <= (double)timeToStudy.y : (double)timeOfDay >= (double)timeToStudy.x && (double)timeOfDay <= (double)timeToStudy.y;
+                return true;
+            return false;
         }
 
         public static bool IsTimeToStudy(
@@ -160,52 +126,6 @@ namespace Time2Work
             return (double)timeToStudy.x >= (double)timeToStudy.y ? (double)timeOfDay >= (double)timeToStudy.x || (double)timeOfDay <= (double)timeToStudy.y : (double)timeOfDay >= (double)timeToStudy.x && (double)timeOfDay <= (double)timeToStudy.y;
         }
 
-        public static float2 GetTimeToStudy(
-          Citizen citizen,
-          Game.Citizens.Student student,
-          ref EconomyParameterData economyParameters,
-          int3 school_start_time_,
-          int3 school_end_time_,
-          int ticksPerDay,
-          out float start_study)
-        {
-            //x = elementary schoo, y = high school, z = college and university
-            int school_start_time = school_start_time_.z;
-            int school_end_time = school_end_time_.z;
-            float studyOffset = Time2WorkStudentSystem.GetStudyOffset(citizen, ticksPerDay);
-            if (student.m_Level == 0)
-            {
-                school_start_time = school_start_time_.x;
-                school_end_time = school_end_time_.x;
-            } else if((student.m_Level == 1))
-            {
-                school_start_time = school_start_time_.y;
-                school_end_time = school_end_time_.y;
-            } 
-            float startTimeOffset = ((float)school_start_time - 4f) * (1 / 48f);
-            float endTimeOffset = ((float)school_end_time - 19f) * (1 / 48f);
-
-            //Adding variation on students schedule, the higher the education level, the higher the variation
-            Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom));
-            float startOnTime = (float)GaussianRandom.NextGaussianDouble(random) * (student.m_Level+1)/100f;
-            float endOnTime = ((float)GaussianRandom.NextGaussianDouble(random)) * (student.m_Level+1)/100f;
-            if(startOnTime < 0)
-            {
-                //We don't want students to arrive too early
-                startOnTime /= (student.m_Level + 2);
-            }
-
-            startTimeOffset += startOnTime;
-            endTimeOffset += endOnTime;
-
-            float num1 = 60f * student.m_LastCommuteTime;
-            if ((double)num1 < 60.0)
-                num1 = 1800f;
-            float num2 = num1 / ticksPerDay;
-            start_study = math.frac(economyParameters.m_WorkDayStart + studyOffset + startTimeOffset);
-            return new float2(math.frac(economyParameters.m_WorkDayStart + studyOffset + startTimeOffset - num2), math.frac(economyParameters.m_WorkDayEnd + studyOffset + endTimeOffset));
-        }
-
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -213,8 +133,26 @@ namespace Time2Work
             this.m_EndFrameBarrier = this.World.GetOrCreateSystemManaged<EndFrameBarrier>();
             this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
             this.m_SimulationSystem = this.World.GetOrCreateSystemManaged<SimulationSystem>();
-            this.m_StudentQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Citizens.Student>(), ComponentType.ReadOnly<Citizen>(), ComponentType.ReadOnly<TravelPurpose>(), ComponentType.ReadOnly<CurrentBuilding>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
+            this.m_StudentQuery = this.GetEntityQuery(new EntityQueryDesc()
+            {
+                All = new ComponentType[5]
+             {
+                   ComponentType.ReadOnly<Game.Citizens.Student>(),
+                   ComponentType.ReadOnly<Citizen>(),
+                   ComponentType.ReadOnly<TravelPurpose>(),
+                   ComponentType.ReadOnly<CurrentBuilding>(),
+                   ComponentType.ReadOnly<CitizenSchedule>()
+             },
+                Any = new ComponentType[0]
+               {
 
+               },
+                None = new ComponentType[2]
+             {
+                ComponentType.Exclude<Deleted>(),
+                ComponentType.Exclude<Temp>(),
+             }
+            });
             this.m_GotoSchoolQuery = this.GetEntityQuery(new EntityQueryDesc()
             {
                 All = new ComponentType[4]
@@ -306,6 +244,7 @@ namespace Time2Work
             {
                 m_EntityType = this.__TypeHandle.__Unity_Entities_Entity_TypeHandle,
                 m_StudentType = this.__TypeHandle.__Game_Citizens_Student_RO_ComponentTypeHandle,
+                m_CitizenSchedule = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle,
                 m_PurposeType = this.__TypeHandle.__Game_Citizens_TravelPurpose_RO_ComponentTypeHandle,
                 m_CitizenType = this.__TypeHandle.__Game_Citizens_Citizen_RO_ComponentTypeHandle,
                 m_Attendings = this.__TypeHandle.__Game_Citizens_AttendingMeeting_RO_ComponentLookup,
@@ -340,6 +279,7 @@ namespace Time2Work
         private struct GoToSchoolJob : IJobChunk
         {
             public EntityTypeHandle m_EntityType;
+            [ReadOnly]
             public ComponentTypeHandle<CitizenSchedule> m_CitizenSchedule;
             public ComponentTypeHandle<Citizen> m_CitizenType;
             public ComponentTypeHandle<Game.Citizens.Student> m_StudentType;
@@ -449,6 +389,8 @@ namespace Time2Work
             [ReadOnly]
             public EntityTypeHandle m_EntityType;
             [ReadOnly]
+            public ComponentTypeHandle<CitizenSchedule> m_CitizenSchedule;
+            [ReadOnly]
             public ComponentTypeHandle<TravelPurpose> m_PurposeType;
             [ReadOnly]
             public ComponentTypeHandle<Citizen> m_CitizenType;
@@ -474,11 +416,12 @@ namespace Time2Work
                 NativeArray<Game.Citizens.Student> nativeArray2 = chunk.GetNativeArray<Game.Citizens.Student>(ref this.m_StudentType);
                 NativeArray<TravelPurpose> nativeArray3 = chunk.GetNativeArray<TravelPurpose>(ref this.m_PurposeType);
                 NativeArray<Citizen> nativeArray4 = chunk.GetNativeArray<Citizen>(ref this.m_CitizenType);
+                NativeArray<CitizenSchedule> nativeArray6 = chunk.GetNativeArray<CitizenSchedule>(ref this.m_CitizenSchedule);
                 for (int index = 0; index < nativeArray1.Length; ++index)
                 {
                     Entity entity = nativeArray1[index];
                     Entity school = nativeArray2[index].m_School;
-                    float studyOffset = Time2WorkStudentSystem.GetStudyOffset(nativeArray4[index], ticksPerDay);
+
                     if (!this.m_Schools.HasComponent(school))
                     {
                         TravelPurpose travelPurpose = nativeArray3[index];
@@ -500,7 +443,11 @@ namespace Time2Work
                         }
                         else
                         {
-                            if (((double)this.m_TimeOfDay > (double)this.m_EconomyParameters.m_WorkDayEnd + (double)studyOffset || (double)this.m_TimeOfDay < (double)this.m_EconomyParameters.m_WorkDayStart + (double)studyOffset || this.m_Attendings.HasComponent(entity)) && nativeArray3[index].m_Purpose == Game.Citizens.Purpose.Studying)
+                            CitizenSchedule citizenSchedule = nativeArray6[index];
+                            float2 time2Study = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
+                            bool studyTime = Time2WorkStudentSystem.IsTimeToStudy(time2Study, this.m_TimeOfDay);
+
+                            if ((!studyTime || this.m_Attendings.HasComponent(entity)) && nativeArray3[index].m_Purpose == Game.Citizens.Purpose.Studying)
                             {
                                 this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
                             }

@@ -333,11 +333,9 @@ namespace Time2Work.Systems
                 {
                     Entity entity1 = nativeArray1[index];
                     Citizen citizen = nativeArray2[index];
+                    CitizenSchedule citizenSchedule = nativeArrayCitizenSchedule[index];
 
-                    float offdayprob = 60f;
-                    int parttime_prob = part_time_prob;
-                    WorkType work = 0;
-                    CitizenSchedule citizenSchedule = CitizenScheduleHelper.CalculateScheduleForCitizen(
+                    citizenSchedule = CitizenScheduleHelper.CalculateScheduleForCitizen(
                         entity1, citizen, m_Workers, m_Students, PrefabRefLookup, PropertyRenterLookup,
                         CommercialPropertyLookup, IndustrialPropertyLookup, OfficePropertyLookup,
                         m_PopulationData, m_EconomyParameters, population, m_NormalizedTime,
@@ -346,9 +344,17 @@ namespace Time2Work.Systems
                         school_start_time, school_end_time, work_start_time, work_end_time, school_vanilla_timeoff,
                         delayFactor, disable_early_shop_leisure, school_offdayprob, part_time_prob,
                         commute_top10, dow, overtime, part_time_reduction, specialEventStartTime, specialEventEndTime,
-                        remote_work_prob);
+                        remote_work_prob,  ref citizenSchedule);
 
                     nativeArrayCitizenSchedule[index] = citizenSchedule;
+
+                    //if(m_Students.HasComponent(entity1) && oldTimeX != citizenSchedule.start_work)
+                    //{
+                    //    Mod.log.Info($"Changed: OldTimeX:{oldTimeX},OldTimeY:{oldTimeY},NewTimeX:{citizenSchedule.start_work},NewTimeY:{citizenSchedule.end_work}");
+                    //} else
+                    //{
+                    //    Mod.log.Info("SAME");
+                    //}
                 }
             }
 
@@ -439,10 +445,7 @@ namespace Time2Work.Systems
                 {
                     Entity entity1 = nativeArray1[index];
                     Citizen citizen = nativeArray2[index];
-
-                    float offdayprob = 60f;
-                    int parttime_prob = part_time_prob;
-                    WorkType work = 0;
+                    var schedule = new CitizenSchedule();
                     CitizenSchedule citizenSchedule = CitizenScheduleHelper.CalculateScheduleForCitizen(
                         entity1, citizen, m_Workers, m_Students, PrefabRefLookup, PropertyRenterLookup,
                         CommercialPropertyLookup, IndustrialPropertyLookup, OfficePropertyLookup,
@@ -452,7 +455,7 @@ namespace Time2Work.Systems
                         school_start_time, school_end_time, work_start_time, work_end_time, school_vanilla_timeoff,
                         delayFactor, disable_early_shop_leisure, school_offdayprob, part_time_prob,
                         commute_top10, dow, overtime, part_time_reduction, specialEventStartTime, specialEventEndTime,
-                        remote_work_prob);
+                        remote_work_prob, ref schedule);
 
 
                     m_CommandBuffer.AddComponent<CitizenSchedule>(unfilteredChunkIndex, entity1, citizenSchedule);

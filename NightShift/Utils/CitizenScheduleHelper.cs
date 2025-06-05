@@ -49,10 +49,10 @@ namespace Time2Work.Utils
             float partTimeReduction,
             float3 eventStart,
             float3 eventEnd,
-            int remoteWorkProb
+            int remoteWorkProb,
+            ref CitizenSchedule schedule
         )
         {
-            var schedule = new CitizenSchedule();
             int day = Time2WorkTimeSystem.GetDay(simulationFrame, timeData, ticksPerDay);
             float2 time2Lunch = new float2(-1, -1);
             float2 time2Work = new float2(-1, -1);
@@ -73,8 +73,11 @@ namespace Time2Work.Utils
 
                 dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref economy, simulationFrame, timeData, population, normalizedTime, offdayprob, ticksPerDay, day);
                 Time2WorkWorkerSystem.IsLunchTime(citizen, workers[entity], ref economy, normalizedTime, lunchBreakPct, simulationFrame, timeData, ticksPerDay, out time2Lunch);
-                Time2WorkWorkerSystem.IsTimeToWork(citizen, workers[entity], ref economy, normalizedTime, lunchBreakPct, workStart, workEnd, delayFactor, ticksPerDay, parttime_prob, commuteTop10, overtime, partTimeReduction, out time2Work, out startWork);
-                //Mod.log.Info($"{citizen.m_PseudoRandom},{workers[entity].m_Shift},{economy.m_WorkDayStart},{normalizedTime},{lunchBreakPct},{workStart},{workEnd},{delayFactor},{ticksPerDay},{parttime_prob},{commuteTop10},{overtime},{partTimeReduction},{time2Work},{startWork}");
+                if (day > (schedule.day + 4))
+                {
+                    time2Work = Time2WorkWorkerSystem.GetTimeToWork(citizen, workers[entity], ref economy, true, lunchBreakPct, workStart, workEnd, delayFactor, ticksPerDay, parttime_prob, commuteTop10, overtime, partTimeReduction, out startWork);
+                }
+                
                 workFromHome = Time2WorkWorkerSystem.IsTodayWorkFromHome(citizen, simulationFrame, timeData, ticksPerDay, remoteWorkProb);
 
                 schedule.work_type = (int)work;
@@ -83,9 +86,8 @@ namespace Time2Work.Utils
 
             if (students.HasComponent(entity))
             {
-                float startStudy = 0f;
-                bool studying = Time2WorkStudentSystem.IsTimeToStudy(citizen, students[entity], ref economy, normalizedTime, simulationFrame, timeData, population, schoolOffdayprob, schoolStart, schoolEnd, ticksPerDay, out time2Work, out startStudy);
-                dayOff = studying;
+                time2Work = Time2WorkStudentSystem.GetTimeToStudy(citizen, students[entity], ref economy, schoolStart, schoolEnd, ticksPerDay, out startWork);
+                dayOff = Time2WorkStudentSystem.IsStudyDayOff(citizen, students[entity], ref economy, day, population, schoolOffdayprob, schoolStart, schoolEnd, ticksPerDay);
             }
 
             schedule.start_work = time2Work.x;

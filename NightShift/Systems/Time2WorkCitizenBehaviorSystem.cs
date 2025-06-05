@@ -157,7 +157,7 @@ namespace Time2Work
             }
             else
             {
-                float2_2 = Time2WorkStudentSystem.GetTimeToStudy(citizen, students[entity], ref economyParameters, school_start_time, school_end_time, ticksPerDay);
+                float2_2 = Time2WorkStudentSystem.GetTimeToStudy(citizen, students[entity], ref economyParameters, school_start_time, school_end_time, ticksPerDay, out start_work);
             }
 
             return GetSleepTime(entity, citizen, ref economyParameters, ref workers, ref students, float2_2); ;
