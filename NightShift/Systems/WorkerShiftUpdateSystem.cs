@@ -70,7 +70,7 @@ namespace Time2Work.Systems
             int bin_size = (int)Math.Floor(30 * Time2WorkTimeSystem.timeReductionFactor);
             float bin_min_size = 15f / Time2WorkTimeSystem.timeReductionFactor;
 
-            var workers = _query.ToEntityArray(Allocator.Temp);
+            using var workers = _query.ToEntityArray(Allocator.Temp);
 
             double day_prob2 = 0f;
             double office_day_prob2 = 0f;
