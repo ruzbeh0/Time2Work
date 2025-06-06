@@ -8,22 +8,23 @@ using Game.Citizens;
 using Game.City;
 using Game.Common;
 using Game.Companies;
+using Game.Economy;
+using Game.Events;
 using Game.Prefabs;
-using Game.Tools;
 using Game.Simulation;
+using Game.Tools;
 using System.Collections.Specialized;
 using System.Runtime.CompilerServices;
+using Time2Work.Components;
+using Time2Work.Utils;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
+using Unity.Core;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using Time2Work.Components;
 using static Game.Prefabs.TriggerPrefabData;
-using Game.Economy;
-using Time2Work.Utils;
-using Game.Events;
 
 #nullable disable
 namespace Time2Work
@@ -59,9 +60,9 @@ namespace Time2Work
                    ComponentType.ReadWrite<TripNeeded>(),
                    ComponentType.ReadOnly<CurrentBuilding>(),
              },
-                Any = new ComponentType[1]
+                Any = new ComponentType[0]
                {
-                    ComponentType.ReadOnly<CitizenSchedule>(),
+                    
                },
                 None = new ComponentType[2]
              {
@@ -101,7 +102,7 @@ namespace Time2Work
             this.__TypeHandle.__Game_Citizens_TravelPurpose_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_CurrentBuilding_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.CitizenScheduleLookup.Update(ref this.CheckedStateRef);
 
             Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob jobData = new Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob()
             {
@@ -123,7 +124,7 @@ namespace Time2Work
                 m_EmergencyShelterData = this.__TypeHandle.__Game_Buildings_EmergencyShelter_RO_ComponentLookup,
                 m_Citizens = this.__TypeHandle.__Game_Citizens_Citizen_RO_ComponentLookup,
                 m_HealthProblems = this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentLookup,
-                m_CitizenSchedule = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle,
+                CitizenScheduleLookup = this.__TypeHandle.CitizenScheduleLookup,
                 m_EconomyParameters = this.m_EconomyParameterGroup.GetSingleton<EconomyParameterData>(),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 m_ArriveQueue = nativeQueue.AsParallelWriter(),
@@ -209,7 +210,7 @@ namespace Time2Work
             this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.CitizenScheduleLookup.Update(ref this.CheckedStateRef);
 
 
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
@@ -290,7 +291,7 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<HealthProblem> m_HealthProblems;
             [ReadOnly]
-            public ComponentTypeHandle<CitizenSchedule> m_CitizenSchedule;
+            public ComponentLookup<CitizenSchedule> CitizenScheduleLookup;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
             public NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive>.ParallelWriter m_ArriveQueue;
             public EconomyParameterData m_EconomyParameters;
@@ -341,8 +342,6 @@ namespace Time2Work
                 NativeArray<CurrentBuilding> nativeArray3 = chunk.GetNativeArray<CurrentBuilding>(ref this.m_CurrentBuildingType);
                 Random random = this.m_RandomSeed.GetRandom(unfilteredChunkIndex);
 
-                NativeArray<CitizenSchedule> nativeArray6 = chunk.GetNativeArray<CitizenSchedule>(ref this.m_CitizenSchedule);
-
                 bool flag1 = chunk.Has<HealthProblem>(ref this.m_HealthProblemType);
                 for (int index = 0; index < chunk.Count; ++index)
                 {
@@ -358,13 +357,13 @@ namespace Time2Work
                     }
                     else if (travelPurpose.m_Purpose == Game.Citizens.Purpose.Sleeping)
                     {
-                        CitizenSchedule citizenSchedule;
-                        bool chunkHasSchedule = chunk.Has(ref m_CitizenSchedule);
+                        float2 time2Work = new float2(-1f, -1f);
 
-                        if (chunkHasSchedule)
+                        bool hasSchedule = this.CitizenScheduleLookup.HasComponent(entity);
+                        if (hasSchedule)
                         {
-                            citizenSchedule = nativeArray6[index];
-                            float2 time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
+                            CitizenSchedule citizenSchedule = this.CitizenScheduleLookup[entity];
+                            time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
                             Citizen citizen = this.m_Citizens[entity];
 
                             float2 time2Sleep;
@@ -945,7 +944,7 @@ namespace Time2Work
             [ReadOnly]
             public EntityTypeHandle __Unity_Entities_Entity_TypeHandle;
             [ReadOnly]
-            public ComponentTypeHandle<CitizenSchedule> __Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle;
+            public ComponentLookup<CitizenSchedule> CitizenScheduleLookup;
             [ReadOnly]
             public ComponentTypeHandle<CurrentBuilding> __Game_Citizens_CurrentBuilding_RO_ComponentTypeHandle;
             public ComponentTypeHandle<TravelPurpose> __Game_Citizens_TravelPurpose_RW_ComponentTypeHandle;
@@ -979,8 +978,6 @@ namespace Time2Work
             public ComponentLookup<Citizen> __Game_Citizens_Citizen_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<HealthProblem> __Game_Citizens_HealthProblem_RO_ComponentLookup;
-            [ReadOnly]
-            public ComponentLookup<CitizenSchedule> __Game_Citizens_CitizenSchedule_RO_ComponentLookup;
             public ComponentLookup<CitizenPresence> __Game_Buildings_CitizenPresence_RW_ComponentLookup;
             public BufferLookup<Patient> __Game_Buildings_Patient_RW_BufferLookup;
             public BufferLookup<Occupant> __Game_Buildings_Occupant_RW_BufferLookup;
@@ -1006,7 +1003,7 @@ namespace Time2Work
                 this.__Unity_Entities_Entity_TypeHandle = state.GetEntityTypeHandle();
                 
                 this.__Game_Citizens_CurrentBuilding_RO_ComponentTypeHandle = state.GetComponentTypeHandle<CurrentBuilding>(true);
-                this.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle = state.GetComponentTypeHandle<CitizenSchedule>(true);
+                this.CitizenScheduleLookup = state.GetComponentLookup<CitizenSchedule>(true);
                 this.__Game_Citizens_TravelPurpose_RW_ComponentTypeHandle = state.GetComponentTypeHandle<TravelPurpose>();
                 
                 this.__Game_Citizens_HealthProblem_RO_ComponentTypeHandle = state.GetComponentTypeHandle<HealthProblem>(true);
@@ -1038,8 +1035,6 @@ namespace Time2Work
                 this.__Game_Citizens_Citizen_RO_ComponentLookup = state.GetComponentLookup<Citizen>(true);
                 
                 this.__Game_Citizens_HealthProblem_RO_ComponentLookup = state.GetComponentLookup<HealthProblem>(true);
-
-                this.__Game_Citizens_CitizenSchedule_RO_ComponentLookup = state.GetComponentLookup<CitizenSchedule>(true);
 
                 this.__Game_Buildings_CitizenPresence_RW_ComponentLookup = state.GetComponentLookup<CitizenPresence>();
                 

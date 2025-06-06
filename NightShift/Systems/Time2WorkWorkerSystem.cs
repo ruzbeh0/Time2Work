@@ -47,70 +47,24 @@ namespace Time2Work
         public static bool IsTodayOffDay(
           Citizen citizen,
           ref EconomyParameterData economyParameters,
-          uint frame,
           Game.Common.TimeData timeData,
-          int population, float timeOfDay,
+          int population,
           float offdayprob,
-          int ticksPerDay
-          )
-        {
-            int num = (int)Math.Round(offdayprob);
-            //int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
-            int day = Time2WorkTimeSystem.GetDay(frame, timeData, ticksPerDay);
-            bool todayOff = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + day)).NextInt(100) <= num;
-            bool yesterdayOff = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + day - 1)).NextInt(100) <= num;
-            if (yesterdayOff && timeOfDay < 0.18)
-            {
-                return yesterdayOff;
-            }
-
-            return todayOff;
-        }
-
-        public static bool IsTodayOffDay(
-          Citizen citizen,
-          ref EconomyParameterData economyParameters,
-          uint frame,
-          Game.Common.TimeData timeData,
-          int population, float timeOfDay,
-          float offdayprob,
-          int ticksPerDay,
           int day
           )
         {
-            int num = (int)Math.Round(offdayprob);
+            //int num = (int)Math.Round(offdayprob);
 
-            //int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
+            int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
 
             bool todayOff = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + day)).NextInt(100) <= num;
-            bool yesterdayOff = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + day - 1)).NextInt(100) <= num;
-            if (yesterdayOff && timeOfDay < 0.18)
-            {
-                todayOff = yesterdayOff;
-            }
+            //bool yesterdayOff = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + day - 1)).NextInt(100) <= num;
+            //if (yesterdayOff && timeOfDay < 0.18)
+            //{
+            //    todayOff = yesterdayOff;
+            //}
 
             return todayOff;
-        }
-
-        public static bool IsTimeToWork(
-          Citizen citizen,
-          Worker worker,
-          ref EconomyParameterData economyParameters,
-          float timeOfDay,
-          int lunch_break_pct,
-          float work_start_time,
-          float work_end_time,
-          float delayFactor,
-          int ticksPerDay,
-          int part_time_prob,
-          float commute_top10,
-          float overtime,
-          float part_time_reduction,
-          out float2 timeToWork,
-          out float start_work)
-        {
-            timeToWork = Time2WorkWorkerSystem.GetTimeToWork(citizen, worker, ref economyParameters, true, lunch_break_pct, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction, out start_work);
-            return (double)timeToWork.x >= (double)timeToWork.y ? (double)timeOfDay >= (double)timeToWork.x || (double)timeOfDay <= (double)timeToWork.y : (double)timeOfDay >= (double)timeToWork.x && (double)timeOfDay <= (double)timeToWork.y;
         }
 
         public static bool IsTimeToWork(
@@ -542,7 +496,7 @@ namespace Time2Work
             ComponentLookup<OfficeProperty> OfficePropertyLookup, Worker worker,out float offdayprob, int part_time_prob, out int parttime_prob, float4 commercial_offdayprob, 
             float4 industry_offdayprob, float4 office_offdayprob, float4 cityservices_offdayprob, Setting.DTSimulationEnum dow,  out int remote_work_probability)
         {
-            offdayprob = 60f;
+            offdayprob = cityservices_offdayprob.x;
             parttime_prob = part_time_prob;
             remote_work_probability = 0;
             WorkType work = WorkType.CityService;

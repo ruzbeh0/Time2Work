@@ -58,7 +58,7 @@ namespace Time2Work.Utils
             float2 time2Work = new float2(-1, -1);
             float startWork = 0f;
             bool workFromHome = false;
-            float offdayprob = 60f;
+            float offdayprob = cityservicesOffdayprob.x;
             int parttime_prob = partTimeProb;
             WorkType work = 0;
 
@@ -71,7 +71,7 @@ namespace Time2Work.Utils
                             commercialOffdayprob, industryOffdayprob, officeOffdayprob, cityservicesOffdayprob,
                             dow, out remoteWorkProb);
 
-                dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref economy, simulationFrame, timeData, population, normalizedTime, offdayprob, ticksPerDay, day);
+                dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref economy, timeData, population, offdayprob, day);
                 Time2WorkWorkerSystem.IsLunchTime(citizen, workers[entity], ref economy, normalizedTime, lunchBreakPct, simulationFrame, timeData, ticksPerDay, out time2Lunch);
                 if (day > (schedule.day + 4))
                 {
@@ -82,6 +82,8 @@ namespace Time2Work.Utils
 
                 schedule.work_type = (int)work;
                 schedule.dayoff = dayOff;
+
+                //Mod.log.Info($"day:{day}, offdayprob:{offdayprob}, part_time_prob: {parttime_prob}, remoteWorkProb:{remoteWorkProb}, dayOff:{dayOff}, work:{work}, timeToStudy:{time2Work}");
             }
 
             if (students.HasComponent(entity))
