@@ -2,6 +2,7 @@
 using Game.Citizens;
 using Game.City;
 using Game.Prefabs;
+using System.Runtime.CompilerServices;
 using Time2Work.Components;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -12,11 +13,13 @@ namespace Time2Work.Utils
 {
     public static class CitizenScheduleHelper
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static CitizenSchedule CalculateScheduleForCitizen(
             Entity entity,
             Citizen citizen,
-            ComponentLookup<Worker> workers,
-            ComponentLookup<Student> students,
+            bool isWorker,
+            Worker workerData,
+            Student studentData,
             ComponentLookup<PrefabRef> prefabRefs,
             ComponentLookup<PropertyRenter> propertyRenters,
             ComponentLookup<CommercialProperty> commercialLookup,
@@ -63,41 +66,37 @@ namespace Time2Work.Utils
             WorkType work = 0;
 
             bool dayOff = false;
+            bool updateDay = true;
 
-            if (workers.HasComponent(entity))
+            if (isWorker)
             {
-                work = GetWorkerOffDayAndPartTimeProb(prefabRefs, propertyRenters, commercialLookup, industrialLookup,
-                            officeLookup, workers[entity], out offdayprob, partTimeProb, out parttime_prob,
-                            commercialOffdayprob, industryOffdayprob, officeOffdayprob, cityservicesOffdayprob,
-                            dow, out remoteWorkProb);
+                work = GetWorkerOffDayAndPartTimeProb(
+                    prefabRefs, propertyRenters, commercialLookup, industrialLookup,
+                    officeLookup, workerData, out offdayprob, partTimeProb, out parttime_prob,
+                    commercialOffdayprob, industryOffdayprob, officeOffdayprob, cityservicesOffdayprob,
+                    dow, out remoteWorkProb);
 
                 dayOff = Time2WorkWorkerSystem.IsTodayOffDay(citizen, ref economy, timeData, population, offdayprob, day);
-                Time2WorkWorkerSystem.IsLunchTime(citizen, workers[entity], ref economy, normalizedTime, lunchBreakPct, simulationFrame, timeData, ticksPerDay, out time2Lunch);
-                if (day > (schedule.day + 4))
-                {
-                    time2Work = Time2WorkWorkerSystem.GetTimeToWork(citizen, workers[entity], ref economy, true, lunchBreakPct, workStart, workEnd, delayFactor, ticksPerDay, parttime_prob, commuteTop10, overtime, partTimeReduction, out startWork);
-                }
-                
+                Time2WorkWorkerSystem.IsLunchTime(citizen, workerData, ref economy, normalizedTime, lunchBreakPct, simulationFrame, timeData, ticksPerDay, out time2Lunch);
+                time2Work = Time2WorkWorkerSystem.GetTimeToWork(citizen, workerData, ref economy, true, lunchBreakPct, workStart, workEnd, delayFactor, ticksPerDay, parttime_prob, commuteTop10, overtime, partTimeReduction, out startWork);
+
                 workFromHome = Time2WorkWorkerSystem.IsTodayWorkFromHome(citizen, simulationFrame, timeData, ticksPerDay, remoteWorkProb);
 
                 schedule.work_type = (int)work;
                 schedule.dayoff = dayOff;
-
-                //Mod.log.Info($"day:{day}, offdayprob:{offdayprob}, part_time_prob: {parttime_prob}, remoteWorkProb:{remoteWorkProb}, dayOff:{dayOff}, work:{work}, timeToStudy:{time2Work}");
             }
-
-            if (students.HasComponent(entity))
+            else
             {
-                time2Work = Time2WorkStudentSystem.GetTimeToStudy(citizen, students[entity], ref economy, schoolStart, schoolEnd, ticksPerDay, out startWork);
-                dayOff = Time2WorkStudentSystem.IsStudyDayOff(citizen, students[entity], ref economy, day, population, schoolOffdayprob, schoolStart, schoolEnd, ticksPerDay);
+                time2Work = Time2WorkStudentSystem.GetTimeToStudy(citizen, studentData, ref economy, schoolStart, schoolEnd, ticksPerDay, out startWork);
+                dayOff = Time2WorkStudentSystem.IsStudyDayOff(citizen, studentData, ref economy, day, population, schoolOffdayprob, schoolStart, schoolEnd, ticksPerDay);
             }
 
-            schedule.start_work = time2Work.x;
-            schedule.end_work = time2Work.y;
-            schedule.go_to_work = startWork;
             schedule.start_lunch = time2Lunch.x;
             schedule.end_lunch = time2Lunch.y;
             schedule.work_from_home = workFromHome;
+            schedule.start_work = time2Work.x;
+            schedule.end_work = time2Work.y;
+            schedule.go_to_work = startWork;
             schedule.day = day;
 
             return schedule;

@@ -23,11 +23,13 @@ using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Core;
 using Unity.Entities;
+using Unity.Entities.UniversalDelegates;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
 using static Time2Work.Time2WorkWorkerSystem;
+using Student = Game.Citizens.Student;
 
 namespace Time2Work.Systems
 {
@@ -124,8 +126,8 @@ namespace Time2Work.Systems
             uint frameWithInterval = SimulationUtils.GetUpdateFrameWithInterval(this.m_SimulationSystem.frameIndex, (uint)this.GetUpdateInterval(SystemUpdatePhase.GameSimulation), 16);
             this.__TypeHandle.__Game_City_Population_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Citizens_Student_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Citizens_Worker_RO_ComponentLookup.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.WorkerTypeHandle.Update(ref this.CheckedStateRef);
+            this.__TypeHandle.StudentTypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
             this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
@@ -146,9 +148,9 @@ namespace Time2Work.Systems
                         m_CitizenSchedule = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RW_ComponentTypeHandle,
                         m_EntityType = this.__TypeHandle.__Unity_Entities_Entity_TypeHandle,
                         m_PropertyRenters = this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup,
-                        m_Workers = this.__TypeHandle.__Game_Citizens_Worker_RO_ComponentLookup,
-                        m_Students = this.__TypeHandle.__Game_Citizens_Student_RO_ComponentLookup,
-                        m_Prefabs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
+                    m_WorkerType = __TypeHandle.WorkerTypeHandle,
+                    m_StudentType = __TypeHandle.StudentTypeHandle,
+                    m_Prefabs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
                         m_PopulationData = this.__TypeHandle.__Game_City_Population_RO_ComponentLookup,
                         CommercialPropertyLookup = this.__TypeHandle.CommercialPropertyLookup,
                         IndustrialPropertyLookup = this.__TypeHandle.IndustrialPropertyLookup,
@@ -197,8 +199,8 @@ namespace Time2Work.Systems
                     m_CitizenSchedule = this.__TypeHandle.__Game_Citizens_CitizenSchedule_RW_ComponentTypeHandle,
                     m_EntityType = this.__TypeHandle.__Unity_Entities_Entity_TypeHandle,
                     m_PropertyRenters = this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup,
-                    m_Workers = this.__TypeHandle.__Game_Citizens_Worker_RO_ComponentLookup,
-                    m_Students = this.__TypeHandle.__Game_Citizens_Student_RO_ComponentLookup,
+                    m_WorkerType = __TypeHandle.WorkerTypeHandle,
+                    m_StudentType = __TypeHandle.StudentTypeHandle,
                     m_Prefabs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
                     m_PopulationData = this.__TypeHandle.__Game_City_Population_RO_ComponentLookup,
                     CommercialPropertyLookup = this.__TypeHandle.CommercialPropertyLookup,
@@ -267,12 +269,10 @@ namespace Time2Work.Systems
             public EntityTypeHandle m_EntityType;
             public ComponentTypeHandle<Citizen> m_CitizenType;
             public ComponentTypeHandle<CitizenSchedule> m_CitizenSchedule;
+            [ReadOnly] public ComponentTypeHandle<Worker> m_WorkerType;
+            [ReadOnly] public ComponentTypeHandle<Game.Citizens.Student> m_StudentType;
             [ReadOnly]
             public ComponentLookup<PropertyRenter> m_PropertyRenters;
-            [ReadOnly]
-            public ComponentLookup<Worker> m_Workers;
-            [ReadOnly]
-            public ComponentLookup<Game.Citizens.Student> m_Students;
             [ReadOnly]
             public ComponentLookup<PrefabRef> m_Prefabs;
             [ReadOnly]
@@ -334,14 +334,27 @@ namespace Time2Work.Systems
                 NativeArray<CitizenSchedule> nativeArrayCitizenSchedule = chunk.GetNativeArray<CitizenSchedule>(ref this.m_CitizenSchedule);
                 int population = this.m_PopulationData[this.m_PopulationEntity].m_Population;
 
+                bool hasWorker = chunk.Has(ref m_WorkerType);
+                bool hasStudent = chunk.Has(ref m_StudentType);
+
+                NativeArray<Worker> workers = default;
+                NativeArray<Student> students = default;
+
+                if (hasWorker) workers = chunk.GetNativeArray(ref m_WorkerType);
+                if (hasStudent) students = chunk.GetNativeArray(ref m_StudentType);
+
                 for (int index = 0; index < nativeArray1.Length; ++index)
                 {
                     Entity entity1 = nativeArray1[index];
                     Citizen citizen = nativeArray2[index];
                     CitizenSchedule citizenSchedule = nativeArrayCitizenSchedule[index];
 
+                    bool isWorker = hasWorker;
+                    Worker workerData = isWorker ? workers[index] : default;
+                    Student studentData = !isWorker ? students[index] : default;
+
                     citizenSchedule = CitizenScheduleHelper.CalculateScheduleForCitizen(
-                        entity1, citizen, m_Workers, m_Students, PrefabRefLookup, PropertyRenterLookup,
+                        entity1, citizen, isWorker, workerData, studentData, PrefabRefLookup, PropertyRenterLookup,
                         CommercialPropertyLookup, IndustrialPropertyLookup, OfficePropertyLookup,
                         m_PopulationData, m_EconomyParameters, population, m_NormalizedTime,
                         m_SimulationFrame, m_TimeData, ticksPerDay, lunch_break_pct,
@@ -380,12 +393,10 @@ namespace Time2Work.Systems
             public EntityTypeHandle m_EntityType;
             public ComponentTypeHandle<Citizen> m_CitizenType;
             public ComponentTypeHandle<CitizenSchedule> m_CitizenSchedule;
+            [ReadOnly] public ComponentTypeHandle<Worker> m_WorkerType;
+            [ReadOnly] public ComponentTypeHandle<Student> m_StudentType;
             [ReadOnly]
             public ComponentLookup<PropertyRenter> m_PropertyRenters;
-            [ReadOnly]
-            public ComponentLookup<Worker> m_Workers;
-            [ReadOnly]
-            public ComponentLookup<Game.Citizens.Student> m_Students;
             [ReadOnly]
             public ComponentLookup<PrefabRef> m_Prefabs;
             [ReadOnly]
@@ -446,13 +457,27 @@ namespace Time2Work.Systems
                 NativeArray<Citizen> nativeArray2 = chunk.GetNativeArray<Citizen>(ref this.m_CitizenType);
                 int population = this.m_PopulationData[this.m_PopulationEntity].m_Population;
 
+                bool hasWorker = chunk.Has(ref m_WorkerType);
+                bool hasStudent = chunk.Has(ref m_StudentType);
+
+                NativeArray<Worker> workers = default;
+                NativeArray<Student> students = default;
+
+                if (hasWorker) workers = chunk.GetNativeArray(ref m_WorkerType);
+                if (hasStudent) students = chunk.GetNativeArray(ref m_StudentType);
+
                 for (int index = 0; index < nativeArray1.Length; ++index)
                 {
                     Entity entity1 = nativeArray1[index];
                     Citizen citizen = nativeArray2[index];
                     var schedule = new CitizenSchedule();
+
+                    bool isWorker = hasWorker;
+                    Worker workerData = isWorker ? workers[index] : default;
+                    Student studentData = !isWorker ? students[index] : default;
+
                     CitizenSchedule citizenSchedule = CitizenScheduleHelper.CalculateScheduleForCitizen(
-                        entity1, citizen, m_Workers, m_Students, PrefabRefLookup, PropertyRenterLookup,
+                        entity1, citizen, isWorker, workerData, studentData, PrefabRefLookup, PropertyRenterLookup,
                         CommercialPropertyLookup, IndustrialPropertyLookup, OfficePropertyLookup,
                         m_PopulationData, m_EconomyParameters, population, m_NormalizedTime,
                         m_SimulationFrame, m_TimeData, ticksPerDay, lunch_break_pct,
@@ -487,10 +512,8 @@ namespace Time2Work.Systems
             public EntityTypeHandle __Unity_Entities_Entity_TypeHandle;
             [ReadOnly]
             public ComponentLookup<PropertyRenter> __Game_Buildings_PropertyRenter_RO_ComponentLookup;
-            [ReadOnly]
-            public ComponentLookup<Worker> __Game_Citizens_Worker_RO_ComponentLookup;
-            [ReadOnly]
-            public ComponentLookup<Game.Citizens.Student> __Game_Citizens_Student_RO_ComponentLookup;
+            public ComponentTypeHandle<Worker> WorkerTypeHandle;
+            public ComponentTypeHandle<Student> StudentTypeHandle;
             [ReadOnly]
             public ComponentLookup<PrefabRef> __Game_Prefabs_PrefabRef_RO_ComponentLookup;
             [ReadOnly]
@@ -516,8 +539,8 @@ namespace Time2Work.Systems
                 this.__Game_Citizens_CitizenSchedule_RW_ComponentTypeHandle = state.GetComponentTypeHandle<CitizenSchedule>();
                 this.__Unity_Entities_Entity_TypeHandle = state.GetEntityTypeHandle();
                 this.__Game_Buildings_PropertyRenter_RO_ComponentLookup = state.GetComponentLookup<PropertyRenter>(true);
-                this.__Game_Citizens_Worker_RO_ComponentLookup = state.GetComponentLookup<Worker>(true);
-                this.__Game_Citizens_Student_RO_ComponentLookup = state.GetComponentLookup<Game.Citizens.Student>(true);
+                this.WorkerTypeHandle = state.GetComponentTypeHandle<Worker>(true);
+                this.StudentTypeHandle = state.GetComponentTypeHandle<Student>(true);
                 this.__Game_Prefabs_PrefabRef_RO_ComponentLookup = state.GetComponentLookup<PrefabRef>(true);
                 this.__Game_City_Population_RO_ComponentLookup = state.GetComponentLookup<Population>(true);
                 this.__Game_Citizens_Citizen_RO_ComponentLookup = state.GetComponentLookup<Citizen>(true);

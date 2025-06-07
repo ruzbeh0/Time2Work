@@ -384,7 +384,7 @@ namespace Time2Work
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
             JobHandle deps;
-            //Mod.log.Info($"day type: {this.m_daytype}");
+      
             JobHandle jobHandle1 = new Time2WorkWorkerSystem.GoToWorkJob()
             {
                 m_EntityType = this.__TypeHandle.__Unity_Entities_Entity_TypeHandle,
@@ -699,7 +699,7 @@ namespace Time2Work
         {
         }
 
-        [BurstCompile]
+        //[BurstCompile]
         private struct GoToWorkJob : IJobChunk
         {
             [ReadOnly]
@@ -803,6 +803,8 @@ namespace Time2Work
                     bool workFromHome = citizenSchedule.work_from_home;
                     float start_work = citizenSchedule.start_work;
 
+                    
+                    
                     if (!dayOff
                         && !lunchTime && workTime)
                     {
@@ -838,7 +840,6 @@ namespace Time2Work
                                     //If too much time has passed since work start time, not go to work
                                     double threshold_start_work = Math.Min(Math.Abs(time2Work.x - this.m_TimeOfDay), Math.Abs(1 - (time2Work.x - this.m_TimeOfDay)));
                                     double threshold_resume_work = Math.Min(Math.Abs(time2Lunch.y - this.m_TimeOfDay), Math.Abs(1 - (time2Lunch.y - this.m_TimeOfDay)));
-                                    Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom));
 
                                     Entity household = nativeArray5[index].m_Household;
                                     Entity home = Entity.Null;
@@ -846,12 +847,12 @@ namespace Time2Work
                                     {
                                         home = this.m_Properties[household].m_Property;
                                     }
-                                    //Mod.log.Info($"work:{timeToWork}, lunch{timeToLunch}");
-                                    if (threshold_start_work <= 0.03 ||
-                                        (threshold_resume_work >= 0 && threshold_resume_work <= 0.03))
+
+                                    if (threshold_start_work <= 0.04 ||
+                                        (threshold_resume_work >= 0 && threshold_resume_work <= 0.04))
                                     {
                                         if (nativeArray4[index].m_CurrentBuilding == home &&
-                                            threshold_start_work > 0.03)
+                                            threshold_start_work > 0.04)
                                         {
                                             continue;
                                         }
@@ -909,7 +910,7 @@ namespace Time2Work
             }
         }
 
-        [BurstCompile]
+        //[BurstCompile]
         private struct WorkJob : IJobChunk
         {
             [ReadOnly]
