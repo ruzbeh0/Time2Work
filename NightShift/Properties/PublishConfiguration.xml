@@ -140,10 +140,11 @@ There are also other four plots comparing the three day types: Weekday, Average 
 * Refactored and improved many of this mod core systems
 * Added schedule information on the cim panel when clicking on a cim
 * Updated lunch break calculations to have a minimum of 30 minutes
+* Adjusted part time jobs to have more variaty in shift lengths
 * Fixed bug that was using the vanilla version of isTodayOffDay, isTimeToStudy and isTimeToWork methods for cims that were attending meetings.
 * Fixed error when printing probabilities in new cities.
 * Fixed error on school start end times being applied incorrectly to colleges
-* Fixed memory leak on SpecialEventSystem
+* Fixed memory leak on several systems
 * Fixed bug that was causing vanilla school start and end hours to be applied
 * Changed logo of the mod
 	</ChangeLog>

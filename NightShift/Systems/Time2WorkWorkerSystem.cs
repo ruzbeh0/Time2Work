@@ -23,6 +23,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
+using static Time2Work.Time2WorkWorkerSystem;
 namespace Time2Work
 {
     public partial class Time2WorkWorkerSystem : GameSystemBase
@@ -53,8 +54,7 @@ namespace Time2Work
           int day
           )
         {
-            //int num = (int)Math.Round(offdayprob);
-
+           
             int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
 
             bool todayOff = Unity.Mathematics.Random.CreateFromIndex((uint)(citizen.m_PseudoRandom + day)).NextInt(100) <= num;
@@ -214,9 +214,9 @@ namespace Time2Work
                 {
                     double shift_duration = Math.Abs(economyParameters.m_WorkDayEnd + workOffset + endOnTime - (economyParameters.m_WorkDayStart + workOffset + startOnTime));
                     //Shift duration varies by education level
-                    if (worker.m_Level <= 1)
+                    if (worker.m_Level <= 2)
                     {
-                        shift_duration *= 1.05f;
+                        shift_duration *= 1.15f;
                     }
                     else if (worker.m_Level > 2)
                     {
@@ -699,7 +699,7 @@ namespace Time2Work
         {
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct GoToWorkJob : IJobChunk
         {
             [ReadOnly]
@@ -803,8 +803,6 @@ namespace Time2Work
                     bool workFromHome = citizenSchedule.work_from_home;
                     float start_work = citizenSchedule.start_work;
 
-                    
-                    
                     if (!dayOff
                         && !lunchTime && workTime)
                     {
@@ -848,11 +846,11 @@ namespace Time2Work
                                         home = this.m_Properties[household].m_Property;
                                     }
 
-                                    if (threshold_start_work <= 0.04 ||
+                                    if (threshold_start_work <= 0.03 ||
                                         (threshold_resume_work >= 0 && threshold_resume_work <= 0.04))
                                     {
                                         if (nativeArray4[index].m_CurrentBuilding == home &&
-                                            threshold_start_work > 0.04)
+                                            threshold_start_work > 0.03)
                                         {
                                             continue;
                                         }
@@ -910,7 +908,7 @@ namespace Time2Work
             }
         }
 
-        //[BurstCompile]
+        [BurstCompile]
         private struct WorkJob : IJobChunk
         {
             [ReadOnly]

@@ -112,7 +112,6 @@ namespace Time2Work
             {
                 offdayprob = offdayprob3.z;
             }
-            //int num = (int)Math.Round(offdayprob);
             int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
             if (Unity.Mathematics.Random.CreateFromIndex((uint)citizen.m_PseudoRandom + (uint)day).NextInt(100) <= num)
                 return true;
@@ -276,6 +275,7 @@ namespace Time2Work
         {
         }
 
+        [BurstCompile]
         private struct GoToSchoolJob : IJobChunk
         {
             public EntityTypeHandle m_EntityType;
@@ -382,6 +382,7 @@ namespace Time2Work
             }
         }
 
+        [BurstCompile]
         private struct StudyJob : IJobChunk
         {
             [ReadOnly]
