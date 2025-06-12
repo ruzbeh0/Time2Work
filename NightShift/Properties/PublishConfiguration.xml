@@ -131,22 +131,14 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="1.9" />
+	<ModVersion Value="1.9.1" />
 	<!--Recommended version of the base game to use the mod-->
-	<GameVersion Value="1.2.*" />
+	<GameVersion Value="1.3.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="75426" />
 	<ChangeLog>
-* Refactored and improved many of this mod core systems
-* Added schedule information on the cim panel when clicking on a cim
-* Updated lunch break calculations to have a minimum of 30 minutes
-* Adjusted part time jobs to have more variaty in shift lengths
-* Fixed bug that was using the vanilla version of isTodayOffDay, isTimeToStudy and isTimeToWork methods for cims that were attending meetings.
-* Fixed error when printing probabilities in new cities.
-* Fixed error on school start end times being applied incorrectly to colleges
-* Fixed memory leak on several systems
-* Fixed bug that was causing vanilla school start and end hours to be applied
-* Changed logo of the mod
+* Fixed bug that was cauisng cims to not consider commute time when going to work
+* Updated for version 1.3 of the game
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

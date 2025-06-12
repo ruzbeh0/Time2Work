@@ -13,9 +13,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using Time2Work.Components;
-using Colossal.Entities;
-using static Game.Prefabs.TriggerPrefabData;
-using System;
+using Unity.Entities.Internal;
 
 #nullable disable
 namespace Time2Work.Systems
@@ -80,17 +78,7 @@ namespace Time2Work.Systems
         protected override void OnUpdate()
         {
             uint frameWithInterval = SimulationUtils.GetUpdateFrameWithInterval(this.m_SimulationSystem.frameIndex, (uint)this.GetUpdateInterval(SystemUpdatePhase.GameSimulation), 16);
-            this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_ParkData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_AttractionData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Simulation_UpdateFrame_SharedComponentTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Objects_Transform_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Buildings_InstalledUpgrade_RO_BufferTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Buildings_Park_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Buildings_Signature_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Buildings_Efficiency_RO_BufferTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Buildings_AttractivenessProvider_RW_ComponentTypeHandle.Update(ref this.CheckedStateRef);
+
             JobHandle dependencies;
          
             m_daytype = WeekSystem.currentDayOfTheWeek;
@@ -102,17 +90,17 @@ namespace Time2Work.Systems
             Time2WorkAttractionSystem.AttractivenessJob jobData = new Time2WorkAttractionSystem.AttractivenessJob()
             {
                 ecb = m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
-                m_AttractivenessType = this.__TypeHandle.__Game_Buildings_AttractivenessProvider_RW_ComponentTypeHandle,
-                m_PrefabType = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentTypeHandle,
-                m_EfficiencyType = this.__TypeHandle.__Game_Buildings_Efficiency_RO_BufferTypeHandle,
-                m_SignatureType = this.__TypeHandle.__Game_Buildings_Signature_RO_ComponentTypeHandle,
-                m_ParkType = this.__TypeHandle.__Game_Buildings_Park_RO_ComponentTypeHandle,
-                m_InstalledUpgradeType = this.__TypeHandle.__Game_Buildings_InstalledUpgrade_RO_BufferTypeHandle,
-                m_TransformType = this.__TypeHandle.__Game_Objects_Transform_RO_ComponentTypeHandle,
-                m_UpdateFrameType = this.__TypeHandle.__Game_Simulation_UpdateFrame_SharedComponentTypeHandle,
-                m_AttractionDatas = this.__TypeHandle.__Game_Prefabs_AttractionData_RO_ComponentLookup,
-                m_ParkDatas = this.__TypeHandle.__Game_Prefabs_ParkData_RO_ComponentLookup,
-                m_PrefabRefData = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
+                m_AttractivenessType = InternalCompilerInterface.GetComponentTypeHandle<AttractivenessProvider>(ref this.__TypeHandle.__Game_Buildings_AttractivenessProvider_RW_ComponentTypeHandle, ref this.CheckedStateRef),
+                m_PrefabType = InternalCompilerInterface.GetComponentTypeHandle<PrefabRef>(ref this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentTypeHandle, ref this.CheckedStateRef),
+                m_EfficiencyType = InternalCompilerInterface.GetBufferTypeHandle<Efficiency>(ref this.__TypeHandle.__Game_Buildings_Efficiency_RO_BufferTypeHandle, ref this.CheckedStateRef),
+                m_SignatureType = InternalCompilerInterface.GetComponentTypeHandle<Signature>(ref this.__TypeHandle.__Game_Buildings_Signature_RO_ComponentTypeHandle, ref this.CheckedStateRef),
+                m_ParkType = InternalCompilerInterface.GetComponentTypeHandle<Game.Buildings.Park>(ref this.__TypeHandle.__Game_Buildings_Park_RO_ComponentTypeHandle, ref this.CheckedStateRef),
+                m_InstalledUpgradeType = InternalCompilerInterface.GetBufferTypeHandle<InstalledUpgrade>(ref this.__TypeHandle.__Game_Buildings_InstalledUpgrade_RO_BufferTypeHandle, ref this.CheckedStateRef),
+                m_TransformType = InternalCompilerInterface.GetComponentTypeHandle<Game.Objects.Transform>(ref this.__TypeHandle.__Game_Objects_Transform_RO_ComponentTypeHandle, ref this.CheckedStateRef),
+                m_UpdateFrameType = InternalCompilerInterface.GetSharedComponentTypeHandle<UpdateFrame>(ref this.__TypeHandle.__Game_Simulation_UpdateFrame_SharedComponentTypeHandle, ref this.CheckedStateRef),
+                m_AttractionDatas = InternalCompilerInterface.GetComponentLookup<AttractionData>(ref this.__TypeHandle.__Game_Prefabs_AttractionData_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_ParkDatas = InternalCompilerInterface.GetComponentLookup<ParkData>(ref this.__TypeHandle.__Game_Prefabs_ParkData_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_PrefabRefData = InternalCompilerInterface.GetComponentLookup<PrefabRef>(ref this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_SpecialEventData = this.__TypeHandle.__Game_Prefabs_SpecialEventData_RO_ComponentLookup,
                 m_TerrainMap = this.m_TerrainAttractivenessSystem.GetData(true, out dependencies),
                 m_HeightData = this.m_TerrainSystem.GetHeightData(),
@@ -134,6 +122,7 @@ namespace Time2Work.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void __AssignQueries(ref SystemState state)
         {
+            new EntityQueryBuilder((AllocatorManager.AllocatorHandle)Allocator.Temp).Dispose();
         }
         protected override void OnCreateForCompiler()
         {
@@ -236,7 +225,7 @@ namespace Time2Work.Systems
                         Game.Buildings.Park park = nativeArray3[index];
                         
                         ParkData parkData = this.m_ParkDatas[prefab];
-                        float num = parkData.m_MaintenancePool > (short)0 ? (float)park.m_Maintenance / (float)parkData.m_MaintenancePool : 0.0f;
+                        float num = parkData.m_MaintenancePool > (short)0 ? (float)park.m_Maintenance / (float)parkData.m_MaintenancePool : 1f;
                         attractiveness *= (float)(0.800000011920929 + 0.20000000298023224 * (double)num);
                         isPark = true;
                     }

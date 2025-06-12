@@ -11,19 +11,33 @@ namespace Time2Work.Components
 {
     public struct CitizenSchedule : IComponentData, IQueryTypeParameter, ISerializable
     {
-        public int version = 2;
-        public int day = -1000;
-        public bool dayoff = default;
-        public float go_to_work = default;
-        public float start_work = default;
-        public float end_work = default;
-        public float start_lunch = default;
-        public float end_lunch = default;
-        public bool work_from_home = false;
-        public int work_type = default;
+        public int version;
+        public int day;
+        public bool dayoff;
+        public float go_to_work;
+        public float start_work;
+        public float end_work;
+        public float start_lunch;
+        public float end_lunch;
+        public bool work_from_home;
+        public int work_type;
 
-        public CitizenSchedule()
+        // Factory method to create a CitizenSchedule with default values
+        public static CitizenSchedule CreateDefault()
         {
+            return new CitizenSchedule
+            {
+                version = 2,
+                day = -1000,
+                dayoff = false,
+                go_to_work = 0,
+                start_work = 0,
+                end_work = 0,
+                start_lunch = 0,
+                end_lunch = 0,
+                work_from_home = false,
+                work_type = 0
+            };
         }
 
         public void Serialize<TWriter>(TWriter writer) where TWriter : IWriter

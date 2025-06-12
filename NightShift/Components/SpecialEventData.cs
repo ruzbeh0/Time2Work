@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Unity.Entities;
 using Colossal.Serialization.Entities;
 using Game.Agents;
@@ -11,18 +7,28 @@ namespace Time2Work.Components
 {
     public struct SpecialEventData : IComponentData, IQueryTypeParameter, ISerializable
     {
-        public int version = 1;
-        public SpecialEventData()
+        public int version;
+        public float start_time;
+        public float duration;
+        public float early_start_offset;
+        public LeisureType leisureType;
+        public int new_attraction;
+        public int day;
+
+        // Static factory method for initializing with default values
+        public static SpecialEventData CreateDefault()
         {
-
+            return new SpecialEventData
+            {
+                version = 1,
+                start_time = 0f,
+                duration = 0f,
+                early_start_offset = 0f,
+                leisureType = default,
+                new_attraction = 0,
+                day = 0
+            };
         }
-
-        public float start_time = default;
-        public float duration = default;
-        public float early_start_offset = default;
-        public LeisureType leisureType = default;
-        public int new_attraction = default;
-        public int day = default;
 
         public void Serialize<TWriter>(TWriter writer) where TWriter : IWriter
         {
@@ -43,9 +49,9 @@ namespace Time2Work.Components
             reader.Read(out early_start_offset);
             int leisureTypeInt;
             reader.Read(out leisureTypeInt);
-            leisureType = (LeisureType) leisureTypeInt;
+            leisureType = (LeisureType)leisureTypeInt;
             reader.Read(out new_attraction);
-            reader.Read(out day); 
+            reader.Read(out day);
         }
     }
 }

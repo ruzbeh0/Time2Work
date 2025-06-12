@@ -37,14 +37,14 @@ namespace Time2Work.Systems
             _query = GetEntityQuery(new EntityQueryDesc()
             {
                 All = new[] {
-                    ComponentType.ReadWrite<Worker>()
-                },
-                None =
-                    [
-                        ComponentType.Exclude<Deleted>(),
-                        ComponentType.Exclude<Temp>()
-                    ],
+        ComponentType.ReadWrite<Worker>()
+    },
+                None = new[] {
+        ComponentType.Exclude<Deleted>(),
+        ComponentType.Exclude<Temp>()
+    },
             });
+
 
             RequireForUpdate(_query);
             PrefabRefLookup = SystemAPI.GetComponentLookup<PrefabRef>(true);

@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Entities.Internal;
 using Unity.Jobs;
 using Unity.Mathematics;
 
@@ -58,9 +59,6 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
-            this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Prefabs_OutsideConnectionData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_City_Tourism_RO_ComponentLookup.Update(ref this.CheckedStateRef);
             if (Mod.m_Setting.tourism_trips)
             {
                 this.m_daytype = WeekSystem.currentDayOfTheWeek;
@@ -80,9 +78,9 @@ namespace Time2Work.Systems
                 m_Archetypes = this.m_HouseholdPrefabQuery.ToComponentDataListAsync<Game.Prefabs.ArchetypeData>((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle2),
                 m_HouseholdPrefabs = this.m_HouseholdPrefabQuery.ToComponentDataListAsync<HouseholdData>((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle3),
                 m_OutsideConnectionEntities = this.m_OutsideConnectionQuery.ToEntityListAsync((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle4),
-                m_Tourisms = this.__TypeHandle.__Game_City_Tourism_RO_ComponentLookup,
-                m_OutsideConnectionDatas = this.__TypeHandle.__Game_Prefabs_OutsideConnectionData_RO_ComponentLookup,
-                m_PrefabRefs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
+                m_Tourisms = InternalCompilerInterface.GetComponentLookup<Tourism>(ref this.__TypeHandle.__Game_City_Tourism_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_OutsideConnectionDatas = InternalCompilerInterface.GetComponentLookup<OutsideConnectionData>(ref this.__TypeHandle.__Game_Prefabs_OutsideConnectionData_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_PrefabRefs = InternalCompilerInterface.GetComponentLookup<PrefabRef>(ref this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_AttractivenessParameter = this.m_AttractivenessParameterQuery.GetSingleton<AttractivenessParameterData>(),
                 m_DemandParameterData = this.m_DemandParameterQuery.GetSingleton<DemandParameterData>(),
                 m_WeatherClassification = this.m_ClimateSystem.classification,
@@ -103,6 +101,7 @@ namespace Time2Work.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void __AssignQueries(ref SystemState state)
         {
+            new EntityQueryBuilder((AllocatorManager.AllocatorHandle)Allocator.Temp).Dispose();
         }
 
         protected override void OnCreateForCompiler()

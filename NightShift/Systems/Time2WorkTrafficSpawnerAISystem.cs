@@ -20,6 +20,7 @@ using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Entities.Internal;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine.Assertions;
@@ -74,7 +75,7 @@ namespace Time2Work
             this.m_TransportVehicleQuery = this.GetEntityQuery(TransportVehicleSelectData.GetEntityQueryDesc());
             this.m_CreaturePrefabQuery = this.GetEntityQuery(ComponentType.ReadOnly<CreatureData>(), ComponentType.ReadOnly<PrefabData>());
             this.m_TrafficRequestArchetype = this.EntityManager.CreateArchetype(ComponentType.ReadWrite<ServiceRequest>(), ComponentType.ReadWrite<RandomTrafficRequest>(), ComponentType.ReadWrite<RequestGroup>());
-            this.m_HandleRequestArchetype = this.EntityManager.CreateArchetype(ComponentType.ReadWrite<HandleRequest>(), ComponentType.ReadWrite<Game.Common.Event>());
+            this.m_HandleRequestArchetype = this.EntityManager.CreateArchetype(ComponentType.ReadWrite<HandleRequest>(), ComponentType.ReadWrite<Event>());
             this.m_CurrentLaneTypesRelative = new ComponentTypeSet(new ComponentType[5]
             {
         ComponentType.ReadWrite<Moving>(),
@@ -101,23 +102,6 @@ namespace Time2Work
                 this.m_TransportVehicleSelectData.PreUpdate((SystemBase)this, this.m_CityConfigurationSystem, this.m_TransportVehicleQuery, Allocator.TempJob, out jobHandle2);
                 JobHandle outJobHandle;
                 NativeList<ArchetypeChunk> archetypeChunkListAsync = this.m_CreaturePrefabQuery.ToArchetypeChunkListAsync((AllocatorManager.AllocatorHandle)Allocator.TempJob, out outJobHandle);
-                this.__TypeHandle.__Game_Prefabs_ActivityLocationElement_RO_BufferLookup.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Pathfind_PathElement_RO_BufferLookup.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Net_Curve_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Objects_Transform_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Pathfind_PathInformation_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Simulation_ServiceRequest_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Simulation_RandomTrafficRequest_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Prefabs_ObjectData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Prefabs_DeliveryTruckData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Prefabs_TrafficSpawnerData_RO_ComponentLookup.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Simulation_ServiceDispatch_RW_BufferTypeHandle.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Prefabs_ResidentData_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Prefabs_CreatureData_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Game_Buildings_TrafficSpawner_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-                this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
 
                 JobHandle jobHandle3 = new Time2WorkTrafficSpawnerAISystem.TrafficSpawnerTickJob()
                 {
@@ -163,6 +147,7 @@ namespace Time2Work
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void __AssignQueries(ref SystemState state)
         {
+            new EntityQueryBuilder((AllocatorManager.AllocatorHandle)Allocator.Temp).Dispose();
         }
 
         protected override void OnCreateForCompiler()
@@ -259,44 +244,41 @@ namespace Time2Work
             }
 
             private void Tick(
-              int jobIndex,
-              Entity entity,
-              ref Unity.Mathematics.Random random,
-              Game.Buildings.TrafficSpawner trafficSpawner,
-              PrefabRef prefabRef,
-              DynamicBuffer<ServiceDispatch> dispatches)
+        int jobIndex,
+        Entity entity,
+        ref Unity.Mathematics.Random random,
+        Game.Buildings.TrafficSpawner trafficSpawner,
+        PrefabRef prefabRef,
+        DynamicBuffer<ServiceDispatch> dispatches)
             {
+                // ISSUE: reference to a compiler-generated field
                 TrafficSpawnerData prefabTrafficSpawnerData = this.m_PrefabTrafficSpawnerData[prefabRef.m_Prefab];
                 float num1 = prefabTrafficSpawnerData.m_SpawnRate * 4.266667f;
                 float num2 = random.NextFloat(num1 * 0.5f, num1 * 1.5f);
+                // ISSUE: reference to a compiler-generated field
                 if (MathUtils.RoundToIntRandom(ref random, num2) > 0 && !this.m_RandomTrafficRequestData.HasComponent(trafficSpawner.m_TrafficRequest))
                 {
+                    // ISSUE: reference to a compiler-generated method
                     this.RequestVehicle(jobIndex, ref random, entity, prefabTrafficSpawnerData);
                 }
                 for (int index1 = 0; index1 < dispatches.Length; ++index1)
                 {
                     Entity request = dispatches[index1].m_Request;
+                    // ISSUE: reference to a compiler-generated field
                     if (this.m_RandomTrafficRequestData.HasComponent(request))
                     {
-                        bool remove = true;
+                        // ISSUE: reference to a compiler-generated field
                         int num3 = (double)this.m_Loading >= 0.89999997615814209 ? 1 : ((prefabTrafficSpawnerData.m_RoadType & RoadTypes.Airplane) == RoadTypes.None ? ((prefabTrafficSpawnerData.m_TrackType & TrackTypes.Train) == TrackTypes.None ? 2 : 0) : random.NextInt(2));
                         for (int index2 = 0; index2 < num3; ++index2)
                         {
-                            bool remove_temp;
-                            remove_temp = this.SpawnVehicle(jobIndex, ref random, entity, request, prefabTrafficSpawnerData);
-                            if (!remove_temp)
-                            {
-                                remove = remove_temp;
-                                break;
-                            }
+                            // ISSUE: reference to a compiler-generated method
+                            this.SpawnVehicle(jobIndex, ref random, entity, request, prefabTrafficSpawnerData);
                         }
-                        if (remove)
-                        {
-                            dispatches.RemoveAt(index1--);
-                        }
+                        dispatches.RemoveAt(index1--);
                     }
                     else
                     {
+                        // ISSUE: reference to a compiler-generated field
                         if (!this.m_ServiceRequestData.HasComponent(request))
                             dispatches.RemoveAt(index1--);
                     }
@@ -304,49 +286,60 @@ namespace Time2Work
             }
 
             private void RequestVehicle(
-              int jobIndex,
-              ref Unity.Mathematics.Random random,
-              Entity entity,
-              TrafficSpawnerData prefabTrafficSpawnerData)
+                int jobIndex,
+                ref Unity.Mathematics.Random random,
+                Entity entity,
+                TrafficSpawnerData prefabTrafficSpawnerData)
             {
-                SizeClass sizeClass;
+                SizeClass sizeClass = SizeClass.Small;
+                RandomTrafficRequestFlags flags = (RandomTrafficRequestFlags)0;
                 if ((prefabTrafficSpawnerData.m_RoadType & RoadTypes.Car) != RoadTypes.None)
                 {
                     int num = random.NextInt(100);
-                    sizeClass = num >= 20 ? (num >= 25 ? SizeClass.Small : SizeClass.Medium) : SizeClass.Large;
+                    if (num < 20)
+                    {
+                        sizeClass = SizeClass.Large;
+                        flags |= RandomTrafficRequestFlags.DeliveryTruck;
+                    }
+                    else if (num < 25)
+                    {
+                        sizeClass = SizeClass.Large;
+                        flags |= RandomTrafficRequestFlags.TransportVehicle;
+                    }
                 }
                 else
-                    sizeClass = SizeClass.Medium;
-                RandomTrafficRequestFlags flags = (RandomTrafficRequestFlags)0;
+                {
+                    sizeClass = SizeClass.Large;
+                    flags |= RandomTrafficRequestFlags.TransportVehicle;
+                }
                 if (prefabTrafficSpawnerData.m_NoSlowVehicles)
                     flags |= RandomTrafficRequestFlags.NoSlowVehicles;
-
                 Entity entity1 = this.m_CommandBuffer.CreateEntity(jobIndex, this.m_VehicleRequestArchetype);
                 this.m_CommandBuffer.SetComponent<RandomTrafficRequest>(jobIndex, entity1, new RandomTrafficRequest(entity, prefabTrafficSpawnerData.m_RoadType, prefabTrafficSpawnerData.m_TrackType, EnergyTypes.FuelAndElectricity, sizeClass, flags));
-                this.m_CommandBuffer.SetComponent<RequestGroup>(jobIndex, entity1, new RequestGroup(16U));
+                this.m_CommandBuffer.SetComponent<RequestGroup>(jobIndex, entity1, new RequestGroup(16U /*0x10*/));
             }
 
-            private bool SpawnVehicle(
-              int jobIndex,
-              ref Unity.Mathematics.Random random,
-              Entity entity,
-              Entity request,
-              TrafficSpawnerData prefabTrafficSpawnerData)
+            private void SpawnVehicle(
+      int jobIndex,
+      ref Unity.Mathematics.Random random,
+      Entity entity,
+      Entity request,
+      TrafficSpawnerData prefabTrafficSpawnerData)
             {
                 RandomTrafficRequest componentData1;
                 PathInformation componentData2;
 
                 if (!this.m_RandomTrafficRequestData.TryGetComponent(request, out componentData1) || !this.m_PathInformationData.TryGetComponent(request, out componentData2) || !this.m_PrefabRefData.HasComponent(componentData2.m_Destination))
-                    return true;
-                uint delay = random.NextUInt(256U);
+                    return;
+                uint delay = random.NextUInt(256U /*0x0100*/);
                 Entity source = entity;
-
+                // ISSUE: reference to a compiler-generated field
                 Transform transform = this.m_TransformData[entity];
                 int num1 = 0;
                 DynamicBuffer<PathElement> bufferData;
-
+                // ISSUE: reference to a compiler-generated field
                 this.m_PathElements.TryGetBuffer(request, out bufferData);
-
+                // ISSUE: reference to a compiler-generated field
                 if ((double)this.m_Loading < 0.89999997615814209)
                 {
                     delay = 0U;
@@ -356,28 +349,29 @@ namespace Time2Work
                         num1 = random.NextInt(2, bufferData.Length * 3 / 4);
                         PathElement pathElement = bufferData[num1];
                         Curve componentData3;
+                        // ISSUE: reference to a compiler-generated field
                         if (this.m_CurveData.TryGetComponent(pathElement.m_Target, out componentData3))
                         {
-                            float3 a = MathUtils.Tangent(componentData3.m_Bezier, pathElement.m_TargetDelta.x);
-                            float3 forward = math.select(a, -a, (double)pathElement.m_TargetDelta.y < (double)pathElement.m_TargetDelta.x);
+                            float3 falseValue = MathUtils.Tangent(componentData3.m_Bezier, pathElement.m_TargetDelta.x);
+                            float3 forward = math.select(falseValue, -falseValue, (double)pathElement.m_TargetDelta.y < (double)pathElement.m_TargetDelta.x);
                             transform.m_Position = MathUtils.Position(componentData3.m_Bezier, pathElement.m_TargetDelta.x);
                             transform.m_Rotation = quaternion.LookRotationSafe(forward, math.up());
                         }
                     }
                 }
                 Entity vehicle = Entity.Null;
-                if (componentData1.m_SizeClass == SizeClass.Large)
+                if ((componentData1.m_Flags & RandomTrafficRequestFlags.DeliveryTruck) != (RandomTrafficRequestFlags)0)
                 {
                     float windowStart = 1f - Math.Abs((float)(GaussianRandom.NextGaussianDouble(random))) * (0.375f);
                     float windowEnd = windowStart - 0.375f;
                     if ((this.m_NormalizedTime > 0.25f && this.m_NormalizedTime < 0.625f) && night_trucks)
                     {
-                        return false;
+                        return;
                     }
 
                     Resource randomResource = this.GetRandomResource(ref random);
                     int max;
-
+                    // ISSUE: reference to a compiler-generated field
                     this.m_DeliveryTruckSelectData.GetCapacityRange(Resource.NoResource, out int _, out max);
                     int amount = random.NextInt(1, max + max / 10 + 1);
                     int returnAmount = 0;
@@ -385,20 +379,21 @@ namespace Time2Work
                     if (random.NextInt(100) < 75)
                         state |= DeliveryTruckFlags.Loaded;
                     DeliveryTruckSelectItem selectItem;
-
+                    // ISSUE: reference to a compiler-generated field
                     if (this.m_DeliveryTruckSelectData.TrySelectItem(ref random, randomResource, amount, out selectItem))
                     {
                         vehicle = this.m_DeliveryTruckSelectData.CreateVehicle(this.m_CommandBuffer, jobIndex, ref random, ref this.m_PrefabDeliveryTruckData, ref this.m_PrefabObjectData, selectItem, randomResource, Resource.NoResource, ref amount, ref returnAmount, transform, source, state, delay);
                     }
                     int maxCount = 1;
+                    // ISSUE: reference to a compiler-generated method
                     if (this.CreatePassengers(jobIndex, vehicle, selectItem.m_Prefab1, transform, true, ref maxCount, ref random) > 0)
                     {
+                        // ISSUE: reference to a compiler-generated field
                         this.m_CommandBuffer.AddBuffer<Passenger>(jobIndex, vehicle);
                     }
                 }
-                else if (componentData1.m_SizeClass == SizeClass.Medium)
+                else if ((componentData1.m_Flags & RandomTrafficRequestFlags.TransportVehicle) != (RandomTrafficRequestFlags)0)
                 {
-
                     TransportType transportType = TransportType.None;
                     PublicTransportPurpose publicTransportPurpose = (PublicTransportPurpose)0;
                     Resource cargoResources = Resource.NoResource;
@@ -452,12 +447,14 @@ namespace Time2Work
                             passengerCapacity = new int2(1, int.MaxValue);
                         }
                     }
-
-                    vehicle = this.m_TransportVehicleSelectData.CreateVehicle(this.m_CommandBuffer, jobIndex, ref random, transform, source, Entity.Null, Entity.Null, transportType, componentData1.m_EnergyTypes, publicTransportPurpose, cargoResources, ref passengerCapacity, ref cargoCapacity, false);
+                    // ISSUE: reference to a compiler-generated field
+                    // ISSUE: reference to a compiler-generated field
+                    vehicle = this.m_TransportVehicleSelectData.CreateVehicle(this.m_CommandBuffer, jobIndex, ref random, transform, source, Entity.Null, Entity.Null, transportType, componentData1.m_EnergyTypes, componentData1.m_SizeClass, publicTransportPurpose, cargoResources, ref passengerCapacity, ref cargoCapacity, false);
                     if (vehicle != Entity.Null)
                     {
                         if (publicTransportPurpose != (PublicTransportPurpose)0)
                         {
+                            // ISSUE: reference to a compiler-generated field
                             this.m_CommandBuffer.SetComponent<Game.Vehicles.PublicTransport>(jobIndex, vehicle, new Game.Vehicles.PublicTransport()
                             {
                                 m_State = PublicTransportFlags.DummyTraffic
@@ -465,10 +462,12 @@ namespace Time2Work
                         }
                         if (cargoResources != Resource.NoResource)
                         {
+                            // ISSUE: reference to a compiler-generated field
                             this.m_CommandBuffer.SetComponent<Game.Vehicles.CargoTransport>(jobIndex, vehicle, new Game.Vehicles.CargoTransport()
                             {
                                 m_State = CargoTransportFlags.DummyTraffic
                             });
+                            // ISSUE: reference to a compiler-generated field
                             DynamicBuffer<LoadingResources> dynamicBuffer = this.m_CommandBuffer.SetBuffer<LoadingResources>(jobIndex, vehicle);
                             int min = random.NextInt(1, math.min(5, cargoCapacity.y + 1));
                             int num2 = random.NextInt(min, cargoCapacity.y + cargoCapacity.y / 10 + 1);
@@ -477,6 +476,7 @@ namespace Time2Work
                             {
                                 int num4 = random.NextInt(1, 100000);
                                 num3 += num4;
+                                // ISSUE: reference to a compiler-generated method
                                 dynamicBuffer.Add(new LoadingResources()
                                 {
                                     m_Resource = this.GetRandomResource(ref random),
@@ -514,16 +514,24 @@ namespace Time2Work
                     Entity trailer;
                     Entity vehiclePrefab;
                     Entity trailerPrefab;
-
+                    // ISSUE: reference to a compiler-generated field
+                    // ISSUE: reference to a compiler-generated field
                     vehicle = this.m_PersonalCarSelectData.CreateVehicle(this.m_CommandBuffer, jobIndex, ref random, maxCount, baggageAmount, false, noSlowVehicles, transform, source, Entity.Null, PersonalCarFlags.DummyTraffic, false, delay, out trailer, out vehiclePrefab, out trailerPrefab);
+                    // ISSUE: reference to a compiler-generated method
                     this.CreatePassengers(jobIndex, vehicle, vehiclePrefab, transform, true, ref maxCount, ref random);
+                    // ISSUE: reference to a compiler-generated method
                     this.CreatePassengers(jobIndex, trailer, trailerPrefab, transform, false, ref maxCount, ref random);
                 }
                 if (vehicle == Entity.Null)
-                    return true;
+                    return;
+                // ISSUE: reference to a compiler-generated field
                 this.m_CommandBuffer.SetComponent<Target>(jobIndex, vehicle, new Target(componentData2.m_Destination));
+                // ISSUE: reference to a compiler-generated field
                 this.m_CommandBuffer.AddComponent<Owner>(jobIndex, vehicle, new Owner(entity));
+                // ISSUE: reference to a compiler-generated field
+                // ISSUE: reference to a compiler-generated field
                 Entity entity1 = this.m_CommandBuffer.CreateEntity(jobIndex, this.m_HandleRequestArchetype);
+                // ISSUE: reference to a compiler-generated field
                 this.m_CommandBuffer.SetComponent<HandleRequest>(jobIndex, entity1, new HandleRequest(request, vehicle, true));
                 if (source == Entity.Null)
                 {
@@ -531,33 +539,36 @@ namespace Time2Work
                     {
                         CarCurrentLane component = new CarCurrentLane();
                         component.m_LaneFlags |= Game.Vehicles.CarLaneFlags.ResetSpeed;
+                        // ISSUE: reference to a compiler-generated field
                         this.m_CommandBuffer.SetComponent<CarCurrentLane>(jobIndex, vehicle, component);
                     }
                     else if ((componentData1.m_RoadType & RoadTypes.Airplane) != RoadTypes.None)
                     {
                         AircraftCurrentLane component = new AircraftCurrentLane();
                         component.m_LaneFlags |= AircraftLaneFlags.ResetSpeed | AircraftLaneFlags.Flying;
+                        // ISSUE: reference to a compiler-generated field
                         this.m_CommandBuffer.SetComponent<AircraftCurrentLane>(jobIndex, vehicle, component);
                     }
                     else if ((componentData1.m_RoadType & RoadTypes.Watercraft) != RoadTypes.None)
                     {
                         WatercraftCurrentLane component = new WatercraftCurrentLane();
                         component.m_LaneFlags |= WatercraftLaneFlags.ResetSpeed;
+                        // ISSUE: reference to a compiler-generated field
                         this.m_CommandBuffer.SetComponent<WatercraftCurrentLane>(jobIndex, vehicle, component);
                     }
                 }
                 if (!bufferData.IsCreated || bufferData.Length == 0)
-                    return true;
+                    return;
+                // ISSUE: reference to a compiler-generated field
                 DynamicBuffer<PathElement> targetElements = this.m_CommandBuffer.SetBuffer<PathElement>(jobIndex, vehicle);
                 PathUtils.CopyPath(bufferData, new PathOwner(), 0, targetElements);
+                // ISSUE: reference to a compiler-generated field
                 this.m_CommandBuffer.SetComponent<PathOwner>(jobIndex, vehicle, new PathOwner(num1, PathFlags.Updated));
-                if (componentData1.m_SizeClass != SizeClass.Large)
-                    return true;
+                if ((componentData1.m_Flags & RandomTrafficRequestFlags.DeliveryTruck) == (RandomTrafficRequestFlags)0)
+                    return;
+                // ISSUE: reference to a compiler-generated field
                 this.m_CommandBuffer.SetComponent<PathInformation>(jobIndex, vehicle, componentData2);
-
-                return true;
             }
-
             private int CreatePassengers(
               int jobIndex,
               Entity vehicleEntity,
@@ -581,8 +592,8 @@ namespace Time2Work
                         if (((int)activityLocationElement.m_ActivityMask.m_Mask & (int)activityMask.m_Mask) != 0)
                         {
                             ++num1;
-                            bool c = (activityLocationElement.m_ActivityFlags & ActivityFlags.InvertLefthandTraffic) != (ActivityFlags)0 && this.m_LeftHandTraffic || (activityLocationElement.m_ActivityFlags & ActivityFlags.InvertRighthandTraffic) != (ActivityFlags)0 && !this.m_LeftHandTraffic;
-                            activityLocationElement.m_Position.x = math.select(activityLocationElement.m_Position.x, -activityLocationElement.m_Position.x, c);
+                            bool test = (activityLocationElement.m_ActivityFlags & ActivityFlags.InvertLefthandTraffic) != (ActivityFlags)0 && this.m_LeftHandTraffic || (activityLocationElement.m_ActivityFlags & ActivityFlags.InvertRighthandTraffic) != (ActivityFlags)0 && !this.m_LeftHandTraffic;
+                            activityLocationElement.m_Position.x = math.select(activityLocationElement.m_Position.x, -activityLocationElement.m_Position.x, test);
                             if (((double)math.abs(activityLocationElement.m_Position.x) < 0.5 || (double)activityLocationElement.m_Position.x >= 0.0 == this.m_LeftHandTraffic) && (double)activityLocationElement.m_Position.z > (double)num3)
                             {
                                 num2 = index;
@@ -648,7 +659,7 @@ namespace Time2Work
 
             private Resource GetRandomResource(ref Unity.Mathematics.Random random)
             {
-                switch (random.NextInt(30))
+                switch (random.NextInt(31 /*0x1F*/))
                 {
                     case 0:
                         return Resource.Grain;
@@ -710,6 +721,8 @@ namespace Time2Work
                         return Resource.Textiles;
                     case 29:
                         return Resource.Garbage;
+                    case 30:
+                        return Resource.Fish;
                     default:
                         return Resource.NoResource;
                 }

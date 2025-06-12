@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Entities.Internal;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
@@ -114,11 +115,6 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
-            this.__TypeHandle.__Game_Buildings_AttractivenessProvider_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_City_Tourism_RW_ComponentLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_City_CityModifier_RO_BufferLookup.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Buildings_Renter_RO_BufferTypeHandle.Update(ref this.CheckedStateRef);
-            this.__TypeHandle.__Game_Companies_LodgingProvider_RO_ComponentTypeHandle.Update(ref this.CheckedStateRef);
             if(Mod.m_Setting.tourism_trips)
             {
                 this.m_daytype = WeekSystem.currentDayOfTheWeek;
@@ -133,12 +129,12 @@ namespace Time2Work.Systems
             {
                 m_m_AttractivenessProviderChunks = this.m_AttractivenessProviderGroup.ToArchetypeChunkArray((AllocatorManager.AllocatorHandle)Allocator.TempJob),
                 m_HotelChunks = this.m_HotelGroup.ToArchetypeChunkArray((AllocatorManager.AllocatorHandle)Allocator.TempJob),
-                m_LodgingProviderType = this.__TypeHandle.__Game_Companies_LodgingProvider_RO_ComponentTypeHandle,
-                m_RenterType = this.__TypeHandle.__Game_Buildings_Renter_RO_BufferTypeHandle,
-                m_CityModifiers = this.__TypeHandle.__Game_City_CityModifier_RO_BufferLookup,
-                m_Tourisms = this.__TypeHandle.__Game_City_Tourism_RW_ComponentLookup,
+                m_LodgingProviderType = InternalCompilerInterface.GetComponentTypeHandle<LodgingProvider>(ref this.__TypeHandle.__Game_Companies_LodgingProvider_RO_ComponentTypeHandle, ref this.CheckedStateRef),
+                m_RenterType = InternalCompilerInterface.GetBufferTypeHandle<Renter>(ref this.__TypeHandle.__Game_Buildings_Renter_RO_BufferTypeHandle, ref this.CheckedStateRef),
+                m_CityModifiers = InternalCompilerInterface.GetBufferLookup<CityModifier>(ref this.__TypeHandle.__Game_City_CityModifier_RO_BufferLookup, ref this.CheckedStateRef),
+                m_Tourisms = InternalCompilerInterface.GetComponentLookup<Tourism>(ref this.__TypeHandle.__Game_City_Tourism_RW_ComponentLookup, ref this.CheckedStateRef),
                 m_Parameters = this.m_ParameterQuery.GetSingleton<AttractivenessParameterData>(),
-                m_ProviderType = this.__TypeHandle.__Game_Buildings_AttractivenessProvider_RO_ComponentTypeHandle,
+                m_ProviderType = InternalCompilerInterface.GetComponentTypeHandle<AttractivenessProvider>(ref this.__TypeHandle.__Game_Buildings_AttractivenessProvider_RO_ComponentTypeHandle, ref this.CheckedStateRef),
                 m_City = this.m_CitySystem.City,
                 m_IsRaining = this.m_ClimateSystem.isRaining,
                 m_IsSnowing = this.m_ClimateSystem.isSnowing,
@@ -154,6 +150,7 @@ namespace Time2Work.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void __AssignQueries(ref SystemState state)
         {
+            new EntityQueryBuilder((AllocatorManager.AllocatorHandle)Allocator.Temp).Dispose();
         }
 
         protected override void OnCreateForCompiler()

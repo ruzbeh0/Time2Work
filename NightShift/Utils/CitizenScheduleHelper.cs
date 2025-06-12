@@ -94,9 +94,9 @@ namespace Time2Work.Utils
             schedule.start_lunch = time2Lunch.x;
             schedule.end_lunch = time2Lunch.y;
             schedule.work_from_home = workFromHome;
-            schedule.start_work = time2Work.x;
+            schedule.start_work = startWork;
             schedule.end_work = time2Work.y;
-            schedule.go_to_work = startWork;
+            schedule.go_to_work = time2Work.x;
             schedule.day = day;
 
             return schedule;

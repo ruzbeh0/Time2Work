@@ -34,8 +34,6 @@ namespace Time2Work.Systems
             public int end_hour;
             public int end_minutes;
             public string event_location;
-
-            public SpecialEventInfo() {}
         }
 
         private static string SanitizeString(string input)
