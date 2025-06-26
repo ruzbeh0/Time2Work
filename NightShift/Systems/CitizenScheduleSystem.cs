@@ -365,14 +365,6 @@ namespace Time2Work.Systems
                         remote_work_prob,  ref citizenSchedule);
 
                     nativeArrayCitizenSchedule[index] = citizenSchedule;
-
-                    //if(m_Students.HasComponent(entity1) && oldTimeX != citizenSchedule.start_work)
-                    //{
-                    //    Mod.log.Info($"Changed: OldTimeX:{oldTimeX},OldTimeY:{oldTimeY},NewTimeX:{citizenSchedule.start_work},NewTimeY:{citizenSchedule.end_work}");
-                    //} else
-                    //{
-                    //    Mod.log.Info("SAME");
-                    //}
                 }
             }
 
@@ -470,7 +462,7 @@ namespace Time2Work.Systems
                 {
                     Entity entity1 = nativeArray1[index];
                     Citizen citizen = nativeArray2[index];
-                    var schedule = new CitizenSchedule();
+                    var schedule = CitizenSchedule.CreateDefault();
 
                     bool isWorker = hasWorker;
                     Worker workerData = isWorker ? workers[index] : default;

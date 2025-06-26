@@ -83,13 +83,13 @@ namespace Time2Work
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.WorkerSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.LeisureSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.StudentSystem>().Enabled = false;
-            if(m_Setting.night_trucks)
+            if(m_Setting.better_trucks)
             {
-                World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TrafficSpawnerAISystem>().Enabled = false;
+                World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TripNeededSystem>().Enabled = false;
             }
             else
             {
-                World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TrafficSpawnerAISystem>().Enabled = true;
+                World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TripNeededSystem>().Enabled = true;
             }
 
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TourismSystem>().Enabled = false;
@@ -109,11 +109,12 @@ namespace Time2Work
             updateSystem.UpdateAt<Time2WorkLeisureSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkStudentSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAfter<WeekSystem>(SystemUpdatePhase.GameSimulation);
-            if (m_Setting.night_trucks)
+            if (m_Setting.better_trucks)
             {
-                updateSystem.UpdateAt<Time2WorkTrafficSpawnerAISystem>(SystemUpdatePhase.GameSimulation);
+                updateSystem.UpdateAt<Time2Work.Systems.Time2WorkTripNeededSystem>(SystemUpdatePhase.GameSimulation);
+                updateSystem.UpdateAt<Time2Work.Systems.TruckScheduleSystem>(SystemUpdatePhase.GameSimulation);
             }
-            updateSystem.UpdateAt<Time2WorkGoodsDeliveryRequestSystem>(SystemUpdatePhase.GameSimulation);
+            
             //updateSystem.UpdateAt<Time2WorkStorageTransferSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<CompanyDisableNightNotificationSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTourismSystem>(SystemUpdatePhase.GameSimulation);
@@ -121,11 +122,9 @@ namespace Time2Work
             updateSystem.UpdateAt<Time2WorkAttractionSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<EconomyParameterUpdaterSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<CitizenScheduleSystem>(SystemUpdatePhase.GameSimulation);
-            //updateSystem.UpdateAt<CitizenScheduleDebugSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAfter<SpecialEventSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<SpecialEventsUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkTimeUISystem>(SystemUpdatePhase.UIUpdate);
-            //updateSystem.UpdateAt<CitizenScheduleUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkStatisticsUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAfter<TimeSettingsMultiplierSystem>(SystemUpdatePhase.PrefabUpdate);

@@ -90,7 +90,7 @@ namespace Time2Work
         float[] slow_time_factor_ = new float[] { 1f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f };
         int[] part_time_percentage_ = new int[] { 22, 22, 8, 18, 18, 30, 48, 60, 6, 24, 17 };
         int[] remote_percentage_ = new int[] { 20, 20, 10, 20, 15, 13, 32, 55, 8, 27, 14 };
-        bool[] night_trucks_ = new bool[] { true, true, true, true, true, true, true, true, true, true, true };
+        bool[] better_trucks_ = new bool[] { true, true, true, true, true, true, true, true, true, true, true };
         bool[] peak_spread_ = new bool[] { true, true, true, true, true, true, true, true, true, true, true };
         bool[] tourism_trips_ = new bool[] { true, true, true, true, true, true, true, true, true, true, true };
         bool[] commuter_trips_ = new bool[] { true, true, true, true, true, true, true, true, true, true, true };
@@ -194,7 +194,7 @@ namespace Time2Work
             slow_time_factor = slow_time_factor_[index];
             part_time_percentage = part_time_percentage_[index];
             remote_percentage = remote_percentage_[index];
-            night_trucks = night_trucks_[index];
+            better_trucks = better_trucks_[index];
             peak_spread = peak_spread_[index];
             tourism_trips = tourism_trips_[index];
             commuter_trips = commuter_trips_[index];
@@ -692,7 +692,7 @@ namespace Time2Work
         public int cityServices_sun_pct { get; set; }
 
         [SettingsUISection(OtherSection, TrucksGroup)]
-        public bool night_trucks { get; set; }
+        public bool better_trucks { get; set; }
 
         [SettingsUISection(OtherSection, ExternalGroup)]
         public bool tourism_trips { get; set; }
@@ -1013,8 +1013,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_month2)), $"Month in which schools will be closed for vacation." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.dt_simulation)), "Select day type simulation behaviour" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.dt_simulation)), $"This option changes how the simulation works during a day. Average Day corresponds to the Vanilla behavior, which is a combination of weekday and weekend behaviors. With the default vacation/holiday settings (defined in the Shopping and Leisure tab), in an Average Day, around 30% of cims will behave as on the weekend, doing more leisure and shopping activities, while the rest will work or study. The Weekday option will increase work and study activities and lower leisure and shopping. Weekend will do the opposite. On Weekends, schools are closed. The 7 Days Week will rotate through weekdays and weekends, going from Monday to Sunday." },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.night_trucks)), "More realistic truck traffic" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.night_trucks)), $"Reduces truck traffic during the day and increases it at night and early morning." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.better_trucks)), "More realistic truck traffic" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.better_trucks)), $"Truck traffic will increase in the early and mid parts of the day." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_start_time)), "Elementary School Start Time" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_start_time)), $"Start time for elementary schools." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_end_time)), "Elementary School End Time" },
@@ -1376,8 +1376,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_month2)), $"Mês de férias. As escolas estarão fechadas." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.dt_simulation)), "Selecione o comportamento da Simulação Diária" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.dt_simulation)), $"Esta opção altera o funcionamento da simulação durante um dia. O Dia Padrão corresponde ao comportamento Vanilla, que é uma combinação de dias da semana e finais de semana. Com as configurações padrão de férias/feriados (definidas na aba Compras e Lazer), em um Dia Padrão, cerca de 30% dos cims se comportarão como no fim de semana, realizando mais atividades de lazer e compras, enquanto o restante trabalhará ou estudará. A opção Dia de Semana aumentará as atividades de trabalho e estudo e diminuirá o lazer e as compras. O fim de semana fará o oposto. Nos fins de semana, as escolas estão fechadas. A Semana de 7 Dias irá alternar entre dias de semana e finais de semana, indo de segunda a domingo." },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.night_trucks)), "Tráfego de caminhões mais realista" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.night_trucks)), $"Diminui o tráfego de caminhõess durante o dia e o aumenta a noite e de madrugada." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.better_trucks)), "Tráfego de caminhões mais realista" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.better_trucks)), $"Auemnta o tráfego de caminhõess durante o inicio e metade do dia." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_start_time)), "Horário de início das escolas do ensino básico" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_start_time)), $"Hora de início para escolas do ensino básico." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_end_time)), "Horário de término das escolas do ensino básico" },

@@ -80,6 +80,10 @@ namespace Time2Work.Utils
                 Time2WorkWorkerSystem.IsLunchTime(citizen, workerData, ref economy, normalizedTime, lunchBreakPct, simulationFrame, timeData, ticksPerDay, out time2Lunch);
                 time2Work = Time2WorkWorkerSystem.GetTimeToWork(citizen, workerData, ref economy, true, lunchBreakPct, workStart, workEnd, delayFactor, ticksPerDay, parttime_prob, commuteTop10, overtime, partTimeReduction, out startWork);
 
+                if(time2Lunch.y > time2Work.y)
+                {
+                    time2Lunch.y = time2Lunch.x + 0.05f;
+                }
                 workFromHome = Time2WorkWorkerSystem.IsTodayWorkFromHome(citizen, simulationFrame, timeData, ticksPerDay, remoteWorkProb);
 
                 schedule.work_type = (int)work;

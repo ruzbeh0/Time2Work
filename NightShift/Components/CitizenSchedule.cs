@@ -56,18 +56,24 @@ namespace Time2Work.Components
 
         public void Deserialize<TReader>(TReader reader) where TReader : IReader
         {
-            reader.Read(out version);
-            reader.Read(out day);
-            reader.Read(out dayoff);
-            reader.Read(out go_to_work);
-            reader.Read(out start_work);
-            reader.Read(out end_work);
-            reader.Read(out start_lunch);
-            reader.Read(out end_lunch);
-            reader.Read(out work_from_home);
-            if(version > 1)
+            try
             {
+                reader.Read(out version);
+                reader.Read(out day);
+                reader.Read(out dayoff);
+                reader.Read(out go_to_work);
+                reader.Read(out start_work);
+                reader.Read(out end_work);
+                reader.Read(out start_lunch);
+                reader.Read(out end_lunch);
+                reader.Read(out work_from_home);
                 reader.Read(out work_type);
+            }
+            catch
+            {
+                // fallback to legacy-compatible deserialization
+                version = 2;
+                work_type = 0; // default fallback
             }
         }
     }

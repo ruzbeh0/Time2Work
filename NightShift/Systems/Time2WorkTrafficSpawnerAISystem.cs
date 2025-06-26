@@ -134,7 +134,7 @@ namespace Time2Work
                     m_CurrentLaneTypesRelative = this.m_CurrentLaneTypesRelative,
                     m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                     m_NormalizedTime = this.m_TimeSystem.normalizedTime,
-                    night_trucks = Mod.m_Setting.night_trucks
+                    better_trucks = Mod.m_Setting.better_trucks
                 }.ScheduleParallel<Time2WorkTrafficSpawnerAISystem.TrafficSpawnerTickJob>(this.m_BuildingQuery, JobUtils.CombineDependencies(this.Dependency, jobHandle1, jobHandle2, outJobHandle));
                 this.m_PersonalCarSelectData.PostUpdate(jobHandle3);
                 this.m_TransportVehicleSelectData.PostUpdate(jobHandle3);
@@ -220,7 +220,7 @@ namespace Time2Work
             public ComponentTypeSet m_CurrentLaneTypesRelative;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
             public float m_NormalizedTime;
-            public bool night_trucks;
+            public bool better_trucks;
 
             public void Execute(
               in ArchetypeChunk chunk,
@@ -364,7 +364,7 @@ namespace Time2Work
                 {
                     float windowStart = 1f - Math.Abs((float)(GaussianRandom.NextGaussianDouble(random))) * (0.375f);
                     float windowEnd = windowStart - 0.375f;
-                    if ((this.m_NormalizedTime > 0.25f && this.m_NormalizedTime < 0.625f) && night_trucks)
+                    if ((this.m_NormalizedTime > 0.25f && this.m_NormalizedTime < 0.625f) && better_trucks)
                     {
                         return;
                     }

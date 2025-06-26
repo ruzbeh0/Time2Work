@@ -143,9 +143,9 @@ namespace Time2Work
                 float end_lunch = (float)(lunch_median + lunch_duration + endOnTime);
                 float diff = end_lunch - start_lunch;
                 //Don't allow lunch break that is less than 30 minutes
-                if(diff < 0.2f)
+                if(diff < 0.02f)
                 {
-                    end_lunch = start_lunch + 0.2f;
+                    end_lunch = start_lunch + 0.02f;
                 }
                 return new float2(start_lunch, end_lunch);
             }

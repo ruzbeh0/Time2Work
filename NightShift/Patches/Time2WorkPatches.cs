@@ -64,19 +64,19 @@ namespace Time2Work.Patches
             Traverse.Create(__instance).Field("m_Year").SetValue(t2wTimeSystem.year);
         }
 
-        [HarmonyPatch(typeof(StorageTransferSystem), "OnUpdate")]
-        [HarmonyPrefix]
-        public static bool StorageTransferSystem_OnUpdate_PreFix()
-        {
-            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
-            if ((t2wTimeSystem.normalizedTime > 0.25f && (t2wTimeSystem.normalizedTime < 0.625f) && Mod.m_Setting.night_trucks))
-            {
-                return false;
-            } else
-            {
-                return true;
-            }
-        }
+        //[HarmonyPatch(typeof(StorageTransferSystem), "OnUpdate")]
+        //[HarmonyPrefix]
+        //public static bool StorageTransferSystem_OnUpdate_PreFix()
+        //{
+        //    Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+        //    if ((t2wTimeSystem.normalizedTime > 0.25f && (t2wTimeSystem.normalizedTime < 0.625f) && Mod.m_Setting.better_trucks))
+        //    {
+        //        return false;
+        //    } else
+        //    {
+        //        return true;
+        //    }
+        //}
 
         [HarmonyPatch(typeof(TimeSystem), "GetYear")]
         [HarmonyPrefix]
@@ -87,6 +87,16 @@ namespace Time2Work.Patches
             __result = t2wTimeSystem.GetYear(settings, data);
             return false;
         }
+
+        [HarmonyPatch(typeof(TimeSystem), "get_normalizedDate")]
+        [HarmonyPrefix]
+        static bool TimeSystemPatches_normalizedDate(ref float __result)
+        {
+            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+            __result = t2wTimeSystem.normalizedDate;
+            return false; // Skip original getter
+        }
+
 
         [HarmonyPatch(typeof(TimeSystem), "GetDay")]
         [HarmonyPrefix]
@@ -166,26 +176,26 @@ namespace Time2Work.Patches
             return false;
         }
 
-        [HarmonyPatch(typeof(ClimateSystem), "SampleClimate", new Type[] { typeof(ClimatePrefab), typeof(float)})]
-        [HarmonyPrefix]
-        public static bool ClimateSystemPatches_SampleClimate_Prefix(ClimatePrefab prefab, float t, ref ClimateSample __result, ClimateSystem __instance)
-        {
-            float time = t * 12;
-            float num1 = prefab.m_Temperature.Evaluate(time);
-            float num2 = prefab.m_Precipitation.Evaluate(time);
-            float num3 = prefab.m_Cloudiness.Evaluate(time);
-            float num4 = prefab.m_Aurora.Evaluate(time);
-            float num5 = prefab.m_Aurora.Evaluate(time);
-            __result = new ClimateSystem.ClimateSample()
-            {
-                temperature = num1,
-                precipitation = num2,
-                cloudiness = num3,
-                aurora = num4,
-                fog = num5
-            };
-
-            return false;
-        }
+        //[HarmonyPatch(typeof(ClimateSystem), "SampleClimate", new Type[] { typeof(ClimatePrefab), typeof(float)})]
+        //[HarmonyPrefix]
+        //public static bool ClimateSystemPatches_SampleClimate_Prefix(ClimatePrefab prefab, float t, ref ClimateSample __result, ClimateSystem __instance)
+        //{
+        //    float time = t * 12;
+        //    float num1 = prefab.m_Temperature.Evaluate(time);
+        //    float num2 = prefab.m_Precipitation.Evaluate(time);
+        //    float num3 = prefab.m_Cloudiness.Evaluate(time);
+        //    float num4 = prefab.m_Aurora.Evaluate(time);
+        //    float num5 = prefab.m_Aurora.Evaluate(time);
+        //    __result = new ClimateSystem.ClimateSample()
+        //    {
+        //        temperature = num1,
+        //        precipitation = num2,
+        //        cloudiness = num3,
+        //        aurora = num4,
+        //        fog = num5
+        //    };
+        //
+        //    return false;
+        //}
     }
 }
