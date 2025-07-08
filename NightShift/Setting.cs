@@ -19,8 +19,8 @@ using Unity.Entities.UniversalDelegates;
 namespace Time2Work
 {
     [FileLocation("ModsSettings\\" + nameof(Time2Work) + "\\" + nameof(Time2Work))]
-    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, ShoppingTimeGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, EventGroup, MinEventGroup, MaxEventGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup, OtherGroup)]
-    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, ShoppingTimeGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, OtherGroup, ExternalGroup, ExpensesGroup, MinEventGroup, MaxEventGroup)]
+    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, ShoppingTimeGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, EventGroup, MinEventGroup, MaxEventGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup, OtherGroup, VisitTimeGroup)]
+    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, ShoppingTimeGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, OtherGroup, ExternalGroup, ExpensesGroup, MinEventGroup, MaxEventGroup, VisitTimeGroup)]
     public class Setting : ModSetting
     {
         public const string SettingsSection = "Settings";
@@ -65,6 +65,7 @@ namespace Time2Work
         public const string CommercialGroup = "CommercialGroup";
         public const string IndustryGroup = "IndustryGroup";
         public const string CityServicesGroup = "CityServicesGroup";
+        public const string VisitTimeGroup = "VisitTimeGroup";
 
         Dictionary<int, int> countryIndexLookup = new Dictionary<int, int>();
         int[] evening_share_ = new int[] { 10, 17, 13, 5, 19, 15, 31, 13, 16, 17, 8 };
@@ -499,6 +500,14 @@ namespace Time2Work
         [SettingsUISection(ShopLeisureSection, ShoppingTimeGroup)]
         public int avg_time_vehicles { get; set; } = 120;
 
+        //[SettingsUISlider(min = 60, max = 600, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        //[SettingsUISection(OtherSection, VisitTimeGroup)]
+        //public int avg_time_hospital { get; set; } = 240;
+        //
+        //[SettingsUISlider(min = 400, max = 1600, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        //[SettingsUISection(OtherSection, VisitTimeGroup)]
+        //public int avg_time_prison { get; set; } = 12*60;
+
 
         [SettingsUISection(SchoolSection, SchoolTimeOffGroup)]
         public bool use_school_vanilla_timeoff { get; set; }
@@ -866,6 +875,7 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.CommercialGroup), "Commercial - Percentage of Workers per Day" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.IndustryGroup), "Industry - Percentage of Workers per Day" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.CityServicesGroup), "City Services - Percentage of Workers per Day" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.VisitTimeGroup), "Time Spent Visiting certain Buildings" },
 
                 //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.WeekText)), $"Percentage of Workers per Day" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DTText)), $"Changing the parameters below require restarting the game." },
@@ -1103,6 +1113,10 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_entertainment)), $"Average time in minutes to shop for entertainment." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_vehicles)), "Vehicles" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_vehicles)), $"Average time in minutes to shop for vehicles." },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_hospital)), "Hospitals/Clinics" },
+                //{ m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_hospital)), $"Average time in minutes spent in hospitals or clinics." },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_prison)), "Prisons/Jails" },
+                //{ m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_prison)), $"Average time in minutes spent in prisons or jails." },
 
 
                 { m_Setting.GetEnumValueLocaleID(Setting.DTSimulationEnum.AverageDay), "Average Day" },
@@ -1229,6 +1243,7 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.CommercialGroup), "Comércio - Porcentagem de Trabalhadores por Dia" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.IndustryGroup), "Indústria - Porcentagem de Trabalhadores por Dia" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.CityServicesGroup), "Serviços Públicos - Porcentagem de Trabalhadores por Dia" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.VisitTimeGroup), "Tempo gasto visitando certos edifícios" },
 
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_weekday)), "Segunda a Quinta" },
@@ -1466,6 +1481,10 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_entertainment)), $"Tempo médio em minutos para comprar entretenimento." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_vehicles)), "Veículos" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_vehicles)), $"Tempo médio em minutos para comprar veículos." },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_hospital)), "Hospitais/Clínicas" },
+                //{ m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_hospital)), $"Tempo médio em minutos gasto em hospitais ou clínicas." },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.avg_time_prison)), "Prisões/Cadeias" },
+                //{ m_Setting.GetOptionDescLocaleID(nameof(Setting.avg_time_prison)), $"Tempo médio em minutos gasto em prisões ou cadeias." },
 
 
 

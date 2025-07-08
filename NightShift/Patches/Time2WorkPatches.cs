@@ -176,26 +176,26 @@ namespace Time2Work.Patches
             return false;
         }
 
-        //[HarmonyPatch(typeof(ClimateSystem), "SampleClimate", new Type[] { typeof(ClimatePrefab), typeof(float)})]
-        //[HarmonyPrefix]
-        //public static bool ClimateSystemPatches_SampleClimate_Prefix(ClimatePrefab prefab, float t, ref ClimateSample __result, ClimateSystem __instance)
-        //{
-        //    float time = t * 12;
-        //    float num1 = prefab.m_Temperature.Evaluate(time);
-        //    float num2 = prefab.m_Precipitation.Evaluate(time);
-        //    float num3 = prefab.m_Cloudiness.Evaluate(time);
-        //    float num4 = prefab.m_Aurora.Evaluate(time);
-        //    float num5 = prefab.m_Aurora.Evaluate(time);
-        //    __result = new ClimateSystem.ClimateSample()
-        //    {
-        //        temperature = num1,
-        //        precipitation = num2,
-        //        cloudiness = num3,
-        //        aurora = num4,
-        //        fog = num5
-        //    };
-        //
-        //    return false;
-        //}
+        [HarmonyPatch(typeof(ClimateSystem), "SampleClimate", new Type[] { typeof(ClimatePrefab), typeof(float)})]
+        [HarmonyPrefix]
+        public static bool ClimateSystemPatches_SampleClimate_Prefix(ClimatePrefab prefab, float t, ref ClimateSample __result, ClimateSystem __instance)
+        {
+            float time = t * 12;
+            float num1 = prefab.m_Temperature.Evaluate(time);
+            float num2 = prefab.m_Precipitation.Evaluate(time);
+            float num3 = prefab.m_Cloudiness.Evaluate(time);
+            float num4 = prefab.m_Aurora.Evaluate(time);
+            float num5 = prefab.m_Aurora.Evaluate(time);
+            __result = new ClimateSystem.ClimateSample()
+            {
+                temperature = num1,
+                precipitation = num2,
+                cloudiness = num3,
+                aurora = num4,
+                fog = num5
+            };
+        
+            return false;
+        }
     }
 }

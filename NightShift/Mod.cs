@@ -111,6 +111,7 @@ namespace Time2Work
             updateSystem.UpdateAfter<WeekSystem>(SystemUpdatePhase.GameSimulation);
             if (m_Setting.better_trucks)
             {
+                updateSystem.UpdateBefore<Time2WorkCitizenTravelPurposeSystem, Time2Work.Systems.Time2WorkTripNeededSystem>(SystemUpdatePhase.GameSimulation);
                 updateSystem.UpdateAt<Time2Work.Systems.Time2WorkTripNeededSystem>(SystemUpdatePhase.GameSimulation);
                 updateSystem.UpdateAt<Time2Work.Systems.TruckScheduleSystem>(SystemUpdatePhase.GameSimulation);
             }

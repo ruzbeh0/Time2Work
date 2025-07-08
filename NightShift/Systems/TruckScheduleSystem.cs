@@ -232,7 +232,7 @@ namespace Time2Work.Systems
                         }
 
                         double startHour = math.clamp(mean + GaussianRandom.NextGaussianDouble(random) * stdDev, 4.0, 20.0);
-                        double duration = math.clamp(GaussianRandom.NextGaussianDouble(random) * 2.0 + 4.0, 2.0, 8.0); // duration between 2–8h
+                        double duration = math.clamp(GaussianRandom.NextGaussianDouble(random) * 2.0 + 10.0, 8.0, 12.0); // duration between 8–12h
                         double endHour = math.clamp(startHour + duration, startHour + 1.0, 22.0);
 
                         float normalizedStart = (float)(startHour / 24.0);

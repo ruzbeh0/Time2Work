@@ -365,7 +365,10 @@ namespace Time2Work
 
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
             JobHandle deps;
-      
+
+            __TypeHandle.__AssignHandles(ref this.CheckedStateRef);
+
+
             JobHandle jobHandle1 = new Time2WorkWorkerSystem.GoToWorkJob()
             {
                 m_EntityType = InternalCompilerInterface.GetEntityTypeHandle(ref this.__TypeHandle.__Unity_Entities_Entity_TypeHandle, ref this.CheckedStateRef),

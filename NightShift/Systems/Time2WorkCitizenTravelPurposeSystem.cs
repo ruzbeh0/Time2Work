@@ -141,7 +141,9 @@ namespace Time2Work
                 avg_time_textiles = Mod.m_Setting.avg_time_textiles,
                 avg_time_recreation = Mod.m_Setting.avg_time_recreation,
                 avg_time_entertainment = Mod.m_Setting.avg_time_entertainment,
-                avg_time_vehicles = Mod.m_Setting.avg_time_vehicles
+                avg_time_vehicles = Mod.m_Setting.avg_time_vehicles,
+                //avg_time_hospital = Mod.m_Setting.avg_time_hospital,
+                //avg_time_prison = Mod.m_Setting.avg_time_prison
             };
             
             this.Dependency = jobData.ScheduleParallel<Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob>(this.m_ArrivedGroup, this.Dependency);
@@ -295,6 +297,8 @@ namespace Time2Work
             public int avg_time_recreation;
             public int avg_time_entertainment;
             public int avg_time_vehicles;
+            //public int avg_time_hospital;
+            //public int avg_time_prison;
 
             public void Execute(
               in ArchetypeChunk chunk,
@@ -461,9 +465,10 @@ namespace Time2Work
                                     travelPurpose.m_Purpose = Game.Citizens.Purpose.InHospital;
                                     nativeArray2[index] = travelPurpose;
                                     this.m_ArriveQueue.Enqueue(new Time2WorkCitizenTravelPurposeSystem.Arrive(entity, nativeArray3[index].m_CurrentBuilding, Time2WorkCitizenTravelPurposeSystem.ArriveType.Patient));
+                                    //buildingTime(unfilteredChunkIndex, entity, avg_time_hospital);
                                     continue;
                                 }
-                                
+
                                 this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
                                 continue;
                             case Game.Citizens.Purpose.EmergencyShelter:
@@ -485,10 +490,11 @@ namespace Time2Work
                                     travelPurpose.m_Purpose = Game.Citizens.Purpose.InJail;
                                     nativeArray2[index] = travelPurpose;
                                     this.m_ArriveQueue.Enqueue(new Time2WorkCitizenTravelPurposeSystem.Arrive(entity, nativeArray3[index].m_CurrentBuilding, Time2WorkCitizenTravelPurposeSystem.ArriveType.Occupant));
+                                    //buildingTime(unfilteredChunkIndex, entity, avg_time_prison);
                                     continue;
-                                }
-                                
-                                this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
+                                } 
+
+                                this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity); 
                                 continue;
                             case Game.Citizens.Purpose.GoingToPrison:
                                 
@@ -497,9 +503,10 @@ namespace Time2Work
                                     travelPurpose.m_Purpose = Game.Citizens.Purpose.InPrison;
                                     nativeArray2[index] = travelPurpose;
                                     this.m_ArriveQueue.Enqueue(new Time2WorkCitizenTravelPurposeSystem.Arrive(entity, nativeArray3[index].m_CurrentBuilding, Time2WorkCitizenTravelPurposeSystem.ArriveType.Occupant));
+                                    //buildingTime(unfilteredChunkIndex, entity, avg_time_prison);
                                     continue;
-                                }
-                                
+                                } 
+
                                 this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
                                 continue;
                             case Game.Citizens.Purpose.Deathcare:
@@ -608,6 +615,29 @@ namespace Time2Work
                         duration -= 1f;
                     }
 
+                    this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(duration));
+                }
+            }
+
+            private void buildingTime(int unfilteredChunkIndex, Entity entity, float avg_time)
+            {
+                Shopper shopper;
+                if (!this.m_Shopping.TryGetComponent(entity, out shopper))
+                {
+                    float time = avg_time / 1440f;
+                    
+                    Citizen citizen = this.m_Citizens[entity];
+                    uint seed = (uint)(citizen.m_PseudoRandom + 1000 * m_NormalizedTime);
+                    Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
+                    float random_factor = 0.5f;
+                    
+                    time += (float)(GaussianRandom.NextGaussianDouble(random2) * random_factor * time);
+                    float duration = this.m_NormalizedTime + time;
+                    if (duration > 1f)
+                    {
+                        duration -= 1f;
+                    }
+                    
                     this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(duration));
                 }
             }
