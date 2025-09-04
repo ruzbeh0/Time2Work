@@ -83,14 +83,6 @@ namespace Time2Work
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.WorkerSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.LeisureSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.StudentSystem>().Enabled = false;
-            if(m_Setting.better_trucks)
-            {
-                World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TripNeededSystem>().Enabled = false;
-            }
-            else
-            {
-                World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TripNeededSystem>().Enabled = true;
-            }
 
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TourismSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TouristSpawnSystem>().Enabled = false;
@@ -109,12 +101,6 @@ namespace Time2Work
             updateSystem.UpdateAt<Time2WorkLeisureSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkStudentSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAfter<WeekSystem>(SystemUpdatePhase.GameSimulation);
-            if (m_Setting.better_trucks)
-            {
-                updateSystem.UpdateBefore<Time2WorkCitizenTravelPurposeSystem, Time2Work.Systems.Time2WorkTripNeededSystem>(SystemUpdatePhase.GameSimulation);
-                updateSystem.UpdateAt<Time2Work.Systems.Time2WorkTripNeededSystem>(SystemUpdatePhase.GameSimulation);
-                updateSystem.UpdateAt<Time2Work.Systems.TruckScheduleSystem>(SystemUpdatePhase.GameSimulation);
-            }
             
             //updateSystem.UpdateAt<Time2WorkStorageTransferSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<CompanyDisableNightNotificationSystem>(SystemUpdatePhase.GameSimulation);
@@ -143,7 +129,8 @@ namespace Time2Work
             log.Info($"Plugin {harmonyID} made patches! Patched methods: " + patchedMethods);
             foreach (var patchedMethod in patchedMethods)
             {
-                log.Info($"Patched method: {patchedMethod.Module.Name}:{patchedMethod.Name}");
+                //log.Info($"Patched method: {patchedMethod.Module.Name}:{patchedMethod.Name}");
+                log.Info($"Patched: {patchedMethod.DeclaringType?.FullName}.{patchedMethod.Name}");
             }
 
             //Unity.Collections.NativeLeakDetection.Mode = Unity.Collections.NativeLeakDetectionMode.EnabledWithStackTrace;

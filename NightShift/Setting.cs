@@ -68,89 +68,93 @@ namespace Time2Work
         public const string VisitTimeGroup = "VisitTimeGroup";
 
         Dictionary<int, int> countryIndexLookup = new Dictionary<int, int>();
-        int[] evening_share_ = new int[] { 10, 17, 13, 5, 19, 15, 31, 13, 16, 17, 8 };
-        int[] night_share_ = new int[] { 8, 8, 7, 2, 12, 5, 8, 7, 11, 9, 4 };
-        int[] delay_factor_ = new int[] { 2, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2 };
-        int[] lunch_break_percentage_ = new int[] { 30, 10, 30, 30, 30, 30, 30, 30, 30, 30, 30 };
-        float[] holidays_per_year_ = new float[] { 11, 11, 13, 10, 11, 11, 7, 40, 13, 8, 11 };
-        float[] vacation_per_year_ = new float[] { 22, 22, 30, 21, 30, 28, 25, 15, 26, 39, 22 };
-        bool[] disable_early_shop_leisure_ = new bool[] { true, false, true, true, true, true, true, true, true, true, true };
-        bool[] use_vanilla_timeoff_ = new bool[] { false, true, false, false, false, false, false, false, false, false, false };
-        bool[] use_school_vanilla_timeoff_ = new bool[] { false, true, false, false, false, false, false, false, false, false, false };
-        int[] school_start_time_ = new int[] { 2, 2, 1, 2, 3, 2, 2, 0, 2, 3, 2 };
-        int[] school_end_time_ = new int[] { 16, 16, 9, 16, 19, 12, 16, 19, 16, 16, 16 };
-        int[] high_school_start_time_ = new int[] { 2, 2, 1, 4, 2, 2, 2, 0, 2, 3, 2 };
-        int[] high_school_end_time_ = new int[] { 16, 16, 12, 18, 20, 16, 16, 21, 16, 16, 16 };
-        int[] univ_start_time_ = new int[] { 2, 2, 2, 2, 4, 2, 2, 1, 2, 2, 2 };
-        int[] univ_end_time_ = new int[] { 20, 20, 21, 22, 22, 22, 20, 26, 18, 20, 20 };
-        int[] work_start_time_ = new int[] { 4, 4, 4, 3, 4, 4, 4, 4, 2, 3, 4 };
-        int[] work_end_time_ = new int[] { 20, 20, 22, 20, 20, 20, 20, 22, 18, 19, 20 };
-        int[] dt_simulation_ = new int[] { 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
-        float[] avg_work_hours_ft_wd_ = new float[] { 8.4f, 8.4f, 8.8f, 7.5f, 7.8f, 7.6f, 8.4f, 9.2f, 8f, 7.3f, 8.4f };
-        float[] avg_work_hours_pt_wd_ = new float[] { 5.3f, 5.3f, 5.3f, 4f, 4.7f, 3.6f, 5.3f, 5f, 6f, 3.3f, 5.3f };
-        float[] slow_time_factor_ = new float[] { 1f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f };
-        int[] part_time_percentage_ = new int[] { 22, 22, 8, 18, 18, 30, 48, 60, 6, 24, 17 };
-        int[] remote_percentage_ = new int[] { 20, 20, 10, 20, 15, 13, 32, 55, 8, 27, 14 };
-        bool[] better_trucks_ = new bool[] { true, true, true, true, true, true, true, true, true, true, true };
-        bool[] peak_spread_ = new bool[] { true, true, true, true, true, true, true, true, true, true, true };
-        bool[] tourism_trips_ = new bool[] { true, true, true, true, true, true, true, true, true, true, true };
-        bool[] commuter_trips_ = new bool[] { true, true, true, true, true, true, true, true, true, true, true };
-        int[] service_expenses_night_reduction_ = new int[] { 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30 };
-        int[] office_weekday_pct_ = new int[] { 90, 90, 90, 90, 90, 90, 90, 90, 95, 90, 90 };
-        int[] office_avgday_pct_ = new int[] { 88, 88, 88, 88, 88, 88, 88, 88, 90, 88, 88 };
-        int[] office_sat_pct_ = new int[] { 12, 12, 12, 12, 12, 12, 12, 12, 10, 12, 12 };
-        int[] office_sun_pct_ = new int[] { 6, 6, 6, 6, 6, 6, 6, 6, 2, 6, 6 };
-        int[] commercial_weekday_pct_ = new int[] { 64, 64, 64, 64, 64, 64, 64, 64, 90, 64, 64 };
-        int[] commercial_avgday_pct_ = new int[] { 68, 68, 68, 68, 68, 68, 68, 68, 85, 68, 68 };
-        int[] commercial_sat_pct_ = new int[] { 37, 37, 37, 37, 37, 37, 37, 37, 70, 37, 37 };
-        int[] commercial_sun_pct_ = new int[] { 26, 26, 26, 26, 26, 26, 26, 26, 15, 26, 26 };
-        int[] industry_weekday_pct_ = new int[] { 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90 };
-        int[] industry_avgday_pct_ = new int[] { 86, 86, 86, 86, 86, 86, 86, 86, 80, 86, 86 };
-        int[] industry_sat_pct_ = new int[] { 24, 24, 24, 24, 24, 24, 24, 24, 30, 24, 24 };
-        int[] industry_sun_pct_ = new int[] { 11, 11, 11, 11, 11, 11, 11, 11, 10, 11, 11 };
-        int[] cityServices_weekday_pct_ = new int[] { 80, 80, 80, 80, 80, 80, 80, 80, 95, 80, 80 };
-        int[] cityServices_avgday_pct_ = new int[] { 78, 78, 78, 78, 78, 78, 78, 78, 90, 78, 78 };
-        int[] cityServices_sat_pct_ = new int[] { 17, 17, 17, 17, 17, 17, 17, 17, 60, 17, 17 };
-        int[] cityServices_sun_pct_ = new int[] { 12, 12, 12, 12, 12, 12, 12, 12, 40, 12, 12 };
-        int[] nonday_office_share_ = new int[] { 7, 7, 7, 13, 7, 7, 7, 7, 5, 3, 7 };
-        int[] nonday_commercial_share_ = new int[] { 31, 31, 31, 24, 31, 31, 31, 31, 15, 8, 31 };
-        int[] nonday_industry_share_ = new int[] { 14, 14, 14, 14, 14, 14, 14, 14, 25, 15, 14 };
-        int[] nonday_cityservices_share_ = new int[] { 18, 18, 18, 7, 18, 18, 18, 18, 50, 8, 18 };
-        int[] school_lv1_weekday_pct_ = new int[] { 93, 93, 84, 98, 98, 98, 93, 98, 97, 93, 93 };
-        int[] school_lv1_avgday_pct_ = new int[] { 92, 92, 83, 97, 97, 97, 92, 97, 95, 92, 92 };
-        int[] school_lv1_saturday_pct_ = new int[] { 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0 };
-        int[] school_lv1_sunday_pct_ = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-        int[] school_lv2_weekday_pct_ = new int[] { 90, 90, 81, 93, 98, 98, 90, 97, 90, 90, 90 };
-        int[] school_lv2_avgday_pct_ = new int[] { 88, 88, 79, 88, 97, 97, 88, 95, 85, 88, 88 };
-        int[] school_lv2_saturday_pct_ = new int[] { 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0 };
-        int[] school_lv2_sunday_pct_ = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-        int[] school_lv34_weekday_pct_ = new int[] { 80, 80, 72, 85, 90, 90, 80, 90, 80, 80, 80 };
-        int[] school_lv34_avgday_pct_ = new int[] { 70, 70, 63, 70, 80, 80, 70, 80, 70, 70, 70 };
-        int[] school_lv34_saturday_pct_ = new int[] { 5, 5, 5, 10, 5, 5, 5, 15, 20, 5, 5 };
-        int[] school_lv34_sunday_pct_ = new int[] { 0, 0, 0, 4, 0, 0, 0, 5, 10, 0, 0 };
-        int[] school_vacation_month1_ = new int[] { 7, 7, 1, 7, 7, 7, 7, 4, 6, 7, 7 };
-        int[] school_vacation_month2_ = new int[] { 8, 8, 7, 8, 8, 8, 8, 5, 7, 8, 8 };
-        float[] meals_weekday_ = new float[] { 1.15f, 1.15f, 1.15f, 1.25f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f };
-        float[] meals_avgday_ = new float[] { 1.2f, 1.2f, 1.2f, 1.39f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f };
-        float[] meals_saturday_ = new float[] { 1.32f, 1.32f, 1.32f, 1.67f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f };
-        float[] meals_sunday_ = new float[] { 1.32f, 1.32f, 1.32f, 1.75f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f, 1.32f };
-        float[] entertainment_weekday_ = new float[] { 0.61f, 0.61f, 0.61f, 0.93f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f, 0.61f };
-        float[] entertainment_avgday_ = new float[] { 0.76f, 0.76f, 0.76f, 1.11f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f, 0.76f };
-        float[] entertainment_saturday_ = new float[] { 1.15f, 1.15f, 1.15f, 1.48f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f };
-        float[] entertainment_sunday_ = new float[] { 1.15f, 1.15f, 1.15f, 1.48f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f, 1.15f };
-        float[] shopping_weekday_ = new float[] { 0.24f, 0.24f, 0.24f, 0.3f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f, 0.24f };
-        float[] shopping_avgday_ = new float[] { 1.41f, 1.41f, 1.41f, 0.85f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f, 1.41f };
-        float[] shopping_saturday_ = new float[] { 1.68f, 1.68f, 1.68f, 1f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f, 1.68f };
-        float[] shopping_sunday_ = new float[] { 0.53f, 0.53f, 0.53f, 0.7f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f, 0.53f };
-        float[] park_weekday_ = new float[] { 0.3f, 0.3f, 0.3f, 0.31f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f };
-        float[] park_avgday_ = new float[] { 0.31f, 0.31f, 0.31f, 0.38f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f, 0.31f };
-        float[] park_saturday_ = new float[] { 0.35f, 0.35f, 0.35f, 0.52f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f };
-        float[] park_sunday_ = new float[] { 0.35f, 0.35f, 0.35f, 0.52f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f };
-        float[] travel_weekday_ = new float[] { 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f };
-        float[] travel_avgday_ = new float[] { 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f, 0.04f };
-        float[] travel_saturday_ = new float[] { 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f };
-        float[] travel_sunday_ = new float[] { 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f };
-        int[] traffic_reduction_ = new int[] { 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        int[] evening_share_ = new int[] { 10, 17, 13, 5, 19, 15, 31, 13, 16, 32, 17, 8 };
+        int[] night_share_ = new int[] { 8, 8, 7, 2, 12, 5, 8, 7, 11, 12, 9, 4 };
+        int[] delay_factor_ = new int[] { 2, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 };
+        int[] lunch_break_percentage_ = new int[] { 30, 10, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30 };
+        float[] holidays_per_year_ = new float[] { 11, 11, 13, 10, 11, 11, 7, 40, 13, 11, 8, 11 };
+        float[] vacation_per_year_ = new float[] { 22, 22, 30, 21, 30, 28, 25, 15, 26, 15, 39, 22 };
+        bool[] disable_early_shop_leisure_ = new bool[] { true, false, true, true, true, true, true, true, true, true, true, true };
+        bool[] use_vanilla_timeoff_ = new bool[] { false, true, false, false, false, false, false, false, false, false, false, false };
+        bool[] use_school_vanilla_timeoff_ = new bool[] { false, true, false, false, false, false, false, false, false, false, false, false };
+        int[] school_start_time_ = new int[] { 2, 2, 1, 2, 3, 2, 2, 0, 2, 1, 3, 2 };
+        int[] school_end_time_ = new int[] { 16, 16, 9, 16, 19, 12, 16, 17, 16, 15, 16, 16 };
+        int[] high_school_start_time_ = new int[] { 2, 2, 1, 4, 2, 2, 2, 0, 2, 1, 3, 2 };
+        int[] high_school_end_time_ = new int[] { 16, 16, 12, 18, 20, 16, 16, 21, 16, 18, 16, 16 };
+        int[] univ_start_time_ = new int[] { 2, 2, 2, 2, 4, 2, 2, 1, 2, 3, 2, 2 };
+        int[] univ_end_time_ = new int[] { 20, 20, 21, 22, 22, 22, 20, 26, 18, 20, 20, 20 };
+        int[] work_start_time_ = new int[] { 4, 4, 4, 3, 4, 4, 4, 1, 2, 3, 3, 4 };
+        int[] work_end_time_ = new int[] { 20, 20, 22, 20, 20, 20, 20, 22, 18, 22, 19, 20 };
+        int[] dt_simulation_ = new int[] { 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
+        float[] avg_work_hours_ft_wd_ = new float[] { 8.4f, 8.4f, 8.8f, 7.5f, 7.8f, 7.6f, 8.4f, 9.2f, 8f, 9f, 7.3f, 8.4f };
+        float[] avg_work_hours_pt_wd_ = new float[] { 5.3f, 5.3f, 5.3f, 4f, 4.7f, 3.6f, 5.3f, 5f, 6f, 4.2f, 3.3f, 5.3f };
+        float[] slow_time_factor_ = new float[] { 1f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f, 3.5f };
+        int[] part_time_percentage_ = new int[] { 22, 22, 8, 18, 18, 30, 48, 60, 6, 7, 24, 17 };
+        int[] remote_percentage_ = new int[] { 20, 20, 10, 20, 15, 13, 32, 55, 8, 20, 27, 14 };
+        bool[] peak_spread_ = new bool[] { true, true, true, true, true, true, true, true, true, true, true, true };
+        bool[] tourism_trips_ = new bool[] { true, true, true, true, true, true, true, true, true, true, true, true };
+        bool[] commuter_trips_ = new bool[] { true, true, true, true, true, true, true, true, true, true, true, true };
+        int[] service_expenses_night_reduction_ = new int[] { 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30 };
+        int[] office_weekday_pct_ = new int[] { 90, 90, 90, 90, 90, 90, 90, 92, 95, 99, 90, 90 };
+        int[] office_avgday_pct_ = new int[] { 88, 88, 88, 88, 88, 88, 88, 88, 90, 98, 88, 88 };
+        int[] office_sat_pct_ = new int[] { 12, 12, 12, 12, 12, 12, 12, 12, 10, 30, 12, 12 };
+        int[] office_sun_pct_ = new int[] { 6, 6, 6, 6, 6, 6, 6, 6, 2, 0, 6, 6 };
+        int[] commercial_weekday_pct_ = new int[] { 64, 64, 64, 64, 64, 64, 64, 92, 90, 99, 64, 64 };
+        int[] commercial_avgday_pct_ = new int[] { 68, 68, 68, 68, 68, 68, 68, 87, 85, 98, 68, 68 };
+        int[] commercial_sat_pct_ = new int[] { 37, 37, 37, 37, 37, 37, 37, 50, 70, 80, 37, 37 };
+        int[] commercial_sun_pct_ = new int[] { 26, 26, 26, 26, 26, 26, 26, 15, 15, 50, 26, 26 };
+        int[] industry_weekday_pct_ = new int[] { 90, 90, 90, 90, 90, 90, 90, 92, 90, 99, 90, 90 };
+        int[] industry_avgday_pct_ = new int[] { 86, 86, 86, 86, 86, 86, 86, 87, 80, 99, 86, 86 };
+        int[] industry_sat_pct_ = new int[] { 24, 24, 24, 24, 24, 24, 24, 50, 30, 50, 24, 24 };
+        int[] industry_sun_pct_ = new int[] { 11, 11, 11, 11, 11, 11, 11, 15, 10, 20, 11, 11 };
+        int[] cityServices_weekday_pct_ = new int[] { 80, 80, 80, 80, 80, 80, 80, 92, 95, 90, 80, 80 };
+        int[] cityServices_avgday_pct_ = new int[] { 78, 78, 78, 78, 78, 78, 78, 92, 90, 90, 78, 78 };
+        int[] cityServices_sat_pct_ = new int[] { 17, 17, 17, 17, 17, 17, 17, 15, 60, 90, 17, 17 };
+        int[] cityServices_sun_pct_ = new int[] { 12, 12, 12, 12, 12, 12, 12, 7, 40, 90, 12, 12 };
+        int[] nonday_office_share_ = new int[] { 7, 7, 7, 13, 7, 7, 7, 20, 5, 1, 3, 7 };
+        int[] nonday_commercial_share_ = new int[] { 31, 31, 31, 24, 31, 31, 31, 12, 15, 30, 8, 31 };
+        int[] nonday_industry_share_ = new int[] { 14, 14, 14, 14, 14, 14, 14, 12, 25, 37, 15, 14 };
+        int[] nonday_cityservices_share_ = new int[] { 18, 18, 18, 7, 18, 18, 18, 25, 50, 50, 8, 18 };
+        int[] school_lv1_weekday_pct_ = new int[] { 93, 93, 84, 98, 98, 98, 93, 98, 97, 100, 93, 93 };
+        int[] school_lv1_avgday_pct_ = new int[] { 92, 92, 83, 97, 97, 97, 92, 97, 95, 25, 92, 92 };
+        int[] school_lv1_saturday_pct_ = new int[] { 0, 0, 0, 1, 0, 0, 0, 2, 0, 1, 0, 0 };
+        int[] school_lv1_sunday_pct_ = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        int[] school_lv2_weekday_pct_ = new int[] { 90, 90, 81, 93, 98, 98, 90, 97, 90, 100, 90, 90 };
+        int[] school_lv2_avgday_pct_ = new int[] { 88, 88, 79, 88, 97, 97, 88, 95, 85, 25, 88, 88 };
+        int[] school_lv2_saturday_pct_ = new int[] { 0, 0, 0, 2, 0, 0, 0, 2, 0, 1, 0, 0 };
+        int[] school_lv2_sunday_pct_ = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        int[] school_lv34_weekday_pct_ = new int[] { 80, 80, 72, 85, 90, 90, 80, 90, 80, 100, 80, 80 };
+        int[] school_lv34_avgday_pct_ = new int[] { 70, 70, 63, 70, 80, 80, 70, 80, 70, 100, 70, 70 };
+        int[] school_lv34_saturday_pct_ = new int[] { 5, 5, 5, 10, 5, 5, 5, 15, 20, 0, 5, 5 };
+        int[] school_lv34_sunday_pct_ = new int[] { 0, 0, 0, 4, 0, 0, 0, 5, 10, 0, 0, 0 };
+        int[] school_vacation_month1_ = new int[] { 7, 7, 1, 7, 7, 7, 7, 4, 6, 6, 7, 7 };
+        int[] school_vacation_month2_ = new int[] { 8, 8, 7, 8, 8, 8, 8, 5, 7, 12, 8, 8 };
+        float[] meals_weekday_ = new float[] { 1.15f, 1.15f, 1.21f, 1.25f, 1.27f, 1.17f, 1.17f, 1.21f, 1.16f, 1.20f, 1.18f, 1.15f };
+        float[] meals_avgday_ = new float[] { 1.20f, 1.20f, 1.26f, 1.39f, 1.32f, 1.22f, 1.22f, 1.26f, 1.21f, 1.25f, 1.24f, 1.20f };
+        float[] meals_saturday_ = new float[] { 1.32f, 1.32f, 1.43f, 1.67f, 1.45f, 1.36f, 1.35f, 1.41f, 1.36f, 1.40f, 1.39f, 1.32f };
+        float[] meals_sunday_ = new float[] { 1.32f, 1.32f, 1.45f, 1.75f, 1.48f, 1.36f, 1.35f, 1.41f, 1.36f, 1.40f, 1.39f, 1.32f };
+
+        float[] entertainment_weekday_ = new float[] { 0.61f, 0.61f, 0.64f, 0.93f, 0.63f, 0.63f, 0.63f, 0.64f, 0.62f, 0.64f, 0.65f, 0.61f };
+        float[] entertainment_avgday_ = new float[] { 0.76f, 0.76f, 0.80f, 1.11f, 0.78f, 0.78f, 0.78f, 0.80f, 0.78f, 0.80f, 0.81f, 0.76f };
+        float[] entertainment_saturday_ = new float[] { 1.15f, 1.15f, 1.27f, 1.48f, 1.21f, 1.21f, 1.22f, 1.24f, 1.20f, 1.21f, 1.24f, 1.15f };
+        float[] entertainment_sunday_ = new float[] { 1.15f, 1.15f, 1.27f, 1.48f, 1.21f, 1.21f, 1.22f, 1.24f, 1.20f, 1.21f, 1.24f, 1.15f };
+
+        float[] shopping_weekday_ = new float[] { 0.24f, 0.24f, 0.24f, 0.30f, 0.24f, 0.25f, 0.25f, 0.26f, 0.25f, 0.27f, 0.25f, 0.24f };
+        float[] shopping_avgday_ = new float[] { 1.41f, 1.41f, 1.41f, 0.85f, 1.44f, 1.38f, 1.45f, 1.55f, 1.38f, 1.58f, 1.44f, 1.41f };
+        float[] shopping_saturday_ = new float[] { 1.68f, 1.68f, 1.81f, 1.00f, 1.76f, 1.85f, 1.76f, 1.93f, 1.93f, 1.85f, 1.85f, 1.68f };
+        float[] shopping_sunday_ = new float[] { 0.53f, 0.53f, 0.54f, 0.70f, 0.48f, 0.37f, 0.56f, 0.61f, 0.34f, 0.58f, 0.48f, 0.53f };
+
+        float[] park_weekday_ = new float[] { 0.30f, 0.30f, 0.32f, 0.31f, 0.32f, 0.31f, 0.32f, 0.29f, 0.31f, 0.32f, 0.31f, 0.30f };
+        float[] park_avgday_ = new float[] { 0.31f, 0.31f, 0.33f, 0.38f, 0.33f, 0.32f, 0.33f, 0.29f, 0.32f, 0.33f, 0.32f, 0.31f };
+        float[] park_saturday_ = new float[] { 0.35f, 0.35f, 0.39f, 0.52f, 0.37f, 0.38f, 0.39f, 0.32f, 0.37f, 0.38f, 0.37f, 0.35f };
+        float[] park_sunday_ = new float[] { 0.35f, 0.35f, 0.39f, 0.52f, 0.37f, 0.38f, 0.39f, 0.32f, 0.37f, 0.38f, 0.37f, 0.35f };
+
+        float[] travel_weekday_ = new float[] { 0.04f, 0.04f, 0.035f, 0.04f, 0.045f, 0.045f, 0.045f, 0.035f, 0.035f, 0.05f, 0.045f, 0.04f };
+        float[] travel_avgday_ = new float[] { 0.04f, 0.04f, 0.035f, 0.04f, 0.045f, 0.045f, 0.045f, 0.035f, 0.035f, 0.05f, 0.045f, 0.04f };
+        float[] travel_saturday_ = new float[] { 0.05f, 0.05f, 0.045f, 0.055f, 0.06f, 0.06f, 0.06f, 0.045f, 0.045f, 0.065f, 0.06f, 0.05f };
+        float[] travel_sunday_ = new float[] { 0.05f, 0.05f, 0.045f, 0.055f, 0.06f, 0.06f, 0.06f, 0.045f, 0.045f, 0.065f, 0.06f, 0.05f };
+
+        int[] traffic_reduction_ = new int[] { 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
         public Setting(IMod mod) : base(mod)
         {
@@ -195,7 +199,7 @@ namespace Time2Work
             slow_time_factor = slow_time_factor_[index];
             part_time_percentage = part_time_percentage_[index];
             remote_percentage = remote_percentage_[index];
-            better_trucks = better_trucks_[index];
+            //better_trucks = better_trucks_[index];
             peak_spread = peak_spread_[index];
             tourism_trips = tourism_trips_[index];
             commuter_trips = commuter_trips_[index];
@@ -700,8 +704,8 @@ namespace Time2Work
         [SettingsUISection(Weeksection, CityServicesGroup)]
         public int cityServices_sun_pct { get; set; }
 
-        [SettingsUISection(OtherSection, TrucksGroup)]
-        public bool better_trucks { get; set; }
+        //[SettingsUISection(OtherSection, TrucksGroup)]
+        //public bool better_trucks { get; set; }
 
         [SettingsUISection(OtherSection, ExternalGroup)]
         public bool tourism_trips { get; set; }
@@ -763,6 +767,7 @@ namespace Time2Work
             Netherlands = 124,
             Phillipines = 140,
             Poland = 141,
+            Singapore = 160,
             UK = 187,
             USA = 188
         }
@@ -1023,8 +1028,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_month2)), $"Month in which schools will be closed for vacation." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.dt_simulation)), "Select day type simulation behaviour" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.dt_simulation)), $"This option changes how the simulation works during a day. Average Day corresponds to the Vanilla behavior, which is a combination of weekday and weekend behaviors. With the default vacation/holiday settings (defined in the Shopping and Leisure tab), in an Average Day, around 30% of cims will behave as on the weekend, doing more leisure and shopping activities, while the rest will work or study. The Weekday option will increase work and study activities and lower leisure and shopping. Weekend will do the opposite. On Weekends, schools are closed. The 7 Days Week will rotate through weekdays and weekends, going from Monday to Sunday." },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.better_trucks)), "More realistic truck traffic" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.better_trucks)), $"Truck traffic will increase in the early and mid parts of the day." },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.better_trucks)), "More realistic truck traffic" },
+                //{ m_Setting.GetOptionDescLocaleID(nameof(Setting.better_trucks)), $"Truck traffic will increase in the early and mid parts of the day." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_start_time)), "Elementary School Start Time" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_start_time)), $"Start time for elementary schools." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_end_time)), "Elementary School End Time" },
@@ -1128,6 +1133,7 @@ namespace Time2Work
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Performance), "Performance" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Balanced), "Balanced" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.USA), "United States of America" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Singapore), "Singapore" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.UK), "United Kingdom" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Brazil), "Brazil" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Canada), "Canada" },
@@ -1391,8 +1397,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_vacation_month2)), $"Mês de férias. As escolas estarão fechadas." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.dt_simulation)), "Selecione o comportamento da Simulação Diária" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.dt_simulation)), $"Esta opção altera o funcionamento da simulação durante um dia. O Dia Padrão corresponde ao comportamento Vanilla, que é uma combinação de dias da semana e finais de semana. Com as configurações padrão de férias/feriados (definidas na aba Compras e Lazer), em um Dia Padrão, cerca de 30% dos cims se comportarão como no fim de semana, realizando mais atividades de lazer e compras, enquanto o restante trabalhará ou estudará. A opção Dia de Semana aumentará as atividades de trabalho e estudo e diminuirá o lazer e as compras. O fim de semana fará o oposto. Nos fins de semana, as escolas estão fechadas. A Semana de 7 Dias irá alternar entre dias de semana e finais de semana, indo de segunda a domingo." },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.better_trucks)), "Tráfego de caminhões mais realista" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.better_trucks)), $"Auemnta o tráfego de caminhõess durante o inicio e metade do dia." },
+                //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.better_trucks)), "Tráfego de caminhões mais realista" },
+                //{ m_Setting.GetOptionDescLocaleID(nameof(Setting.better_trucks)), $"Auemnta o tráfego de caminhõess durante o inicio e metade do dia." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_start_time)), "Horário de início das escolas do ensino básico" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.school_start_time)), $"Hora de início para escolas do ensino básico." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.school_end_time)), "Horário de término das escolas do ensino básico" },
@@ -1499,6 +1505,7 @@ namespace Time2Work
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.USA), "Estados Unidos da América" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.UK), "Reino Unido" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Brazil), "Brasil" },
+                { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Singapore), "Singapura" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Canada), "Canadá" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Phillipines), "Filipinas" },
                 { m_Setting.GetEnumValueLocaleID(Setting.SettingsEnum.Netherlands), "Paises Baíxos" },
