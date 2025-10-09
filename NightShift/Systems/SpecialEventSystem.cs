@@ -1,23 +1,26 @@
-﻿using Game.Buildings;
+﻿using Colossal.Entities;
+using Game;
+using Game.Buildings;
+using Game.Citizens;
+using Game.Common;
 using Game.Prefabs;
 using Game.Simulation;
-using Game;
+using Game.Tools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Time2Work.Components;
+using Time2Work.Utils;
 using Unity.Collections;
 using Unity.Entities;
-using UnityEngine;
-using Colossal.Entities;
-using static Time2Work.Setting;
-using Unity.Mathematics;
-using Game.Citizens;
-using System.Net;
-using Time2Work.Utils;
 using Unity.Entities.UniversalDelegates;
+using Unity.Mathematics;
+using UnityEngine;
+using UnityEngine.PlayerLoop;
+using static Time2Work.Setting;
 
 namespace Time2Work.Systems
 {
@@ -30,8 +33,9 @@ namespace Time2Work.Systems
         private SimulationSystem m_SimulationSystem;
         private bool updated = false;
         public static int numberEvents = 0;
-        public static float3 startTime;
-        public static float3 endTime;
+        public static NativeArray<float> startTime;
+        public static NativeArray<float> endTime;
+        private int _timesCount; // tracks current allocated length
 
         protected override void OnCreate()
         {
@@ -40,16 +44,19 @@ namespace Time2Work.Systems
 
             _query = GetEntityQuery(new EntityQueryDesc()
             {
-                All = new[] {
-                    ComponentType.ReadWrite<SpecialEventData>(),
-                }
+                All = new[]
+                {
+                    ComponentType.ReadOnly<PrefabRef>(),
+                    ComponentType.ReadOnly<AttractivenessProvider>()
+                },
+                None = new[] { ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>() }
             });
 
             RequireForUpdate(_query);
 
             m_SimulationSystem = this.World.GetOrCreateSystemManaged<SimulationSystem>();
             m_TimeDataQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Common.TimeData>());
-
+            _timesCount = 0; // not allocated yet
         }
 
         protected override void OnUpdate()
@@ -58,6 +65,9 @@ namespace Time2Work.Systems
 
             try
             {
+                if (entities.Length == 0)
+                    return; // NEW: nothing to process this tick
+
                 Game.Common.TimeData m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
                 m_SimulationFrame = this.m_SimulationSystem.frameIndex;
                 int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
@@ -83,26 +93,59 @@ namespace Time2Work.Systems
                 }
 
                 numberEvents = random.NextInt(min, max + 1);
+                EnsureTimeBuffers(numberEvents);
 
-                //Mod.log.Info($"dayOfWeek:{dayOfWeek}, day: {day}, hour:{hour}, minute:{minute}, numberEvents:{numberEvents}, entities:{entities.Length}, min: {min}, max: {max}");
-
+                //Mod.log.Info($"Day:{day}, DayOfWeek:{dayOfWeek}, Hour:{hour}, Minute:{minute}, Number of Events Today: {numberEvents}, !updated:{!updated}");
                 if ((int)dayOfWeek > -1 && (hour == 0 && minute >= 4 && minute < 10 || !updated))
                 {
-                    updated = true;
-                    //Mod.log.Info($"Number of Events Today: {numberEvents}");
+                    //updated = true;
                     int i = 0;
+
+                    int validCnt = 0;
+                    for (int j = 0; j < entities.Length; j++)
+                    {
+                        PrefabRef prefabRef = EntityManager.GetComponentData<PrefabRef>(entities[j]);
+
+                        if (!EntityManager.HasComponent<SpecialEventData>(entities[j]))
+                            continue;
+                        
+                        validCnt++;
+                    }
+
+                    if(validCnt == 0) {
+                        // No valid special event locations, nothing to do
+                        return;
+                    }
+
+                    // We'll keep track of unique locations for today to avoid duplicates
+                    var prefabSystem = World.GetOrCreateSystemManaged<PrefabSystem>();
+                    var seenLocations = new HashSet<string>(StringComparer.Ordinal);
+
                     foreach (var ent in entities)
                     {
+                        PrefabRef prefabRef = EntityManager.GetComponentData<PrefabRef>(ent);
                         SpecialEventData specialEventData;
+                        //Mod.log.Info($"Processing entity {ent.Index} with prefab {prefabRef.m_Prefab}");
                         if (EntityManager.TryGetComponent(ent, out specialEventData))
                         {
                             uint seed = (uint)(specialEventData.new_attraction / 100 + day * day);
                             Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
-                            int r = random2.NextInt(0, entities.Length);
-
-
+                            int r = random2.NextInt(0, validCnt);
+                            
+                            //Mod.log.Info($"Entity {ent.Index} with attraction {specialEventData.new_attraction} gets random r={r} (validCnt/2={validCnt/2}) with seed {seed}");
                             if (specialEventData.day != day && (n < numberEvents && (r < numberEvents || i == entities.Length - 1)))
                             {
+                                // Human-readable location
+                                string location = prefabSystem.GetPrefabName(prefabRef.m_Prefab);
+
+                                location = SpecialEventsUISystem.SanitizeString(location);
+                                if (string.IsNullOrWhiteSpace(location) || location == "Unknown")
+                                    continue; // don't surface blank locations
+
+                                // Avoid duplicates by location
+                                if (!seenLocations.Add(location))
+                                    continue;
+
                                 if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
                                 {
                                     specialEventData.start_time = random.NextInt(8, 20) / 24f;
@@ -124,22 +167,32 @@ namespace Time2Work.Systems
                                     specialEventData.duration = random.NextInt(2, 4) / 24f;
                                 }
                                 specialEventData.day = day;
+                                specialEventData.entity_index = ent.Index;
                                 startTime[n] = specialEventData.start_time;
                                 endTime[n] = specialEventData.start_time + specialEventData.duration;
                                 n++;
-                                //Mod.log.Info($"startTime:{startTime[n]}, endTime:{endTime[n]}, enti:{entities.Length}, numberEvents:{numberEvents}, attr:{specialEventData.new_attraction}, n:{n}, day:{specialEventData.day}");
+                                //Mod.log.Info($"location:{location}, updated:{updated}, numberEvents:{numberEvents}, attr:{specialEventData.new_attraction}, n:{n}, day:{specialEventData.day}, enti:{specialEventData.entity_index}");
                             }
                             else
                             {
-                                specialEventData.day = -1;
+                                //specialEventData.day = -1;
                             }
-                            EntityManager.SetComponentData(ent, specialEventData);
+                            if(specialEventData.version < 2)
+                            {
+                                specialEventData.version = 2; 
+                                EntityManager.RemoveComponent<SpecialEventData>(prefabRef.m_Prefab);
+                                EntityManager.AddComponentData(ent, specialEventData);
+                            } else
+                            {
+                                EntityManager.SetComponentData(ent, specialEventData);
+                            }   
                         }
                         i++;
                     }
-                    if (n == numberEvents)
+                    if (n >= 1)
                     {
                         updated = true;
+                        numberEvents = n;
                     }
                 }
             }
@@ -150,6 +203,36 @@ namespace Time2Work.Systems
             }
             
         }
+
+        protected override void OnDestroy()
+        {
+            if (startTime.IsCreated) startTime.Dispose();
+            if (endTime.IsCreated) endTime.Dispose();
+            base.OnDestroy();
+        }
+
+        private void EnsureTimeBuffers(int count)
+        {
+            if (count < 0) count = 0;
+
+            // (Re)allocate only if size changed or not created yet
+            if (!startTime.IsCreated || _timesCount != count)
+            {
+                if (startTime.IsCreated) startTime.Dispose();
+                if (endTime.IsCreated) endTime.Dispose();
+
+                startTime = count > 0
+                    ? new NativeArray<float>(count, Allocator.Persistent, NativeArrayOptions.ClearMemory)
+                    : default;
+
+                endTime = count > 0
+                    ? new NativeArray<float>(count, Allocator.Persistent, NativeArrayOptions.ClearMemory)
+                    : default;
+
+                _timesCount = count;
+            }
+        }
+
 
         public override int GetUpdateInterval(SystemUpdatePhase phase) => 16;
     }

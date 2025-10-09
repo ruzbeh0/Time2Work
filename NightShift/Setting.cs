@@ -1190,7 +1190,13 @@ namespace Time2Work
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Wednesday), "Wed" },
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Thursday), "Thu" },
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Friday), "Fri" },
-                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Saturday), "Sat" }
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Saturday), "Sat" },
+
+                { "t2w.chirp.special_event.today",   "Special event today from {start} to {end} at" },
+                { "t2w.chirp.special_event.starting","Special event starting soon at" },
+                { "t2w.chirp.special_event.ending",  "Special event ending soon at" },
+                { "t2w.chirp.holiday.new_year",      "Happy New Year!" },
+                { "t2w.chirp.mod_name",      "Realistic Trips Mod" },
             };
             }
 
@@ -1560,7 +1566,13 @@ namespace Time2Work
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Wednesday), "Qua" },
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Thursday), "Qui" },
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Friday), "Sex" },
-                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Saturday), "Sab" }
+                { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Saturday), "Sab" },
+
+                { "t2w.chirp.special_event.today",   "Evento especial hoje das {start} às {end} em" },
+                { "t2w.chirp.special_event.starting","Evento especial começando em breve em" },
+                { "t2w.chirp.special_event.ending",  "Evento especial terminando em breve em" },
+                { "t2w.chirp.holiday.new_year",      "Feliz Ano Novo!" },
+                { "t2w.chirp.mod_name",      "Mod Realistic Trips" },
             };
             }
 

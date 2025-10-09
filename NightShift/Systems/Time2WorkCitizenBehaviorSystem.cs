@@ -642,8 +642,8 @@ namespace Time2Work
             public Setting.DTSimulationEnum dow;
             public float overtime;
             public float part_time_reduction;
-            public float3 specialEventStartTime;
-            public float3 specialEventEndTime;
+            public NativeArray<float> specialEventStartTime;
+            public NativeArray<float> specialEventEndTime;
             public int remote_work_prob;
 
 
@@ -992,7 +992,7 @@ namespace Time2Work
 
                 //Check if there is a special event happening
                 bool specialEvent = false;
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < specialEventEndTime.Length; i++)
                 {
                     if (m_NormalizedTime >= specialEventStartTime[i] && m_NormalizedTime <= specialEventEndTime[i])
                     {

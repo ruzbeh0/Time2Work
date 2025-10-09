@@ -89,6 +89,7 @@ namespace Time2Work.Systems
 
             Time2WorkAttractionSystem.AttractivenessJob jobData = new Time2WorkAttractionSystem.AttractivenessJob()
             {
+                m_EntityType = InternalCompilerInterface.GetEntityTypeHandle(ref this.__TypeHandle.__Unity_Entities_Entity_RO_EntityTypeHandle, ref this.CheckedStateRef),
                 ecb = m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 m_AttractivenessType = InternalCompilerInterface.GetComponentTypeHandle<AttractivenessProvider>(ref this.__TypeHandle.__Game_Buildings_AttractivenessProvider_RW_ComponentTypeHandle, ref this.CheckedStateRef),
                 m_PrefabType = InternalCompilerInterface.GetComponentTypeHandle<PrefabRef>(ref this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentTypeHandle, ref this.CheckedStateRef),
@@ -149,6 +150,7 @@ namespace Time2Work.Systems
         [BurstCompile]
         private struct AttractivenessJob : IJobChunk
         {
+            public EntityTypeHandle m_EntityType;
             public EntityCommandBuffer.ParallelWriter ecb;
             public ComponentTypeHandle<AttractivenessProvider> m_AttractivenessType;
             [ReadOnly]
@@ -194,6 +196,7 @@ namespace Time2Work.Systems
             {
                 if ((int)chunk.GetSharedComponent<UpdateFrame>(this.m_UpdateFrameType).m_Index != (int)this.m_UpdateFrameIndex)
                     return;
+                var entities = chunk.GetNativeArray(m_EntityType);
                 NativeArray<PrefabRef> nativeArray1 = chunk.GetNativeArray<PrefabRef>(ref this.m_PrefabType);
                 NativeArray<AttractivenessProvider> nativeArray2 = chunk.GetNativeArray<AttractivenessProvider>(ref this.m_AttractivenessType);
                 BufferAccessor<Efficiency> bufferAccessor1 = chunk.GetBufferAccessor<Efficiency>(ref this.m_EfficiencyType);
@@ -205,6 +208,7 @@ namespace Time2Work.Systems
 
                 for (int index = 0; index < chunk.Count; ++index)
                 {
+                    Entity ent = entities[index];
                     Entity prefab = nativeArray1[index].m_Prefab;
                     AttractionData data = new AttractionData();
                     bool isPark = false;
@@ -238,13 +242,13 @@ namespace Time2Work.Systems
                     if (attractiveness >= minAttraction && isPark)
                     {
                         SpecialEventData specialEventData;
-                        if (!m_SpecialEventData.TryGetComponent(prefab, out specialEventData))
+                        if (!m_SpecialEventData.TryGetComponent(ent, out specialEventData))
                         {
                             attractiveness *= 1000f;
                             specialEventData = new SpecialEventData();
                             specialEventData.new_attraction = Mathf.RoundToInt(attractiveness);
 
-                            ecb.AddComponent(unfilteredChunkIndex, prefab, specialEventData);
+                            ecb.AddComponent(unfilteredChunkIndex, ent, specialEventData);
                         } else
                         {
                             float start = specialEventData.start_time - 1f / 24f;
@@ -304,10 +308,12 @@ namespace Time2Work.Systems
             public ComponentLookup<PrefabRef> __Game_Prefabs_PrefabRef_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<SpecialEventData> __Game_Prefabs_SpecialEventData_RO_ComponentLookup;
+            public EntityTypeHandle __Unity_Entities_Entity_RO_EntityTypeHandle;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void __AssignHandles(ref SystemState state)
             {
+                this.__Unity_Entities_Entity_RO_EntityTypeHandle = state.GetEntityTypeHandle(); 
                 this.__Game_Buildings_AttractivenessProvider_RW_ComponentTypeHandle = state.GetComponentTypeHandle<AttractivenessProvider>();
                 this.__Game_Prefabs_PrefabRef_RO_ComponentTypeHandle = state.GetComponentTypeHandle<PrefabRef>(true);
                 this.__Game_Buildings_Efficiency_RO_BufferTypeHandle = state.GetBufferTypeHandle<Efficiency>(true);

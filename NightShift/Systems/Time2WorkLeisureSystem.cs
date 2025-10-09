@@ -699,7 +699,7 @@ namespace Time2Work
                     }
 
                     //During special event parks will attract more people
-                    if (m_SpecialEventDatas.TryGetComponent(entity2, out specialEventdata))
+                    if (m_SpecialEventDatas.TryGetComponent(providerEntity, out specialEventdata))
                     {
                         if (specialEventdata.day == day)
                         {
@@ -712,7 +712,7 @@ namespace Time2Work
 
                     if (entity2 != Entity.Null)
                     {
-                        this.SpendLeisure(unfilteredChunkIndex, entity1, ref citizenData, ref leisure, providerEntity, provider, entity2, day);
+                        this.SpendLeisure(unfilteredChunkIndex, entity1, ref citizenData, ref leisure,providerEntity, provider, providerEntity, day);
                         nativeArray2[index] = leisure;
                         this.m_CitizenDatas[entity1] = citizenData;
                     }

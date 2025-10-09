@@ -14,19 +14,21 @@ namespace Time2Work.Components
         public LeisureType leisureType;
         public int new_attraction;
         public int day;
+        public int entity_index; // entity index used to deduplicate when there multiples instances of the same location
 
         // Static factory method for initializing with default values
         public static SpecialEventData CreateDefault()
         {
             return new SpecialEventData
             {
-                version = 1,
+                version = 2,
                 start_time = 0f,
                 duration = 0f,
                 early_start_offset = 0f,
                 leisureType = default,
                 new_attraction = 0,
-                day = 0
+                day = 0,
+                entity_index = 0
             };
         }
 
@@ -39,6 +41,10 @@ namespace Time2Work.Components
             writer.Write((int)leisureType);
             writer.Write(new_attraction);
             writer.Write(day);
+            if (version >= 2)
+            {
+                writer.Write(entity_index);
+            }
         }
 
         public void Deserialize<TReader>(TReader reader) where TReader : IReader
@@ -52,6 +58,14 @@ namespace Time2Work.Components
             leisureType = (LeisureType)leisureTypeInt;
             reader.Read(out new_attraction);
             reader.Read(out day);
+            if (version >= 2)
+            {
+                reader.Read(out entity_index);
+            }
+            else
+            {
+                entity_index = 0; // default value for older versions
+            }
         }
     }
 }

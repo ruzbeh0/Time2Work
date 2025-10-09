@@ -318,8 +318,8 @@ namespace Time2Work.Systems
             public Setting.DTSimulationEnum dow;
             public float overtime;
             public float part_time_reduction;
-            public float3 specialEventStartTime;
-            public float3 specialEventEndTime;
+            public NativeArray<float> specialEventStartTime;
+            public NativeArray<float> specialEventEndTime;
             public int remote_work_prob;
 
 
@@ -434,8 +434,8 @@ namespace Time2Work.Systems
             public Setting.DTSimulationEnum dow;
             public float overtime;
             public float part_time_reduction;
-            public float3 specialEventStartTime;
-            public float3 specialEventEndTime;
+            public NativeArray<float> specialEventStartTime;
+            public NativeArray<float> specialEventEndTime;
             public int remote_work_prob;
 
 

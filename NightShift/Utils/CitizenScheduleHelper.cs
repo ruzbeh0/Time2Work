@@ -4,6 +4,7 @@ using Game.City;
 using Game.Prefabs;
 using System.Runtime.CompilerServices;
 using Time2Work.Components;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using static Time2Work.Time2WorkWorkerSystem;
@@ -50,8 +51,8 @@ namespace Time2Work.Utils
             Setting.DTSimulationEnum dow,
             float overtime,
             float partTimeReduction,
-            float3 eventStart,
-            float3 eventEnd,
+            NativeArray<float> eventStart,
+            NativeArray<float> eventEnd,
             int remoteWorkProb,
             ref CitizenSchedule schedule
         )

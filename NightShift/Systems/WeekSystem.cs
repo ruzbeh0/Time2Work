@@ -1,5 +1,10 @@
 ﻿using Game;
+using Game.Buildings;
+using Game.Prefabs;
 using System;
+using Time2Work.Bridge;
+using Time2Work.Localization;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -23,6 +28,8 @@ namespace Time2Work.Systems
         private static bool updated = false;
         private static Setting.months month;
         public static bool initialized = false;
+        // Prevent duplicate "Happy New Year" chirps each year/day
+        private int _lastNewYearChirpYear = -1;
 
         protected override void OnCreate()
         {
@@ -316,6 +323,36 @@ namespace Time2Work.Systems
                 updated = false;
                 initialized = true;
             }
+
+            TrySendNewYearChirp();
+
+        }
+
+        private void TrySendNewYearChirp()
+        {
+            // We’ll post in the first few minutes after midnight to avoid missing the exact tick.
+            var t2w = World.GetExistingSystemManaged<Time2WorkTimeSystem>();
+            var now = t2w.GetCurrentDateTime();
+
+            // Guard: only on Jan 1, first ~5 minutes, and once per year
+            if (now.Month == 1 && now.Day == 1 && now.Hour == 0 && now.Minute < 5)
+            {
+                if (_lastNewYearChirpYear != now.Year)
+                {
+                    PostHappyNewYearChirp();
+                    _lastNewYearChirpYear = now.Year;
+                }
+            }
+        }
+
+        private void PostHappyNewYearChirp()
+        {
+            if (!CustomChirpsBridge.IsAvailable)
+                return;
+
+            Entity target = Entity.Null;
+
+            CustomChirpsBridge.PostChirp(T2WStrings.T("t2w.chirp.holiday.new_year"), DepartmentAccountBridge.Transportation, target, T2WStrings.T("t2w.chirp.mod_name"));
         }
     }
 }

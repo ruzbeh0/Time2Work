@@ -1,19 +1,21 @@
 ﻿using Colossal.Entities;
+using Colossal.UI;
+using Colossal.UI.Binding;
 using Game;
 using Game.Buildings;
 using Game.Prefabs;
+using Game.Rendering;
 using Game.Simulation;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using Time2Work.Components;
+using Time2Work.Extensions;
 using Unity.Collections;
 using Unity.Entities;
-using Time2Work.Extensions;
-using Colossal.UI.Binding;
-using Game.Rendering;
-using Colossal.UI;
+using Unity.Mathematics;
 using static Time2Work.Setting;
-using System.Linq;
 
 namespace Time2Work.Systems
 {
@@ -26,6 +28,12 @@ namespace Time2Work.Systems
         private EntityQuery m_TimeDataQuery;
         private SimulationSystem m_SimulationSystem;
         private CameraUpdateSystem _cameraUpdateSystem;
+        public static readonly ConcurrentDictionary<Entity, string> LatestEventLocations
+            = new ConcurrentDictionary<Entity, string>();
+
+        // Optional accessor if you prefer a method
+        public static bool TryGetLocation(Entity e, out string location)
+            => LatestEventLocations.TryGetValue(e, out location);
         private struct SpecialEventInfo
         {
             public Entity entity;
@@ -36,7 +44,7 @@ namespace Time2Work.Systems
             public string event_location;
         }
 
-        private static string SanitizeString(string input)
+        public static string SanitizeString(string input)
         {
             try
             {
@@ -93,6 +101,7 @@ namespace Time2Work.Systems
                 All = new[] {
                     ComponentType.ReadOnly<AttractivenessProvider>(),
                     ComponentType.ReadOnly<PrefabRef>(),
+                    ComponentType.ReadOnly<SpecialEventData>()
                 }
             });
 
@@ -125,82 +134,113 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
+            // Gather today + reset per-frame buffers
             var entities = _query.ToEntityArray(Allocator.Temp);
+            Game.Common.TimeData timeData = m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
+            m_SimulationFrame = m_SimulationSystem.frameIndex;
+            int todaySimDay = Time2WorkTimeSystem.GetDay(m_SimulationFrame, timeData);
 
             int nEvents = SpecialEventSystem.numberEvents;
-            int n = 0;
-
-            Game.Common.TimeData m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
-            m_SimulationFrame = this.m_SimulationSystem.frameIndex;
-            int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
             m_ValidResults.Clear();
 
-            // Check if we need to resize
+            // Resize output buffer if SpecialEventSystem changed count
             if (!m_Results.IsCreated || m_Results.Length != nEvents)
             {
-                // Dispose the old array if needed
-                if (m_Results.IsCreated)
-                {
-                    m_Results.Dispose();
-                }
-
-                // Allocate a new array with the updated size
+                if (m_Results.IsCreated) m_Results.Dispose();
                 m_Results = new NativeArray<SpecialEventInfo>(nEvents, Allocator.Persistent);
-
                 Mod.log.Info($"Reallocated m_Results with new count: {nEvents}");
             }
 
-            //Mod.log.Info($"day: {day}, entities:{entities.Length}");
+            // We'll keep track of unique locations for today to avoid duplicates
+            var prefabSystem = World.GetOrCreateSystemManaged<PrefabSystem>();
+            var seenLocations = new HashSet<string>(StringComparer.Ordinal);
+            int n = 0;
+
+            // Clear & repopulate the shared cache for other systems (e.g., chirps)
+            LatestEventLocations.Clear();
+
             foreach (var ent in entities)
             {
-                AttractivenessProvider attractivenessProvider;
-
-                if (!_attractivenessProviderDictionary.TryGetValue(ent, out attractivenessProvider))
+                // Lazily cache AttractivenessProvider lookups (kept from your original code)
+                if (!_attractivenessProviderDictionary.TryGetValue(ent, out var attractivenessProvider))
                 {
-                    attractivenessProvider = EntityManager.GetComponentData<AttractivenessProvider>(ent);
-                    _attractivenessProviderDictionary.Add(ent, attractivenessProvider);
-                }
-
-                PrefabRef prefabRef;
-                if (EntityManager.TryGetComponent<PrefabRef>(ent, out prefabRef))
-                {
-                    SpecialEventData specialEventdata;
-
-                    if (EntityManager.TryGetComponent<SpecialEventData>(prefabRef.m_Prefab, out specialEventdata))
+                    if (EntityManager.HasComponent<AttractivenessProvider>(ent))
                     {
-                        if(specialEventdata.day == day && n < nEvents && n < m_Results.Length)
-                        {
-                            if(n > 0 && m_Results[n - 1].event_location == this.World.GetOrCreateSystemManaged<PrefabSystem>().GetPrefabName(prefabRef.m_Prefab))
-                            {
-                                continue;
-                            } 
-
-                            SpecialEventInfo info = new SpecialEventInfo();
-                            info.entity = ent;
-                            info.event_location = this.World.GetOrCreateSystemManaged<PrefabSystem>().GetPrefabName(prefabRef.m_Prefab);
-                            info.start_hour = (int)Math.Round(24f * specialEventdata.start_time);
-                            info.end_hour = (int)Math.Round(24f * (specialEventdata.start_time + specialEventdata.duration));
-                            info.start_minutes = (int)(6 * (info.start_hour - (24f * (specialEventdata.start_time))));
-                            info.end_minutes = (int)(6 * (info.end_hour - (24f * (specialEventdata.start_time + specialEventdata.duration))));
-                            if (string.IsNullOrWhiteSpace(info.event_location) || SanitizeString(info.event_location) == "Unknown")
-                                Mod.log.Warn($"SpecialEvent has empty or invalid location for entity {ent.Index}");
-                            else
-                            {
-                                m_Results[n] = info;
-                                m_ValidResults.Add(info);
-                                n++;
-                            }
-                            //Mod.log.Info($"Special Event at: {info.event_location} - Start Hour:{info.start_hour}, Duration:{specialEventdata.duration}, Attraction: {attractivenessProvider.m_Attractiveness}");
-                        }    
+                        attractivenessProvider = EntityManager.GetComponentData<AttractivenessProvider>(ent);
+                        _attractivenessProviderDictionary[ent] = attractivenessProvider;
                     }
                 }
+
+                // Need a prefab to resolve SpecialEventData & a readable name
+                if (!EntityManager.TryGetComponent<PrefabRef>(ent, out var prefabRef))
+                    continue;
+
+                // Event data lives on the prefab
+                if (!EntityManager.TryGetComponent<SpecialEventData>(ent, out var sed))
+                    continue;
+
+                // Only show today's events
+                if (sed.day != todaySimDay)
+                    continue;
+
+                // Skip uninitialized / invalid events (duration < 5 in-game minutes)
+                const float fiveMinutes = 5f / (24f * 60f);
+                if (sed.duration < fiveMinutes)
+                    continue;
+
+                // Human-readable location
+                string location = prefabSystem.GetPrefabName(prefabRef.m_Prefab);
+                location = SanitizeString(location);
+                if (string.IsNullOrWhiteSpace(location) || location == "Unknown")
+                    continue; // don't surface blank locations
+
+                if (ent.Index != sed.entity_index)
+                {
+                    continue;
+                }
+
+                // Compute start/end HH:MM (normalized 0..1 → 24h)
+                float start24 = math.frac(sed.start_time) * 24f;
+                int startH = (int)math.floor(start24);
+                int startM = (int)math.round((start24 - startH) * 60f);
+                if (startM == 60) { startM = 0; startH = (startH + 1) % 24; }
+
+                float endNorm = math.frac(sed.start_time + sed.duration);
+                float end24 = endNorm * 24f;
+                int endH = (int)math.floor(end24);
+                int endM = (int)math.round((end24 - endH) * 60f);
+                if (endM == 60) { endM = 0; endH = (endH + 1) % 24; }
+
+                // Write UI row
+                if (n < m_Results.Length)
+                {
+                    var info = new SpecialEventInfo
+                    {
+                        entity = ent,
+                        start_hour = startH,
+                        start_minutes = startM,
+                        end_hour = endH,
+                        end_minutes = endM,
+                        event_location = location
+                    };
+
+                    m_Results[n] = info;
+                    m_ValidResults.Add(info);
+                    n++;
+
+                    // Update shared cache for other systems (e.g., chirps)
+                    LatestEventLocations[ent] = location;
+                }
+
+                // Stop if we've filled the announced count
+                if (n >= nEvents)
+                    break;
             }
 
             Mod.numCurrentEvents = n;
             m_uiResults.Update();
-
-            
         }
+
 
         public void NavigateTo(Entity entity)
         {
