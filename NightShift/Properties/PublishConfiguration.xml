@@ -10,9 +10,9 @@
 	<LongDescription>
 This mod has several options to configure the travel behavior of the population. There is also a feature to change the simulation to follow a weekly schedule, with travel patterns changing based on each day of the week. And there is another option to slow down time and make the day longer - without changing the simulation speed.
 
-## New on Version 1.9
+## New on Version 2.1
 
-Cim Schedule Panel with work/study hours is available when clicking on a cim
+This mod will send chirps to announce special events happening at park facilities. 
 
 ## Settings
 
@@ -131,16 +131,16 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="2.0.3" />
+	<ModVersion Value="2.1" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.3.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="75426" />
+	<Dependency Id="121812" />
 	<ChangeLog>
-* Fixed night expense reduction bug
-* Added parameters for Singapore
-* Updated parameters for the Philippines
-* Added country variations for leisure settings
+* Added special events chirps
+* Reworked special event system and fixed bugs
+* Added Happy New Year chirp
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

@@ -145,7 +145,6 @@ namespace Time2Work.Systems
 
             // We'll keep track of unique locations for today to avoid duplicates
             var prefabSystem = World.GetOrCreateSystemManaged<PrefabSystem>();
-            var seenLocations = new HashSet<string>(StringComparer.Ordinal);
 
             for (int i = 0; i < entities.Length; i++)
             {
@@ -203,7 +202,6 @@ namespace Time2Work.Systems
 
             // We'll keep track of unique locations for today to avoid duplicates
             var prefabSystem = World.GetOrCreateSystemManaged<PrefabSystem>();
-            var seenLocations = new HashSet<string>(StringComparer.Ordinal);
 
             var stateLookup = GetComponentLookup<SpecialEventChirpState>(isReadOnly: false);
 

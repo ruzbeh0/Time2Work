@@ -198,7 +198,6 @@ namespace Time2Work.Systems
             }
             finally
             {
-                entities.Dispose();
 
             }
             
