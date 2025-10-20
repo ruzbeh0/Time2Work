@@ -703,9 +703,24 @@ namespace Time2Work
                     {
                         if (specialEventdata.day == day)
                         {
-                            if (m_TimeOfDay >= specialEventdata.start_time && m_TimeOfDay <= (specialEventdata.start_time + specialEventdata.duration))
+                            float start = specialEventdata.start_time - 1.5f / 24f;
+                            if (m_TimeOfDay >= start && m_TimeOfDay <= (specialEventdata.start_time + specialEventdata.duration))
                             {
-                                park_avghour *= 5;
+                                switch (provider.m_LeisureType)
+                                {
+                                    case LeisureType.CityPark:
+                                        park_avghour *= 10f;              // parks get the big bump
+                                        break;
+                                    case LeisureType.Entertainment:
+                                        entertainment_avghour *= 5f;     // strong bump
+                                        break;
+                                    case LeisureType.Meals:
+                                        meals_avghour *= 5f;             // modest bump
+                                        break;
+                                    default:
+                                        // If you have a "travel" or other, you can choose to leave it unchanged
+                                        break;
+                                }
                             }
                         }
                     }

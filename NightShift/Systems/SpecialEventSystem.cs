@@ -36,6 +36,7 @@ namespace Time2Work.Systems
         public static NativeArray<float> startTime;
         public static NativeArray<float> endTime;
         private int _timesCount; // tracks current allocated length
+        private int nEvents_NewYears = Mod.m_Setting.new_years_num_events;
 
         protected override void OnCreate()
         {
@@ -70,10 +71,16 @@ namespace Time2Work.Systems
 
                 Game.Common.TimeData m_TimeData = this.m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
                 m_SimulationFrame = this.m_SimulationSystem.frameIndex;
+
                 int day = Time2WorkTimeSystem.GetDay(this.m_SimulationFrame, m_TimeData);
                 DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
                 int hour = currentDateTime.Hour;
                 int minute = currentDateTime.Minute;
+
+                bool isNewYearsEve = (currentDateTime.Day == (Mod.m_Setting.daysPerMonth*12));
+
+                //Mod.log.Info($"isNewYearsEve:{isNewYearsEve}, currentDateTime.Month:{currentDateTime.Month},currentDateTime.Day:{currentDateTime.Day},Mod.m_Setting.daysPerMonth:{Mod.m_Setting.daysPerMonth*12},{currentDateTime.Month == 12},{currentDateTime.Day == (Mod.m_Setting.daysPerMonth * 12)}");
+
                 System.DayOfWeek dayOfWeek = (System.DayOfWeek)WeekSystem.getDayOfWeekInt();
                 Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex((uint)day * 100);
                 int n = 0;
@@ -93,10 +100,26 @@ namespace Time2Work.Systems
                 }
 
                 numberEvents = random.NextInt(min, max + 1);
+
+                //If it is New Years Eve double number of events of a weekend
+                if (isNewYearsEve)
+                {
+                    numberEvents = nEvents_NewYears;
+                }
+
                 EnsureTimeBuffers(numberEvents);
 
+                // Count how many placed entities reference each leisure prefab
+                var prefabUseCount = new Dictionary<Entity, int>(entities.Length);
+                for (int k = 0; k < entities.Length; k++)
+                {
+                    var pr = EntityManager.GetComponentData<PrefabRef>(entities[k]).m_Prefab;
+                    if (!prefabUseCount.TryGetValue(pr, out int cnt)) prefabUseCount[pr] = 1;
+                    else prefabUseCount[pr] = cnt + 1;
+                }
+
                 //Mod.log.Info($"Day:{day}, DayOfWeek:{dayOfWeek}, Hour:{hour}, Minute:{minute}, Number of Events Today: {numberEvents}, !updated:{!updated}");
-                if ((int)dayOfWeek > -1 && (hour == 0 && minute >= 4 && minute < 10 || !updated))
+                if ((int)dayOfWeek > -1 && (hour == 3 && minute >= 4 && minute < 10 || !updated))
                 {
                     //updated = true;
                     int i = 0;
@@ -108,7 +131,11 @@ namespace Time2Work.Systems
 
                         if (!EntityManager.HasComponent<SpecialEventData>(entities[j]))
                             continue;
-                        
+
+                        var prefab = prefabRef.m_Prefab;
+                        if (!prefabUseCount.TryGetValue(prefab, out int cnt) || cnt != 1)
+                            continue; // skip non-unique prefabs
+
                         validCnt++;
                     }
 
@@ -125,7 +152,12 @@ namespace Time2Work.Systems
                     {
                         PrefabRef prefabRef = EntityManager.GetComponentData<PrefabRef>(ent);
                         SpecialEventData specialEventData;
-                        //Mod.log.Info($"Processing entity {ent.Index} with prefab {prefabRef.m_Prefab}");
+                        var prefab = prefabRef.m_Prefab;
+
+                        // Skip non-unique prefabs
+                        if (!prefabUseCount.TryGetValue(prefab, out int cnt) || cnt != 1)
+                            continue;
+
                         if (EntityManager.TryGetComponent(ent, out specialEventData))
                         {
                             uint seed = (uint)(specialEventData.new_attraction / 100 + day * day);
@@ -146,26 +178,36 @@ namespace Time2Work.Systems
                                 if (!seenLocations.Add(location))
                                     continue;
 
-                                if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
+                                if(isNewYearsEve)
                                 {
-                                    specialEventData.start_time = random.NextInt(8, 20) / 24f;
+                                    //In New Years Eve events end at midnight
                                     specialEventData.duration = random.NextInt(2, 5) / 24f;
-                                }
-                                else
+                                    specialEventData.start_time = 1f - specialEventData.duration;
+
+                                } else
                                 {
-                                    float time = (float)GaussianRandom.NextGaussianDouble(random);
-                                    if (time > 0)
+                                    if (dayOfWeek.Equals(DayOfWeek.Saturday) || dayOfWeek.Equals(DayOfWeek.Sunday))
                                     {
-                                        time *= 4;
+                                        specialEventData.start_time = random.NextInt(8, 20) / 24f;
+                                        specialEventData.duration = random.NextInt(2, 5) / 24f;
                                     }
                                     else
                                     {
-                                        time *= 8;
+                                        float time = (float)GaussianRandom.NextGaussianDouble(random);
+                                        if (time > 0)
+                                        {
+                                            time *= 4;
+                                        }
+                                        else
+                                        {
+                                            time *= 8;
+                                        }
+                                        int timeint = (int)time;
+                                        specialEventData.start_time = Math.Max(8, Math.Min((timeint + 16f), 20)) / 24f;
+                                        specialEventData.duration = random.NextInt(2, 4) / 24f;
                                     }
-                                    int timeint = (int)time;
-                                    specialEventData.start_time = Math.Max(8, Math.Min((timeint + 16f), 20)) / 24f;
-                                    specialEventData.duration = random.NextInt(2, 4) / 24f;
                                 }
+                                
                                 specialEventData.day = day;
                                 specialEventData.entity_index = ent.Index;
                                 startTime[n] = specialEventData.start_time;

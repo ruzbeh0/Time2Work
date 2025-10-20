@@ -131,16 +131,18 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="2.1" />
+	<ModVersion Value="2.2" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.3.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="75426" />
 	<Dependency Id="121812" />
 	<ChangeLog>
-* Added special events chirps
-* Reworked special event system and fixed bugs
-* Added Happy New Year chirp
+* Added New Years Events
+* Changed event schedule reset from midnight to 3 am
+* Updated Special Event UI to keep events sorted always in the same order
+* Updated sleep times on Friday and Saturday to be a little later
+* Updated Special Events to also attract city residents - not just tourists
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

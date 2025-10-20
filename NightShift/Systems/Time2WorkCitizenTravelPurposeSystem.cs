@@ -16,6 +16,7 @@ using Game.Tools;
 using System.Collections.Specialized;
 using System.Runtime.CompilerServices;
 using Time2Work.Components;
+using Time2Work.Systems;
 using Time2Work.Utils;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
@@ -84,7 +85,8 @@ namespace Time2Work
         protected override void OnUpdate()
         {
             NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive> nativeQueue = new NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive>((AllocatorManager.AllocatorHandle)Allocator.TempJob);
-            
+
+            var now = m_TimeSystem.GetCurrentDateTime();
 
             Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob jobData = new Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob()
             {
@@ -142,8 +144,8 @@ namespace Time2Work
                 avg_time_recreation = Mod.m_Setting.avg_time_recreation,
                 avg_time_entertainment = Mod.m_Setting.avg_time_entertainment,
                 avg_time_vehicles = Mod.m_Setting.avg_time_vehicles,
-                //avg_time_hospital = Mod.m_Setting.avg_time_hospital,
-                //avg_time_prison = Mod.m_Setting.avg_time_prison
+                newyearseve = (now.Day == (Mod.m_Setting.daysPerMonth*12)),
+                dow = (int)WeekSystem.currentDayOfTheWeek
             };
             
             this.Dependency = jobData.ScheduleParallel<Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob>(this.m_ArrivedGroup, this.Dependency);
@@ -297,6 +299,8 @@ namespace Time2Work
             public int avg_time_recreation;
             public int avg_time_entertainment;
             public int avg_time_vehicles;
+            public bool newyearseve;
+            public int dow;
             //public int avg_time_hospital;
             //public int avg_time_prison;
 
@@ -339,7 +343,7 @@ namespace Time2Work
                             Citizen citizen = this.m_Citizens[entity];
 
                             float2 time2Sleep;
-                            if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, time2Work, out time2Sleep))
+                            if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, time2Work, out time2Sleep, newyearseve, dow))
                             {
 
                                 this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
@@ -354,7 +358,7 @@ namespace Time2Work
                         {
                             //If CitizenSchedule hasn't been created yet, use old code
                             Citizen citizen = this.m_Citizens[entity];
-                            if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction))
+                            if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction,newyearseve,dow))
                             {
                                 this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
 

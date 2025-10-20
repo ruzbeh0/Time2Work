@@ -108,6 +108,7 @@ namespace Time2Work
             updateSystem.UpdateAt<Time2WorkTouristSpawnSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkAttractionSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<EconomyParameterUpdaterSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAt<SpecialEventLeisureEfficiencySystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<CitizenScheduleSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAfter<SpecialEventSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<SpecialEventChirpSystem>(SystemUpdatePhase.GameSimulation);

@@ -105,18 +105,12 @@ namespace Time2Work.Systems
 
             try
             {
-                int validCnt = 0;
-                for (int i = 0; i < ents.Length; i++)
-                {
-                    if (!EntityManager.TryGetComponent<SpecialEventData>(ents[i], out var sed))
-                        continue;
-
-                    if (IsValidForToday(sed, simDay)) validCnt++;
-                }
+                int nEvents = SpecialEventSystem.numberEvents;
 
                 // Announce once we actually have at least one valid event this day
-                if (!_dailyAnnounced && validCnt > 0 && hour >= 5)
+                if (!_dailyAnnounced && nEvents > 0 && hour >= 5)
                 {
+                    Mod.log.Info($"Posting daily chirp for {nEvents} events on day {simDay}");
                     TryPostDailyAnnouncements(simDay);
                     _dailyAnnounced = true;
                 }
@@ -175,7 +169,7 @@ namespace Time2Work.Systems
                           ("start", $"{Two(sh)}:{Two(sm)}"),
                           ("end", $"{Two(eh)}:{Two(em)}"));
 
-                Mod.log.Info($"Posting chirp for event entity {ent.Index} with prefab link");
+                Mod.log.Info($"Posting chirp for event entity {ent.Index}");
                 // Use prefab link (parks & attractions without a discrete Building entity)
                 CustomChirpsBridge.PostChirp(
                     text: msg,
@@ -250,8 +244,8 @@ namespace Time2Work.Systems
 
                 float tStart = math.frac(sed.start_time);
                 float tEnd = math.frac(sed.start_time + sed.duration);
-                float tStartWarn = math.frac(tStart - FiveMinutes);
-                float tEndWarn = math.frac(tEnd - FiveMinutes);
+                float tStartWarn = math.frac(tStart - 3*FiveMinutes);
+                float tEndWarn = math.frac(tEnd - 3*FiveMinutes);
 
                 string startSoon = T2WStrings.T("t2w.chirp.special_event.starting");
                 string endSoon = T2WStrings.T("t2w.chirp.special_event.ending");

@@ -19,8 +19,8 @@ using Unity.Entities.UniversalDelegates;
 namespace Time2Work
 {
     [FileLocation("ModsSettings\\" + nameof(Time2Work) + "\\" + nameof(Time2Work))]
-    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, ShoppingTimeGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, EventGroup, MinEventGroup, MaxEventGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup, OtherGroup, VisitTimeGroup)]
-    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, ShoppingTimeGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, OtherGroup, ExternalGroup, ExpensesGroup, MinEventGroup, MaxEventGroup, VisitTimeGroup)]
+    [SettingsUIGroupOrder(SettingsGroup, DelayGroup, WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, ResetGroup, ShopLeisureGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, ShoppingTimeGroup, SchoolTimeOffGroup, SchoolTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, TimeOffGroup, DTSimulationGroup, SlowerTimeGroup, WeekGroup, EventGroup, MinEventGroup, MaxEventGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, ExternalGroup, ExpensesGroup, TrucksGroup, OtherGroup, VisitTimeGroup, HolidayGroup)]
+    [SettingsUIShowGroupName(WorkPlaceShiftGroup, NonDayShiftByWorkTypeGroup, RemoteGroup, DayShiftGroup, SchoolTimeOffGroup, SchoolTimeGroup, TimeOffGroup, LeisureMealsGroup, LeisureEntertainmentGroup, LeisureShoppingGroup, LeisureParksGroup, LeisureTravelGroup, ShoppingTimeGroup, DTSimulationGroup, SlowerTimeGroup, School1WeekGroup, School2WeekGroup, School34WeekGroup, WeekGroup, OfficeGroup, CommercialGroup, IndustryGroup, CityServicesGroup, TrucksGroup, OtherGroup, ExternalGroup, ExpensesGroup, MinEventGroup, MaxEventGroup, VisitTimeGroup, HolidayGroup)]
     public class Setting : ModSetting
     {
         public const string SettingsSection = "Settings";
@@ -66,6 +66,7 @@ namespace Time2Work
         public const string IndustryGroup = "IndustryGroup";
         public const string CityServicesGroup = "CityServicesGroup";
         public const string VisitTimeGroup = "VisitTimeGroup";
+        public const string HolidayGroup = "HolidayGroup";
 
         Dictionary<int, int> countryIndexLookup = new Dictionary<int, int>();
         int[] evening_share_ = new int[] { 10, 17, 13, 5, 19, 15, 31, 13, 16, 32, 17, 8 };
@@ -748,6 +749,10 @@ namespace Time2Work
         [SettingsUISlider(min = 0, max = 3, step = 1f, scalarMultiplier = 1, unit = Unit.kInteger)]
         [SettingsUISection(EventSection, MaxEventGroup)]
         public int max_event_weekend { get; set; } = 3;
+
+        [SettingsUISlider(min = 0, max = 7, step = 1f, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(EventSection, HolidayGroup)]
+        public int new_years_num_events { get; set; } = 5;
         public enum DTSimulationEnum
         {
             AverageDay,

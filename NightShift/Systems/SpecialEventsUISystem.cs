@@ -138,9 +138,24 @@ namespace Time2Work.Systems
             var entities = _query.ToEntityArray(Allocator.Temp);
             Game.Common.TimeData timeData = m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
             m_SimulationFrame = m_SimulationSystem.frameIndex;
-            int todaySimDay = Time2WorkTimeSystem.GetDay(m_SimulationFrame, timeData);
 
+            // 1) Compute the “UI day” with a 3:00 threshold
+            int todaySimDay = Time2WorkTimeSystem.GetDay(m_SimulationFrame, timeData);
+            DateTime now = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
+            bool usePrevDayWindow = now.Hour < 3;             // 00:00–02:59 still show “yesterday”
+            if (usePrevDayWindow)
+            {
+                todaySimDay -= 1;                              // shift the UI’s effective day
+            }
+
+            // 2) Size the output buffer generously during the prev-day window
             int nEvents = SpecialEventSystem.numberEvents;
+            if (usePrevDayWindow)
+            {
+                // numberEvents may already be for the new day; use a safe upper bound
+                nEvents = math.max(nEvents, entities.Length);
+            }
+
             m_ValidResults.Clear();
 
             // Resize output buffer if SpecialEventSystem changed count
@@ -238,7 +253,24 @@ namespace Time2Work.Systems
             }
 
             Mod.numCurrentEvents = n;
+            // after you've finished building m_ValidResults (right before m_uiResults.Update())
+            m_ValidResults.Sort((a, b) =>
+            {
+                int c = a.start_hour.CompareTo(b.start_hour);
+                if (c != 0) return c;
+
+                c = a.start_minutes.CompareTo(b.start_minutes);
+                if (c != 0) return c;
+
+                // deterministic string compare
+                c = string.Compare(a.event_location, b.event_location, StringComparison.Ordinal);
+                if (c != 0) return c;
+
+                // final stable tiebreaker
+                return a.entity.Index.CompareTo(b.entity.Index);
+            });
             m_uiResults.Update();
+
         }
 
 

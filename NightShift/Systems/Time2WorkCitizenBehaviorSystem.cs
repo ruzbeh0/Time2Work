@@ -63,7 +63,9 @@ namespace Time2Work
           ref EconomyParameterData economyParameters,
           ref ComponentLookup<Worker> workers,
           ref ComponentLookup<Game.Citizens.Student> students,
-          float2 time2WorkOrStudy)
+          float2 time2WorkOrStudy,
+          bool newyearseve,
+          int dow)
         {
             int age = (int)citizen.GetAge();
             float2 float2_1 = new float2(0.875f, 0.21f);
@@ -72,11 +74,11 @@ namespace Time2Work
             float2 x1 = float2_1 + (float)(GaussianRandom.NextGaussianDouble(pseudoRandom) * 0.1f) + 0.1f;
 
             if (age == 3)
-                x1 -= 0.05f;
+                x1 -= 0.05f; //Elderly
             if (age == 0)
-                x1 -= 0.1f;
+                x1 -= 0.1f; //Child
             if (age == 1)
-                x1 += 0.05f;
+                x1 += 0.05f; //Adult
             float2 x2 = math.frac(x1);
             float2 float2_2 = time2WorkOrStudy;
             if (workers.HasComponent(entity))
@@ -105,7 +107,45 @@ namespace Time2Work
             }
             else
                 x2 = new float2(float2_2.y, float2_2.y + num);
+            if(newyearseve)
+            {
+                //Prob. that will stay awake for new years by age group
+                int prob = 40; //Elderly
+                if (age == 0)
+                    prob = 50; //Children
+                if (age == 1)
+                    prob = 90; //Teenagers
+                if (age == 2)
+                    prob = 80; //Adults
+
+                if(pseudoRandom.NextInt(prob) < 100 && (x2.x > 0.7 && x2.x < 0.99))
+                {
+                    float extra_time = 0.09f; //Adults, teenagers and Elders
+                    if(age == 0)
+                    {
+                        extra_time += 0.17f;                     
+                    }
+                    x2.x += extra_time;
+                }
+
+               
+            } else if(((int)DayOfWeek.Saturday) == dow || ((int)DayOfWeek.Friday) == dow)
+            {
+                //On Friday and Saturday nights, people tend to sleep a bit later
+                float extra_time = 0.026f; //elderly
+                if (age == 0)
+                {
+                    extra_time += 0.035f;
+                }
+                if (age == 1 || age == 2)
+                {
+                    extra_time += 0.052f;
+
+                }
+                x2.x += extra_time;
+            }
             x2 = math.frac(x2);
+
             return x2;
         }
 
@@ -126,9 +166,11 @@ namespace Time2Work
           int part_time_prob,
           float commute_top10,
           float overtime,
-          float part_time_reduction)
+          float part_time_reduction,
+          bool newyearseve,
+          int dow)
         {
-            float2 sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref workers, ref students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction);
+            float2 sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref workers, ref students, lunch_break_pct, school_start_time, school_end_time, work_start_time, work_end_time, delayFactor, ticksPerDay, part_time_prob, commute_top10, overtime, part_time_reduction, newyearseve, dow);
             return (double)sleepTime.y < (double)sleepTime.x ? (double)normalizedTime > (double)sleepTime.x || (double)normalizedTime < (double)sleepTime.y : (double)normalizedTime > (double)sleepTime.x && (double)normalizedTime < (double)sleepTime.y;
         }
 
@@ -148,7 +190,9 @@ namespace Time2Work
           int part_time_prob,
           float commute_top10,
           float overtime,
-          float part_time_reduction)
+          float part_time_reduction,
+          bool newyearseve,
+          int dow)
         {
             float2 float2_2;
             float start_work;
@@ -161,7 +205,7 @@ namespace Time2Work
                 float2_2 = Time2WorkStudentSystem.GetTimeToStudy(citizen, students[entity], ref economyParameters, school_start_time, school_end_time, ticksPerDay, out start_work);
             }
 
-            return GetSleepTime(entity, citizen, ref economyParameters, ref workers, ref students, float2_2); ;
+            return GetSleepTime(entity, citizen, ref economyParameters, ref workers, ref students, float2_2, newyearseve, dow); ;
         }
 
         public static bool IsSleepTime(
@@ -172,9 +216,11 @@ namespace Time2Work
           ref ComponentLookup<Worker> workers,
           ref ComponentLookup<Game.Citizens.Student> students,
           float2 time2WorkOrStudy,
-          out float2 sleepTime)
+          out float2 sleepTime,
+          bool newyearseve,
+          int dow)
         {
-            sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref workers, ref students, time2WorkOrStudy);
+            sleepTime = Time2WorkCitizenBehaviorSystem.GetSleepTime(entity, citizen, ref economyParameters, ref workers, ref students, time2WorkOrStudy, newyearseve, dow);
             return (double)sleepTime.y < (double)sleepTime.x ? (double)normalizedTime > (double)sleepTime.x || (double)normalizedTime < (double)sleepTime.y : (double)normalizedTime > (double)sleepTime.x && (double)normalizedTime < (double)sleepTime.y;
         }
 
@@ -246,6 +292,8 @@ namespace Time2Work
             uint frameWithInterval = SimulationUtils.GetUpdateFrameWithInterval(this.m_SimulationSystem.frameIndex, (uint)this.GetUpdateInterval(SystemUpdatePhase.GameSimulation), 16);
             NativeQueue<Entity> nativeQueue1 = new NativeQueue<Entity>((AllocatorManager.AllocatorHandle)Allocator.TempJob);
             NativeQueue<Entity> nativeQueue2 = new NativeQueue<Entity>((AllocatorManager.AllocatorHandle)Allocator.TempJob);
+
+            var now = m_TimeSystem.GetCurrentDateTime();
 
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
             JobHandle outJobHandle;
@@ -325,7 +373,8 @@ namespace Time2Work
                 overtime = ((Mod.m_Setting.avg_work_hours_ft_wd - (Mod.m_Setting.work_end_time - Mod.m_Setting.work_start_time) / 2) / 24),
                 specialEventStartTime = SpecialEventSystem.startTime,
                 specialEventEndTime = SpecialEventSystem.endTime,
-                remote_work_prob = Mod.m_Setting.remote_percentage
+                remote_work_prob = Mod.m_Setting.remote_percentage,
+                newyearseve = (now.Day == (Mod.m_Setting.daysPerMonth*12))
             };
             JobHandle jobHandle1 = jobData.ScheduleParallel<Time2WorkCitizenBehaviorSystem.CitizenAITickJob>(this.m_CitizenQuery, JobHandle.CombineDependencies(this.m_CarReserveWriters, JobHandle.CombineDependencies(this.Dependency, outJobHandle)));
             jobData.m_OutsideConnectionEntities.Dispose(jobHandle1);
@@ -645,6 +694,7 @@ namespace Time2Work
             public NativeArray<float> specialEventStartTime;
             public NativeArray<float> specialEventEndTime;
             public int remote_work_prob;
+            public bool newyearseve;
 
 
             private bool CheckSleep(
@@ -657,10 +707,12 @@ namespace Time2Work
               DynamicBuffer<TripNeeded> trips,
               ref EconomyParameterData economyParameters,
               ref Unity.Mathematics.Random random,
-              float2 time2WorkOrStudy)
+              float2 time2WorkOrStudy,
+              bool newyearseve,
+              int dow)
             {
                 float2 time2Sleep;
-                bool sleepTime = Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref economyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, time2WorkOrStudy, out time2Sleep);
+                bool sleepTime = Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref economyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, time2WorkOrStudy, out time2Sleep, newyearseve, dow);
                 if (!(home != Entity.Null) || !sleepTime)
                     return false;
                 if (currentBuilding == home)
@@ -803,7 +855,8 @@ namespace Time2Work
               bool specialEvent,
               float2 timeToWork,
               float2 timeToLunch,
-              bool lunchTime)
+              bool lunchTime,
+              bool newyearseve)
             {
                 bool flag = CitizenUtils.HasMovedIn(householdEntity, this.m_Households) && homeEntity == Entity.Null;
                 if (isTourist)
@@ -832,7 +885,7 @@ namespace Time2Work
                     citizenData.m_LeisureCounter = byte.MaxValue;
                     return true;
                 }
-                float x = this.GetTimeLeftUntilInterval(Time2WorkCitizenBehaviorSystem.GetSleepTime(citizenEntity, citizenData, ref economyParameters, ref this.m_Workers, ref this.m_Students, timeToWork)); ;
+                float x = this.GetTimeLeftUntilInterval(Time2WorkCitizenBehaviorSystem.GetSleepTime(citizenEntity, citizenData, ref economyParameters, ref this.m_Workers, ref this.m_Students, timeToWork, newyearseve, (int)dow)); ;
                 if (this.m_Workers.HasComponent(citizenEntity))
                 {
                     Worker worker = this.m_Workers[citizenEntity];
@@ -853,7 +906,7 @@ namespace Time2Work
                     {
                         Game.Citizens.Student student = this.m_Students[citizenEntity];
                         float2 timeToStudy = timeToWork;
-                        x = this.GetTimeLeftUntilInterval(Time2WorkCitizenBehaviorSystem.GetSleepTime(citizenEntity, citizenData, ref economyParameters, ref this.m_Workers, ref this.m_Students, timeToStudy));
+                        x = this.GetTimeLeftUntilInterval(Time2WorkCitizenBehaviorSystem.GetSleepTime(citizenEntity, citizenData, ref economyParameters, ref this.m_Workers, ref this.m_Students, timeToStudy, newyearseve, (int)dow));
                         x = math.min(x, this.GetTimeLeftUntilInterval(timeToStudy));
                     }
                 }
@@ -1195,7 +1248,7 @@ namespace Time2Work
                                                                 }
                                                                 else
                                                                 {
-                                                                    if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, entity3, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters, specialEvent, time2Work, time2Lunch, lunchTime))
+                                                                    if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, entity3, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters, specialEvent, time2Work, time2Lunch, lunchTime, newyearseve))
                                                                     {
                                                                         nativeArray2[index] = citizen;
                                                                     }
@@ -1208,7 +1261,7 @@ namespace Time2Work
                                                         }
                                                         else
                                                         {
-                                                            if (this.CheckSleep(index, entity1, ref citizen, currentBuilding, household, entity3, trips, ref this.m_EconomyParameters, ref random, time2Work))
+                                                            if (this.CheckSleep(index, entity1, ref citizen, currentBuilding, household, entity3, trips, ref this.m_EconomyParameters, ref random, time2Work, newyearseve, (int)dow))
                                                             {
                                                                 if (chunk.Has<Leisure>(ref this.m_LeisureType))
                                                                 {
@@ -1265,7 +1318,7 @@ namespace Time2Work
                                                                 }
                                                             }
 
-                                                            if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, entity3, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters, specialEvent, time2Work, time2Lunch, lunchTime))
+                                                            if (!chunk.Has<Leisure>(ref this.m_LeisureType) && this.DoLeisure(unfilteredChunkIndex, entity1, household, currentBuilding, entity3, isTourist, ref citizen, population, ticksPerDay, ref random, ref this.m_EconomyParameters, specialEvent, time2Work, time2Lunch, lunchTime, newyearseve))
                                                             {
                                                                 nativeArray2[index] = citizen;
                                                             }
