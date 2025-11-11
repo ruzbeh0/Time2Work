@@ -35,7 +35,6 @@ namespace Time2Work
 {
     public partial class Time2WorkLeisureSystem : GameSystemBase
     {
-        private static readonly int kLeisureConsumeAmount = 2;
         private SimulationSystem m_SimulationSystem;
         private EndFrameBarrier m_EndFrameBarrier;
         private PathfindSetupSystem m_PathFindSetupSystem;
@@ -43,6 +42,7 @@ namespace Time2Work
         private ResourceSystem m_ResourceSystem;
         private ClimateSystem m_ClimateSystem;
         private AddMeetingSystem m_AddMeetingSystem;
+        private CityProductionStatisticSystem m_CityProductionStatisticSystem;
         private EntityQuery m_LeisureQuery;
         private EntityQuery m_EconomyParameterQuery;
         private EntityQuery m_LeisureParameterQuery;
@@ -66,6 +66,7 @@ namespace Time2Work
             this.m_ResourceSystem = this.World.GetOrCreateSystemManaged<ResourceSystem>();
             this.m_ClimateSystem = this.World.GetOrCreateSystemManaged<ClimateSystem>();
             this.m_AddMeetingSystem = this.World.GetOrCreateSystemManaged<AddMeetingSystem>();
+            this.m_CityProductionStatisticSystem = this.World.GetOrCreateSystemManaged<CityProductionStatisticSystem>();
             this.m_EconomyParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<EconomyParameterData>());
             this.m_LeisureParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<LeisureParametersData>());
             this.m_LeisureQuery = this.GetEntityQuery(new EntityQueryDesc()
@@ -112,12 +113,12 @@ namespace Time2Work
 
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
             JobHandle outJobHandle;
-            JobHandle deps;
+            JobHandle deps1;
 
             DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
             int hour = currentDateTime.Hour;
 
-            JobHandle jobHandle = new Time2WorkLeisureSystem.LeisureJob()
+            JobHandle jobHandle1 = new Time2WorkLeisureSystem.LeisureJob()
             {
                 CitizenScheduleLookup = InternalCompilerInterface.GetComponentLookup<CitizenSchedule>(ref this.__TypeHandle.CitizenScheduleLookup, ref this.CheckedStateRef),
                 m_EntityType = InternalCompilerInterface.GetEntityTypeHandle(ref this.__TypeHandle.__Unity_Entities_Entity_TypeHandle, ref this.CheckedStateRef),
@@ -173,7 +174,7 @@ namespace Time2Work
                 m_HumanChunks = this.m_ResidentPrefabQuery.ToArchetypeChunkListAsync((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle),
                 m_PathfindQueue = this.m_PathFindSetupSystem.GetQueue((object)this, 512).AsParallelWriter(),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
-                m_MeetingQueue = this.m_AddMeetingSystem.GetMeetingQueue(out deps).AsParallelWriter(),
+                m_MeetingQueue = this.m_AddMeetingSystem.GetMeetingQueue(out deps1).AsParallelWriter(),
                 m_LeisureQueue = this.m_LeisureQueue.AsParallelWriter(),
                 m_TimeData = this.m_TimeDataQuery.GetSingleton<TimeData>(),
                 m_PopulationEntity = this.m_PopulationQuery.GetSingletonEntity(),
@@ -226,13 +227,14 @@ namespace Time2Work
                 shopping_hourly_factor = LeisureProbabilityCalculator.GetShoppingProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
                 park_hourly_factor = LeisureProbabilityCalculator.GetParkProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
                 travel_hourly_factor = LeisureProbabilityCalculator.GetTravelProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour)
-            }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobHandle.CombineDependencies(this.Dependency, JobHandle.CombineDependencies(outJobHandle, deps)));
-            this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle);
-            this.m_PathFindSetupSystem.AddQueueWriter(jobHandle);
-
-            JobHandle handle = new Time2WorkLeisureSystem.SpendLeisurejob()
+            }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobHandle.CombineDependencies(this.Dependency, JobHandle.CombineDependencies(outJobHandle, deps1)));
+            this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle1);
+            this.m_PathFindSetupSystem.AddQueueWriter(jobHandle1);
+            JobHandle deps2;
+            JobHandle jobHandle2 = new Time2WorkLeisureSystem.SpendLeisurejob()
             {
                 m_ServiceAvailables = this.__TypeHandle.__Game_Companies_ServiceAvailable_RW_ComponentLookup,
+                m_CompanyStatisticDatas = InternalCompilerInterface.GetComponentLookup<CompanyStatisticData>(ref this.__TypeHandle.__Game_Companies_CompanyStatisticData_RW_ComponentLookup, ref this.CheckedStateRef),
                 m_Resources = this.__TypeHandle.__Game_Economy_Resources_RW_BufferLookup,
                 m_HouseholdMembers = this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentLookup,
                 m_IndustrialProcesses = this.__TypeHandle.__Game_Prefabs_IndustrialProcessData_RO_ComponentLookup,
@@ -240,10 +242,13 @@ namespace Time2Work
                 m_ResourceDatas = this.__TypeHandle.__Game_Prefabs_ResourceData_RO_ComponentLookup,
                 m_ServiceCompanyDatas = this.__TypeHandle.__Game_Companies_ServiceCompanyData_RO_ComponentLookup,
                 m_ResourcePrefabs = this.m_ResourceSystem.GetPrefabs(),
+                m_CitizensConsumptionAccumulator = this.m_CityProductionStatisticSystem.GetCityResourceUsageAccumulator(CityProductionStatisticSystem.CityResourceUsage.Consumer.Citizens, out deps2),
                 m_LeisureQueue = this.m_LeisureQueue
-            }.Schedule<Time2WorkLeisureSystem.SpendLeisurejob>(jobHandle);
-            this.m_ResourceSystem.AddPrefabsReader(handle);
-            this.Dependency = handle;
+            }.Schedule<Time2WorkLeisureSystem.SpendLeisurejob>(JobHandle.CombineDependencies(jobHandle1, deps2));
+            this.m_ResourceSystem.AddPrefabsReader(jobHandle2);
+
+            this.m_CityProductionStatisticSystem.AddCityUsageAccumulatorWriter(CityProductionStatisticSystem.CityResourceUsage.Consumer.Citizens, jobHandle2);
+            this.Dependency = jobHandle2;
         }
 
         private void __AssignQueries(ref SystemState state)
@@ -267,6 +272,7 @@ namespace Time2Work
         {
             public NativeQueue<LeisureEvent> m_LeisureQueue;
             public ComponentLookup<ServiceAvailable> m_ServiceAvailables;
+            public ComponentLookup<CompanyStatisticData> m_CompanyStatisticDatas;
             public BufferLookup<Game.Economy.Resources> m_Resources;
             [ReadOnly]
             public ComponentLookup<PrefabRef> m_Prefabs;
@@ -280,6 +286,7 @@ namespace Time2Work
             public ComponentLookup<ServiceCompanyData> m_ServiceCompanyDatas;
             [ReadOnly]
             public ResourcePrefabs m_ResourcePrefabs;
+            public NativeArray<int> m_CitizensConsumptionAccumulator;
 
             public void Execute()
             {
@@ -300,17 +307,25 @@ namespace Time2Work
                                 bool flag = false;
 
                                 float marketPrice = EconomyUtils.GetMarketPrice(resource1, this.m_ResourcePrefabs, ref this.m_ResourceDatas);
+                                int y = 0;
+                                float num1 = 1f;
                                 if (this.m_ServiceAvailables.HasComponent(leisureEvent.m_Provider) && this.m_ServiceCompanyDatas.HasComponent(prefab))
                                 {
                                     ServiceAvailable serviceAvailable = this.m_ServiceAvailables[leisureEvent.m_Provider];
                                     ServiceCompanyData serviceCompanyData = this.m_ServiceCompanyDatas[prefab];
-                                    marketPrice *= (float)serviceCompanyData.m_ServiceConsuming;
+                                    y = serviceCompanyData.m_ServiceConsuming;
                                     if (serviceAvailable.m_ServiceAvailable > 0)
                                     {
                                         serviceAvailable.m_ServiceAvailable -= serviceCompanyData.m_ServiceConsuming;
                                         serviceAvailable.m_MeanPriority = math.lerp(serviceAvailable.m_MeanPriority, (float)serviceAvailable.m_ServiceAvailable / (float)serviceCompanyData.m_MaxService, 0.1f);
                                         this.m_ServiceAvailables[leisureEvent.m_Provider] = serviceAvailable;
-                                        marketPrice *= EconomyUtils.GetServicePriceMultiplier((float)serviceAvailable.m_ServiceAvailable, serviceCompanyData.m_MaxService);
+                                        num1 = EconomyUtils.GetServicePriceMultiplier((float)serviceAvailable.m_ServiceAvailable, serviceCompanyData.m_MaxService);
+                                        if (this.m_CompanyStatisticDatas.HasComponent(leisureEvent.m_Provider))
+                                        {
+                                            CompanyStatisticData companyStatisticData = this.m_CompanyStatisticDatas[leisureEvent.m_Provider];
+                                            ++companyStatisticData.m_CurrentNumberOfCustomers;
+                                            this.m_CompanyStatisticDatas[leisureEvent.m_Provider] = companyStatisticData;
+                                        }
                                     }
                                     else
                                         flag = true;
@@ -318,15 +333,13 @@ namespace Time2Work
                                 if (!flag)
                                 {
                                     DynamicBuffer<Game.Economy.Resources> resource2 = this.m_Resources[leisureEvent.m_Provider];
-
-                                    if (EconomyUtils.GetResources(resource1, resource2) > Time2WorkLeisureSystem.kLeisureConsumeAmount)
-                                    {
-                                        DynamicBuffer<Game.Economy.Resources> resource3 = this.m_Resources[household];
-                                        EconomyUtils.AddResources(resource1, -Time2WorkLeisureSystem.kLeisureConsumeAmount, resource2);
-                                        float f = marketPrice * (float)Time2WorkLeisureSystem.kLeisureConsumeAmount;
-                                        EconomyUtils.AddResources(Resource.Money, Mathf.RoundToInt(f), resource2);
-                                        EconomyUtils.AddResources(Resource.Money, -Mathf.RoundToInt(f), resource3);
-                                    }
+                                    int num2 = math.min(EconomyUtils.GetResources(resource1, resource2), y);
+                                    int f = (int)((double)num2 * (double)marketPrice * (double)num1);
+                                    DynamicBuffer<Game.Economy.Resources> resource3 = this.m_Resources[household];
+                                    EconomyUtils.AddResources(resource1, -num2, resource2);
+                                    EconomyUtils.AddResources(Resource.Money, Mathf.RoundToInt((float)f), resource2);
+                                    EconomyUtils.AddResources(Resource.Money, -Mathf.RoundToInt((float)f), resource3);
+                                    this.m_CitizensConsumptionAccumulator[EconomyUtils.GetResourceIndex(resource1)] += num2;
                                 }
                             }
                         }
@@ -1171,6 +1184,7 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<ConsumptionData> __Game_Prefabs_ConsumptionData_RO_ComponentLookup;
             public ComponentLookup<ServiceAvailable> __Game_Companies_ServiceAvailable_RW_ComponentLookup;
+            public ComponentLookup<CompanyStatisticData> __Game_Companies_CompanyStatisticData_RW_ComponentLookup;
             public BufferLookup<Game.Economy.Resources> __Game_Economy_Resources_RW_BufferLookup;
             public ComponentLookup<TaxPayer> __Game_Agents_TaxPayer_RW_ComponentLookup;
             [ReadOnly]
@@ -1232,6 +1246,7 @@ namespace Time2Work
                 this.__Game_City_Population_RO_ComponentLookup = state.GetComponentLookup<Population>(true);
                 this.__Game_Citizens_HouseholdCitizen_RO_BufferLookup = state.GetBufferLookup<HouseholdCitizen>(true);
                 this.__Game_Companies_ServiceAvailable_RW_ComponentLookup = state.GetComponentLookup<ServiceAvailable>();
+                this.__Game_Companies_CompanyStatisticData_RW_ComponentLookup = state.GetComponentLookup<CompanyStatisticData>();
                 this.__Game_Economy_Resources_RW_BufferLookup = state.GetBufferLookup<Game.Economy.Resources>();
                 this.__Game_Citizens_HouseholdMember_RO_ComponentLookup = state.GetComponentLookup<HouseholdMember>(true);
                 this.__Game_Companies_ServiceCompanyData_RO_ComponentLookup = state.GetComponentLookup<ServiceCompanyData>(true);

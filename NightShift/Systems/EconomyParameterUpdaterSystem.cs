@@ -34,6 +34,7 @@ namespace Time2Work.Systems
                 EconomyParameterData data = EntityManager.GetComponentData<EconomyParameterData>(tsd);
 
                 data.m_TrafficReduction = Mod.m_Setting.trafficReduction / (float)10000;
+                data.m_ResourceConsumptionPerCitizen = Mod.m_Setting.resourceConsumption;
                 EntityManager.SetComponentData<EconomyParameterData>(tsd, data);
             }
         }

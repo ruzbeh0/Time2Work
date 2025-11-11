@@ -433,6 +433,7 @@ namespace Time2Work
                 m_UpdateFrameType = InternalCompilerInterface.GetSharedComponentTypeHandle<UpdateFrame>(ref this.__TypeHandle.__Game_Simulation_UpdateFrame_SharedComponentTypeHandle, ref this.CheckedStateRef),
                 m_CitizenType = InternalCompilerInterface.GetComponentTypeHandle<Citizen>(ref this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentTypeHandle, ref this.CheckedStateRef),
                 m_Attendings = InternalCompilerInterface.GetComponentLookup<AttendingMeeting>(ref this.__TypeHandle.__Game_Citizens_AttendingMeeting_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_HealthProblemType = InternalCompilerInterface.GetComponentTypeHandle<HealthProblem>(ref this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentTypeHandle, ref this.CheckedStateRef),
                 m_Workplaces = InternalCompilerInterface.GetComponentLookup<WorkProvider>(ref this.__TypeHandle.__Game_Companies_WorkProvider_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_TriggerBuffer = this.m_TriggerSystem.CreateActionBuffer().AsParallelWriter(),
                 m_CitizenSchedule = InternalCompilerInterface.GetComponentTypeHandle<CitizenSchedule>(ref this.__TypeHandle.__Game_Citizens_CitizenSchedule_RO_ComponentTypeHandle, ref this.CheckedStateRef),
@@ -898,6 +899,8 @@ namespace Time2Work
             [ReadOnly]
             public ComponentTypeHandle<TravelPurpose> m_PurposeType;
             [ReadOnly]
+            public ComponentTypeHandle<HealthProblem> m_HealthProblemType;
+            [ReadOnly]
             public SharedComponentTypeHandle<UpdateFrame> m_UpdateFrameType;
             public ComponentTypeHandle<Citizen> m_CitizenType;
             [ReadOnly]
@@ -942,29 +945,40 @@ namespace Time2Work
                     Entity workplace = nativeArray2[index].m_Workplace;
                     Worker worker = nativeArray2[index];
                     Citizen citizen = nativeArray4[index];
-                    if (!this.m_Workplaces.HasComponent(workplace))
+                    if (chunk.Has<HealthProblem>(ref this.m_HealthProblemType))
                     {
-                        citizen.SetFailedEducationCount(0);
-                        nativeArray4[index] = citizen;
-                        TravelPurpose travelPurpose = nativeArray3[index];
-                        if (travelPurpose.m_Purpose == Game.Citizens.Purpose.GoingToWork || travelPurpose.m_Purpose == Game.Citizens.Purpose.Working)
+                        if (nativeArray3[index].m_Purpose == Game.Citizens.Purpose.Working)
                         {
+                            // ISSUE: reference to a compiler-generated field
                             this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
                         }
-                        this.m_CommandBuffer.RemoveComponent<Worker>(unfilteredChunkIndex, entity);
-                        this.m_TriggerBuffer.Enqueue(new TriggerAction(TriggerType.CitizenBecameUnemployed, Entity.Null, entity, workplace));
                     }
                     else
                     {
-                        CitizenSchedule citizenSchedule = nativeArray6[index];
-                        float2 time2Lunch = new float2(citizenSchedule.start_lunch, citizenSchedule.end_lunch);
-                        float2 time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
-                        bool lunchTime = Time2WorkWorkerSystem.IsLunchTime(this.m_TimeOfDay, time2Lunch);
-                        bool workTime = Time2WorkWorkerSystem.IsTimeToWork(this.m_TimeOfDay, time2Work);
-
-                        if ((!workTime || this.m_Attendings.HasComponent(entity) || lunchTime) && nativeArray3[index].m_Purpose == Game.Citizens.Purpose.Working)
+                        if (!this.m_Workplaces.HasComponent(workplace))
                         {
-                            this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
+                            citizen.SetFailedEducationCount(0);
+                            nativeArray4[index] = citizen;
+                            TravelPurpose travelPurpose = nativeArray3[index];
+                            if (travelPurpose.m_Purpose == Game.Citizens.Purpose.GoingToWork || travelPurpose.m_Purpose == Game.Citizens.Purpose.Working)
+                            {
+                                this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
+                            }
+                            this.m_CommandBuffer.RemoveComponent<Worker>(unfilteredChunkIndex, entity);
+                            this.m_TriggerBuffer.Enqueue(new TriggerAction(TriggerType.CitizenBecameUnemployed, Entity.Null, entity, workplace));
+                        }
+                        else
+                        {
+                            CitizenSchedule citizenSchedule = nativeArray6[index];
+                            float2 time2Lunch = new float2(citizenSchedule.start_lunch, citizenSchedule.end_lunch);
+                            float2 time2Work = new float2(citizenSchedule.go_to_work, citizenSchedule.end_work);
+                            bool lunchTime = Time2WorkWorkerSystem.IsLunchTime(this.m_TimeOfDay, time2Lunch);
+                            bool workTime = Time2WorkWorkerSystem.IsTimeToWork(this.m_TimeOfDay, time2Work);
+
+                            if ((!workTime || this.m_Attendings.HasComponent(entity) || lunchTime) && nativeArray3[index].m_Purpose == Game.Citizens.Purpose.Working)
+                            {
+                                this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
+                            }
                         }
                     }
                 }
@@ -1010,6 +1024,8 @@ namespace Time2Work
             [ReadOnly]
             public ComponentTypeHandle<TravelPurpose> __Game_Citizens_TravelPurpose_RO_ComponentTypeHandle;
             [ReadOnly]
+            public ComponentTypeHandle<HealthProblem> __Game_Citizens_HealthProblem_RO_ComponentTypeHandle;
+            [ReadOnly]
             public ComponentLookup<WorkProvider> __Game_Companies_WorkProvider_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<HouseholdMember> __Game_Citizens_HouseholdMember_RO_ComponentLookup;
@@ -1049,6 +1065,7 @@ namespace Time2Work
                 this.__Game_Citizens_TravelPurpose_RO_ComponentTypeHandle = state.GetComponentTypeHandle<TravelPurpose>(true);
                 this.__Game_Companies_WorkProvider_RO_ComponentLookup = state.GetComponentLookup<WorkProvider>(true);
                 this.__Game_Citizens_HouseholdMember_RO_ComponentLookup = state.GetComponentLookup<HouseholdMember>(true);
+                this.__Game_Citizens_HealthProblem_RO_ComponentTypeHandle = state.GetComponentTypeHandle<HealthProblem>(true);
                 this.__Game_Citizens_HouseholdMember_RO_ComponentTypeHandle = state.GetComponentTypeHandle<HouseholdMember>(true);
                 this.WorkplaceDataLookup = state.GetComponentLookup<WorkplaceData>(true);
                 this.CommercialPropertyLookup = state.GetComponentLookup<CommercialProperty>(true);

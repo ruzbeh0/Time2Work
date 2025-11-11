@@ -87,8 +87,7 @@ namespace Time2Work.Utils
                 }
                 workFromHome = Time2WorkWorkerSystem.IsTodayWorkFromHome(citizen, simulationFrame, timeData, ticksPerDay, remoteWorkProb);
 
-                schedule.work_type = (int)work;
-                schedule.dayoff = dayOff;
+                schedule.work_type = (int)work;  
             }
             else
             {
@@ -96,6 +95,7 @@ namespace Time2Work.Utils
                 dayOff = Time2WorkStudentSystem.IsStudyDayOff(citizen, studentData, ref economy, day, population, schoolOffdayprob, schoolStart, schoolEnd, ticksPerDay);
             }
 
+            schedule.dayoff = dayOff;
             schedule.start_lunch = time2Lunch.x;
             schedule.end_lunch = time2Lunch.y;
             schedule.work_from_home = workFromHome;

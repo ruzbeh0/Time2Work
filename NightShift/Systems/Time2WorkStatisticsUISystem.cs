@@ -31,10 +31,12 @@ namespace Time2Work.Systems
         private ResourceSystem m_ResourceSystem;
         private ICityStatisticsSystem m_CityStatisticsSystem;
         private CityConfigurationSystem m_CityConfigurationSystem;
+        private GameModeGovernmentSubsidiesSystem m_GameModeGovernmentSubsidiesSystem;
         private Time2WorkTimeUISystem m_TimeUISystem;
         private EntityQuery m_StatisticsCategoryQuery;
         private EntityQuery m_TimeDataQuery;
         private EntityQuery m_UnlockedPrefabQuery;
+        private EntityQuery m_LinePrefabQuery;
         private List<Time2WorkStatisticsUISystem.StatItem> m_GroupCache;
         private List<Time2WorkStatisticsUISystem.StatItem> m_SubGroupCache;
         private List<Time2WorkStatisticsUISystem.StatItem> m_SelectedStatistics;
@@ -55,14 +57,18 @@ namespace Time2Work.Systems
         private RawMapBinding<Entity> m_UnlockingRequirementsBinding;
         private bool m_ClearActive = true;
         private int m_UnlockRequirementVersion;
+        private MapTilePurchaseSystem m_MapTilePurchaseSystem; 
+
 
         [Preserve]
         protected override void OnCreate()
         {
             base.OnCreate();
+            this.m_MapTilePurchaseSystem = this.World.GetOrCreateSystemManaged<MapTilePurchaseSystem>(); 
             this.m_StatisticsCategoryQuery = this.GetEntityQuery(ComponentType.ReadOnly<UIObjectData>(), ComponentType.ReadOnly<PrefabData>(), ComponentType.ReadOnly<UIStatisticsCategoryData>());
             this.m_TimeDataQuery = this.GetEntityQuery(ComponentType.ReadOnly<TimeData>());
             this.m_UnlockedPrefabQuery = this.GetEntityQuery(ComponentType.ReadOnly<Unlock>());
+            this.m_LinePrefabQuery = this.GetEntityQuery(ComponentType.ReadOnly<TransportLineData>());
             this.m_GroupCache = new List<Time2WorkStatisticsUISystem.StatItem>();
             this.m_SubGroupCache = new List<Time2WorkStatisticsUISystem.StatItem>();
             this.m_SelectedStatistics = new List<Time2WorkStatisticsUISystem.StatItem>();
@@ -187,6 +193,46 @@ namespace Time2Work.Systems
                 this.UpdateStackedStatus();
                 this.UpdateStats();
             }), (IReader<Time2WorkStatisticsUISystem.StatItem>)new ValueReader<Time2WorkStatisticsUISystem.StatItem>()));
+            // NEW: allow adding all children of a subgroup in one click
+            this.AddBinding(new TriggerBinding<Time2WorkStatisticsUISystem.StatItem>(
+                "statistics",
+                "addStatChildren",
+                (stat) =>
+                {
+                    if (stat.locked)
+                        return;
+
+                    // keep category/group in sync with the clicked stat
+                    if (stat.category != m_ActiveCategory)
+                    {
+                        m_SelectedStatistics.Clear();
+                        m_SelectedStatisticsTracker.Clear();
+                        m_ActiveCategory = stat.category;
+                        m_ActiveCategoryBinding.Update();
+                    }
+
+                    if (m_ActiveGroup == Entity.Null || stat.isGroup || stat.group != m_ActiveGroup)
+                    {
+                        m_SelectedStatistics.Clear();
+                        m_SelectedStatisticsTracker.Clear();
+                        m_ActiveGroup = stat.isGroup ? stat.entity : stat.group;
+                        m_ActiveGroupBinding.Update();
+                    }
+
+                    // only meaningful for subgroups
+                    if (!stat.isSubgroup)
+                        return;
+
+                    // remove the subgroup itself (if present) and add its children
+                    RemoveStat(stat);
+                    TryAddChildren(stat, m_SubGroupCache);
+
+                    UpdateStackedStatus();
+                    UpdateStats();
+                }
+            ));
+
+
             this.AddBinding((IBinding)new TriggerBinding<Time2WorkStatisticsUISystem.StatItem>("statistics", "removeStat", (Action<Time2WorkStatisticsUISystem.StatItem>)(stat =>
             {
                 if (!this.m_SelectedStatisticsTracker.Contains(stat))
@@ -379,6 +425,10 @@ namespace Time2Work.Systems
                     Entity group = Entity.Null;
                     Entity entity = sortedObjects[index].entity;
                     PrefabBase prefab = this.m_PrefabSystem.GetPrefab<PrefabBase>(entity);
+
+                    if (prefab.name == "MapTileUpkeep" && !m_MapTilePurchaseSystem.GetMapTileUpkeepEnabled())
+                        continue;
+
                     StatisticUnitType unitType = StatisticUnitType.None;
                     StatisticType statisticType = StatisticType.Invalid;
                     bool locked = this.EntityManager.HasEnabledComponent<Locked>(entity);

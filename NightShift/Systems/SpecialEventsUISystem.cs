@@ -142,7 +142,7 @@ namespace Time2Work.Systems
             // 1) Compute the “UI day” with a 3:00 threshold
             int todaySimDay = Time2WorkTimeSystem.GetDay(m_SimulationFrame, timeData);
             DateTime now = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
-            bool usePrevDayWindow = now.Hour < 3;             // 00:00–02:59 still show “yesterday”
+            bool usePrevDayWindow = now.Hour < 2;             // 00:00–02:59 still show “yesterday”
             if (usePrevDayWindow)
             {
                 todaySimDay -= 1;                              // shift the UI’s effective day

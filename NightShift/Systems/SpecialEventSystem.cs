@@ -164,8 +164,9 @@ namespace Time2Work.Systems
                             Unity.Mathematics.Random random2 = Unity.Mathematics.Random.CreateFromIndex(seed);
                             int r = random2.NextInt(0, validCnt);
                             
-                            //Mod.log.Info($"Entity {ent.Index} with attraction {specialEventData.new_attraction} gets random r={r} (validCnt/2={validCnt/2}) with seed {seed}");
-                            if (specialEventData.day != day && (n < numberEvents && (r < numberEvents || i == entities.Length - 1)))
+                            //Mod.log.Info($"Entity {ent.Index} with attraction {specialEventData.new_attraction} gets random r={r} (numberEvents={numberEvents}) with day {day}, validCnt {validCnt}, i:{i}");
+                            i++;
+                            if (specialEventData.day != day && (n < numberEvents && (r < numberEvents || i == validCnt)))
                             {
                                 // Human-readable location
                                 string location = prefabSystem.GetPrefabName(prefabRef.m_Prefab);
@@ -229,7 +230,6 @@ namespace Time2Work.Systems
                                 EntityManager.SetComponentData(ent, specialEventData);
                             }   
                         }
-                        i++;
                     }
                     if (n >= 1)
                     {

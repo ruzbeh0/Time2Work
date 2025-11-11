@@ -260,6 +260,7 @@ namespace Time2Work
             travel_saturday = travel_saturday_[index];
             travel_sunday = travel_sunday_[index];
             trafficReduction = traffic_reduction_[index];
+            resourceConsumption = 8;
         }
 
         public override void Apply()
@@ -722,6 +723,10 @@ namespace Time2Work
         [SettingsUISection(OtherSection, OtherGroup)]
         public int trafficReduction { get; set; }
 
+        [SettingsUISlider(min = 1, max = 30, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
+        [SettingsUISection(OtherSection, OtherGroup)]
+        public int resourceConsumption { get; set; }
+
         [SettingsUISlider(min = 1, max = 500, step = 1, scalarMultiplier = 1, unit = Unit.kInteger)]
         [SettingsUISection(EventSection, EventGroup)]
         public int min_attraction { get; set; } = 25;
@@ -886,6 +891,7 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.IndustryGroup), "Industry - Percentage of Workers per Day" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.CityServicesGroup), "City Services - Percentage of Workers per Day" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.VisitTimeGroup), "Time Spent Visiting certain Buildings" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.HolidayGroup), "Holidays" },
 
                 //{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.WeekText)), $"Percentage of Workers per Day" },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DTText)), $"Changing the parameters below require restarting the game." },
@@ -895,6 +901,8 @@ namespace Time2Work
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Button)), "Confirm" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Button)), $"Confirm new settings" },
 
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.new_years_num_events)), "Number of New Years Events" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.new_years_num_events)), $"The number of events that will happen in the last day of the year. They all end at midnight." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_weekday)), "Monday to Thursday" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.meals_weekday)), $"Average hours that a person spends going out for a meal per day." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_avgday)), "Friday" },
@@ -1071,6 +1079,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.service_expenses_night_reduction)), $"Reduce the cost of services from 11 PM to 6 AM." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.trafficReduction)), "Traffic Reduction" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.trafficReduction)), $"Lower values increase traffic in the city. Vanilla value is 5. Zero will have the maximun amout of traffic." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.resourceConsumption)), "Resource Consumption" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.resourceConsumption)), $"Set the amount of resources needed to be consumed by each citizen. Easy game mode value is 1, normal mode is 20." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_attraction)), "Min. Attraction" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.min_attraction)), $"Increasing or decreasing this setting will change the number of park facilities that can host special events." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_event_weekday)), "Monday to Thursday" },
@@ -1261,8 +1271,11 @@ namespace Time2Work
                 { m_Setting.GetOptionGroupLocaleID(Setting.IndustryGroup), "Indústria - Porcentagem de Trabalhadores por Dia" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.CityServicesGroup), "Serviços Públicos - Porcentagem de Trabalhadores por Dia" },
                 { m_Setting.GetOptionGroupLocaleID(Setting.VisitTimeGroup), "Tempo gasto visitando certos edifícios" },
+                { m_Setting.GetOptionGroupLocaleID(Setting.HolidayGroup), "Feriados" },
 
 
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.new_years_num_events)), "Número de eventos de Ano Novo" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.new_years_num_events)), $"O número de eventos que ocorrerão no último dia do ano. Todos eles terminam à meia-noite." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_weekday)), "Segunda a Quinta" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.meals_weekday)), $"Média de horas que uma pessoa gasta saindo para comer por dia." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.meals_avgday)), "Sexta" },
@@ -1446,6 +1459,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.service_expenses_night_reduction)), $"Reduz os custos de serviços das 23h ate as 6h." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.trafficReduction)), "Redução de Tráfego" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.trafficReduction)), $"Valores mais baixos aumentam o tráfego na cidade. O valor vanilla é 5. Zero terá a quantidade máxima de tráfego." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.resourceConsumption)), "Consumo de Recursos" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.resourceConsumption)), $"Defina a quantidade de recursos que cada cidadão precisa consumir. O valor no modo fácil é 1 e no modo normal é 20." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_attraction)), "Atração Mínima" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.min_attraction)), $"Aumentar ou diminuir esta configuração alterará o número de instalaçõesque podem hospedar eventos especiais." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.min_event_weekday)), "Segunda a Quinta" },
