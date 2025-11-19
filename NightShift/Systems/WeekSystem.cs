@@ -221,6 +221,13 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
+            // Settings may not be initialized yet (e.g. in main menu / early load). 
+            // In that case, skip updating demand parameters.
+            if (Mod.m_Setting == null)
+            {
+                return;
+            }
+
             DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
             hour = currentDateTime.Hour;
             minute = currentDateTime.Minute;

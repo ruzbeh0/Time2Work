@@ -67,15 +67,30 @@ namespace Time2Work.Patches
         //    }
         //}
 
-        [HarmonyPatch(typeof(TimeSystem), "GetYear")]
+        // Overload 1: GetYear(TimeSettingsData settings, TimeData data)
+        [HarmonyPatch(typeof(TimeSystem), "GetYear", new Type[] { typeof(TimeSettingsData), typeof(TimeData) })]
         [HarmonyPrefix]
         static bool TimeSystemPatches_GetYear(TimeSettingsData settings, TimeData data, ref int __result, TimeSystem __instance)
         {
-            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld
+                .GetOrCreateSystemManaged<Time2WorkTimeSystem>();
 
             __result = t2wTimeSystem.GetYear(settings, data);
             return false;
         }
+
+        // Overload 2: GetYear(TimeSettingsData settings, TimeData data, double renderingFrame)
+        [HarmonyPatch(typeof(TimeSystem), "GetYear", new Type[] { typeof(TimeSettingsData), typeof(TimeData), typeof(double) })]
+        [HarmonyPrefix]
+        static bool TimeSystemPatches_GetYear_Rendering(TimeSettingsData settings, TimeData data, double renderingFrame, ref int __result, TimeSystem __instance)
+        {
+            Time2WorkTimeSystem t2wTimeSystem = World.DefaultGameObjectInjectionWorld
+                .GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+
+            __result = t2wTimeSystem.GetYear(settings, data, renderingFrame);
+            return false;
+        }
+
 
         [HarmonyPatch(typeof(TimeSystem), "get_normalizedDate")]
         [HarmonyPrefix]

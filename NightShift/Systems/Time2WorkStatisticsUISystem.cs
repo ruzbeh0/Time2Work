@@ -424,43 +424,52 @@ namespace Time2Work.Systems
                     Entity category = Entity.Null;
                     Entity group = Entity.Null;
                     Entity entity = sortedObjects[index].entity;
+
                     PrefabBase prefab = this.m_PrefabSystem.GetPrefab<PrefabBase>(entity);
-
-                    if (prefab.name == "MapTileUpkeep" && !m_MapTilePurchaseSystem.GetMapTileUpkeepEnabled())
-                        continue;
-
                     StatisticUnitType unitType = StatisticUnitType.None;
                     StatisticType statisticType = StatisticType.Invalid;
                     bool locked = this.EntityManager.HasEnabledComponent<Locked>(entity);
                     bool isSubgroup = !isGroup && this.EntityManager.HasComponent<UIStatisticsGroupData>(entity) || prefab is ParametricStatistic parametricStatistic && parametricStatistic.GetParameters().Count<StatisticParameterData>() > 1;
                     bool stacked = true;
                     Color color = new Color(0.0f, 0.0f, 0.0f, 0.0f);
-                    StatisticsData component1;
-                    if (this.EntityManager.TryGetComponent<StatisticsData>(entity, out component1))
+
+                    if (this.m_MapTilePurchaseSystem.GetMapTileUpkeepEnabled() || !(prefab.name == "MapTileUpkeep"))
                     {
-                        if (!this.m_CityConfigurationSystem.unlimitedMoney || component1.m_StatisticType != StatisticType.Money)
+                        StatisticsData component1;
+                        if (this.EntityManager.TryGetComponent<StatisticsData>(entity, out component1))
                         {
-                            unitType = component1.m_UnitType;
-                            statisticType = component1.m_StatisticType;
-                            group = component1.m_Group;
-                            category = component1.m_Category;
-                            color = component1.m_Color;
-                            stacked = component1.m_Stacked;
+                            if ((!this.m_CityConfigurationSystem.unlimitedMoney || component1.m_StatisticType != StatisticType.Money && !(prefab.name == "LoanInterest")) && (this.m_GameModeGovernmentSubsidiesSystem.GetGovernmentSubsidiesEnabled() || component1.m_StatisticType != StatisticType.Income || !(prefab.name == "GovernmentSubsidy")))
+                            {
+                                if (component1.m_StatisticType == StatisticType.PassengerCountFerry)
+                                {
+                                    NativeArray<Entity> entityArray = this.m_LinePrefabQuery.ToEntityArray((AllocatorManager.AllocatorHandle)Allocator.TempJob);
+                                    int num = !TransportUIUtils.ShouldBindTransportType(this.EntityManager, this.m_PrefabSystem, TransportType.Ferry, entityArray) ? 1 : 0;
+                                    entityArray.Dispose();
+                                    if (num != 0)
+                                        continue;
+                                }
+                                unitType = component1.m_UnitType;
+                                statisticType = component1.m_StatisticType;
+                                group = component1.m_Group;
+                                category = component1.m_Category;
+                                color = component1.m_Color;
+                                stacked = component1.m_Stacked;
+                            }
+                            else
+                                continue;
                         }
-                        else
-                            continue;
+                        UIStatisticsGroupData component2;
+                        UIObjectData component3;
+                        if (this.EntityManager.TryGetComponent<UIStatisticsGroupData>(entity, out component2) && this.EntityManager.TryGetComponent<UIObjectData>(entity, out component3))
+                        {
+                            group = component3.m_Group == component2.m_Category ? entity : component3.m_Group;
+                            unitType = component2.m_UnitType;
+                            category = component2.m_Category;
+                            color = component2.m_Color;
+                            stacked = component2.m_Stacked;
+                        }
+                        cache.Add(new Time2WorkStatisticsUISystem.StatItem(index, category, group, entity, (int)statisticType, unitType, 0, prefab.name, color, locked, isGroup, isSubgroup, stacked));
                     }
-                    UIStatisticsGroupData component2;
-                    UIObjectData component3;
-                    if (this.EntityManager.TryGetComponent<UIStatisticsGroupData>(entity, out component2) && this.EntityManager.TryGetComponent<UIObjectData>(entity, out component3))
-                    {
-                        group = component3.m_Group == component2.m_Category ? entity : component3.m_Group;
-                        unitType = component2.m_UnitType;
-                        category = component2.m_Category;
-                        color = component2.m_Color;
-                        stacked = component2.m_Stacked;
-                    }
-                    cache.Add(new Time2WorkStatisticsUISystem.StatItem(index, category, group, entity, (int)statisticType, unitType, 0, prefab.name, color, locked, isGroup, isSubgroup, stacked));
                 }
                 sortedObjects.Dispose();
             }
@@ -471,6 +480,7 @@ namespace Time2Work.Systems
                 if (!this.EntityManager.TryGetComponent<StatisticsData>(parentEntity, out component4) || !this.EntityManager.TryGetComponent<PrefabData>(parentEntity, out component5))
                     return;
                 bool locked = this.EntityManager.HasEnabledComponent<Locked>(parentEntity);
+                // ISSUE: reference to a compiler-generated method
                 this.CacheParameterChildren(parentEntity, locked, component4, component5, cache);
             }
         }

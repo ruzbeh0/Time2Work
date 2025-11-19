@@ -510,11 +510,6 @@ namespace Time2Work.Systems
             }
         }
 
-        protected override void OnGameLoadingComplete(Colossal.Serialization.Entities.Purpose purpose, GameMode mode)
-        {
-            calculateShifts(16);
-        }
-
         public override int GetUpdateInterval(SystemUpdatePhase phase)
         {
             // One day (or month) in-game is '262144' ticks
@@ -522,6 +517,13 @@ namespace Time2Work.Systems
         }
         protected override void OnUpdate()
         {
+            // Settings may not be initialized yet (e.g. in main menu / early load). 
+            // In that case, skip updating demand parameters.
+            if (Mod.m_Setting == null)
+            {
+                return;
+            }
+
             DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
             int day = currentDateTime.Day;
             //Only run every other day

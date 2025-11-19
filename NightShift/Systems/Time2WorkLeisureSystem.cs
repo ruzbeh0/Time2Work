@@ -1,4 +1,7 @@
-﻿using Game.Agents;
+﻿using Colossal.Entities;
+using Game;
+using Game.Agents;
+using Game.Areas;
 using Game.Buildings;
 using Game.Citizens;
 using Game.City;
@@ -6,35 +9,36 @@ using Game.Common;
 using Game.Companies;
 using Game.Economy;
 using Game.Events;
+using Game.Net;
+using Game.Objects;
 using Game.Pathfind;
 using Game.Prefabs;
+using Game.Routes;
+using Game.Simulation;
 using Game.Tools;
 using Game.Vehicles;
-using Game.Simulation;
-using Game.Areas;
-using Game;
+using System;
 using System.Runtime.CompilerServices;
+using Time2Work.Components;
+using Time2Work.Systems;
+using Time2Work.Utils;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Entities.Internal;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using Game.Objects;
-using Game.Routes;
-using Time2Work.Systems;
-using Unity.Entities.Internal;
 using static Game.Prefabs.TriggerPrefabData;
-using Time2Work.Components;
-using Time2Work.Utils;
-using System;
 using static Time2Work.Time2WorkWorkerSystem;
 
 namespace Time2Work
 {
     public partial class Time2WorkLeisureSystem : GameSystemBase
     {
+        public static readonly int kUpdatePerDay = 4096 /*0x1000*/;
+        public static readonly float kUpdateInterval = 5f;
         private SimulationSystem m_SimulationSystem;
         private EndFrameBarrier m_EndFrameBarrier;
         private PathfindSetupSystem m_PathFindSetupSystem;
@@ -43,18 +47,24 @@ namespace Time2Work
         private ClimateSystem m_ClimateSystem;
         private AddMeetingSystem m_AddMeetingSystem;
         private CityProductionStatisticSystem m_CityProductionStatisticSystem;
+        private CityConfigurationSystem m_CityConfigurationSystem;
         private EntityQuery m_LeisureQuery;
         private EntityQuery m_EconomyParameterQuery;
         private EntityQuery m_LeisureParameterQuery;
         private EntityQuery m_ResidentPrefabQuery;
         private EntityQuery m_TimeDataQuery;
         private EntityQuery m_PopulationQuery;
+        private EntityQuery m_CarPrefabQuery;
         private ComponentTypeSet m_PathfindTypes;
         private NativeQueue<LeisureEvent> m_LeisureQueue;
+        private PersonalCarSelectData m_PersonalCarSelectData;
         private Time2WorkLeisureSystem.TypeHandle __TypeHandle;
         private Setting.DTSimulationEnum m_daytype;
 
-        public override int GetUpdateInterval(SystemUpdatePhase phase) => 16;
+        public override int GetUpdateInterval(SystemUpdatePhase phase)
+        {
+            return 262144 /*0x040000*/ / Time2WorkLeisureSystem.kUpdatePerDay;
+        }
 
         protected override void OnCreate()
         {
@@ -67,6 +77,8 @@ namespace Time2Work
             this.m_ClimateSystem = this.World.GetOrCreateSystemManaged<ClimateSystem>();
             this.m_AddMeetingSystem = this.World.GetOrCreateSystemManaged<AddMeetingSystem>();
             this.m_CityProductionStatisticSystem = this.World.GetOrCreateSystemManaged<CityProductionStatisticSystem>();
+            this.m_CityConfigurationSystem = this.World.GetOrCreateSystemManaged<CityConfigurationSystem>();
+            this.m_PersonalCarSelectData = new PersonalCarSelectData((SystemBase)this);
             this.m_EconomyParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<EconomyParameterData>());
             this.m_LeisureParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<LeisureParametersData>());
             this.m_LeisureQuery = this.GetEntityQuery(new EntityQueryDesc()
@@ -92,6 +104,7 @@ namespace Time2Work
             this.m_ResidentPrefabQuery = this.GetEntityQuery(ComponentType.ReadOnly<ObjectData>(), ComponentType.ReadOnly<HumanData>(), ComponentType.ReadOnly<ResidentData>(), ComponentType.ReadOnly<PrefabData>());
             this.m_TimeDataQuery = this.GetEntityQuery(ComponentType.ReadOnly<TimeData>());
             this.m_PopulationQuery = this.GetEntityQuery(ComponentType.ReadOnly<Population>());
+            this.m_CarPrefabQuery = this.GetEntityQuery(PersonalCarSelectData.GetEntityQueryDesc());
             this.m_PathfindTypes = new ComponentTypeSet(ComponentType.ReadWrite<PathInformation>(), ComponentType.ReadWrite<PathElement>());
             this.m_LeisureQueue = new NativeQueue<LeisureEvent>((AllocatorManager.AllocatorHandle)Allocator.Persistent);
             this.RequireForUpdate(this.m_LeisureQuery);
@@ -112,13 +125,16 @@ namespace Time2Work
             float num = this.m_ClimateSystem.precipitation.value;
 
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
+            JobHandle jobHandle1;
+            this.m_PersonalCarSelectData.PreUpdate((SystemBase)this, this.m_CityConfigurationSystem, this.m_CarPrefabQuery, Allocator.TempJob, out jobHandle1);
+
             JobHandle outJobHandle;
             JobHandle deps1;
 
             DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
             int hour = currentDateTime.Hour;
 
-            JobHandle jobHandle1 = new Time2WorkLeisureSystem.LeisureJob()
+            JobHandle jobHandle2 = new Time2WorkLeisureSystem.LeisureJob()
             {
                 CitizenScheduleLookup = InternalCompilerInterface.GetComponentLookup<CitizenSchedule>(ref this.__TypeHandle.CitizenScheduleLookup, ref this.CheckedStateRef),
                 m_EntityType = InternalCompilerInterface.GetEntityTypeHandle(ref this.__TypeHandle.__Unity_Entities_Entity_TypeHandle, ref this.CheckedStateRef),
@@ -133,6 +149,7 @@ namespace Time2Work
                 m_BuildingData = InternalCompilerInterface.GetComponentLookup<Building>(ref this.__TypeHandle.__Game_Buildings_Building_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_PropertyRenters = InternalCompilerInterface.GetComponentLookup<PropertyRenter>(ref this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_CarKeepers = InternalCompilerInterface.GetComponentLookup<CarKeeper>(ref this.__TypeHandle.__Game_Citizens_CarKeeper_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_BicycleOwners = InternalCompilerInterface.GetComponentLookup<BicycleOwner>(ref this.__TypeHandle.__Game_Citizens_BicycleOwner_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_ParkedCarData = InternalCompilerInterface.GetComponentLookup<ParkedCar>(ref this.__TypeHandle.__Game_Vehicles_ParkedCar_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_PersonalCarData = InternalCompilerInterface.GetComponentLookup<Game.Vehicles.PersonalCar>(ref this.__TypeHandle.__Game_Vehicles_PersonalCar_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_Targets = InternalCompilerInterface.GetComponentLookup<Game.Common.Target>(ref this.__TypeHandle.__Game_Common_Target_RO_ComponentLookup, ref this.CheckedStateRef),
@@ -172,6 +189,7 @@ namespace Time2Work
                 m_RandomSeed = RandomSeed.Next(),
                 m_PathfindTypes = this.m_PathfindTypes,
                 m_HumanChunks = this.m_ResidentPrefabQuery.ToArchetypeChunkListAsync((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle),
+                m_PersonalCarSelectData = this.m_PersonalCarSelectData,
                 m_PathfindQueue = this.m_PathFindSetupSystem.GetQueue((object)this, 512).AsParallelWriter(),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 m_MeetingQueue = this.m_AddMeetingSystem.GetMeetingQueue(out deps1).AsParallelWriter(),
@@ -227,15 +245,16 @@ namespace Time2Work
                 shopping_hourly_factor = LeisureProbabilityCalculator.GetShoppingProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
                 park_hourly_factor = LeisureProbabilityCalculator.GetParkProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
                 travel_hourly_factor = LeisureProbabilityCalculator.GetTravelProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour)
-            }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobHandle.CombineDependencies(this.Dependency, JobHandle.CombineDependencies(outJobHandle, deps1)));
-            this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle1);
-            this.m_PathFindSetupSystem.AddQueueWriter(jobHandle1);
+            }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobUtils.CombineDependencies(this.Dependency, outJobHandle, deps1, jobHandle1));
+            this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle2);
+            this.m_PathFindSetupSystem.AddQueueWriter(jobHandle2);
             JobHandle deps2;
-            JobHandle jobHandle2 = new Time2WorkLeisureSystem.SpendLeisurejob()
+            JobHandle jobHandle3 = new Time2WorkLeisureSystem.SpendLeisurejob()
             {
                 m_ServiceAvailables = this.__TypeHandle.__Game_Companies_ServiceAvailable_RW_ComponentLookup,
                 m_CompanyStatisticDatas = InternalCompilerInterface.GetComponentLookup<CompanyStatisticData>(ref this.__TypeHandle.__Game_Companies_CompanyStatisticData_RW_ComponentLookup, ref this.CheckedStateRef),
                 m_Resources = this.__TypeHandle.__Game_Economy_Resources_RW_BufferLookup,
+                m_CitizenDatas = InternalCompilerInterface.GetComponentLookup<Citizen>(ref this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentLookup, ref this.CheckedStateRef),
                 m_HouseholdMembers = this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentLookup,
                 m_IndustrialProcesses = this.__TypeHandle.__Game_Prefabs_IndustrialProcessData_RO_ComponentLookup,
                 m_Prefabs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
@@ -244,11 +263,11 @@ namespace Time2Work
                 m_ResourcePrefabs = this.m_ResourceSystem.GetPrefabs(),
                 m_CitizensConsumptionAccumulator = this.m_CityProductionStatisticSystem.GetCityResourceUsageAccumulator(CityProductionStatisticSystem.CityResourceUsage.Consumer.Citizens, out deps2),
                 m_LeisureQueue = this.m_LeisureQueue
-            }.Schedule<Time2WorkLeisureSystem.SpendLeisurejob>(JobHandle.CombineDependencies(jobHandle1, deps2));
-            this.m_ResourceSystem.AddPrefabsReader(jobHandle2);
+            }.Schedule<Time2WorkLeisureSystem.SpendLeisurejob>(JobHandle.CombineDependencies(jobHandle2, deps2));
+            this.m_ResourceSystem.AddPrefabsReader(jobHandle3);
 
-            this.m_CityProductionStatisticSystem.AddCityUsageAccumulatorWriter(CityProductionStatisticSystem.CityResourceUsage.Consumer.Citizens, jobHandle2);
-            this.Dependency = jobHandle2;
+            this.m_CityProductionStatisticSystem.AddCityUsageAccumulatorWriter(CityProductionStatisticSystem.CityResourceUsage.Consumer.Citizens, jobHandle3);
+            this.Dependency = jobHandle3;
         }
 
         private void __AssignQueries(ref SystemState state)
@@ -274,6 +293,7 @@ namespace Time2Work
             public ComponentLookup<ServiceAvailable> m_ServiceAvailables;
             public ComponentLookup<CompanyStatisticData> m_CompanyStatisticDatas;
             public BufferLookup<Game.Economy.Resources> m_Resources;
+            public ComponentLookup<Citizen> m_CitizenDatas;
             [ReadOnly]
             public ComponentLookup<PrefabRef> m_Prefabs;
             [ReadOnly]
@@ -294,6 +314,13 @@ namespace Time2Work
 
                 while (this.m_LeisureQueue.TryDequeue(out leisureEvent))
                 {
+                    if (this.m_CitizenDatas.HasComponent(leisureEvent.m_Citizen))
+                    {
+                        Citizen citizenData = this.m_CitizenDatas[leisureEvent.m_Citizen];
+                        int num = (int)math.ceil((float)leisureEvent.m_Efficiency / Time2WorkLeisureSystem.kUpdateInterval);
+                        citizenData.m_LeisureCounter = (byte)math.min((int)byte.MaxValue, (int)citizenData.m_LeisureCounter + num);
+                        this.m_CitizenDatas[leisureEvent.m_Citizen] = citizenData;
+                    }
                     if (this.m_HouseholdMembers.HasComponent(leisureEvent.m_Citizen) && this.m_Prefabs.HasComponent(leisureEvent.m_Provider))
                     {
                         Entity household = this.m_HouseholdMembers[leisureEvent.m_Citizen].m_Household;
@@ -313,10 +340,10 @@ namespace Time2Work
                                 {
                                     ServiceAvailable serviceAvailable = this.m_ServiceAvailables[leisureEvent.m_Provider];
                                     ServiceCompanyData serviceCompanyData = this.m_ServiceCompanyDatas[prefab];
-                                    y = serviceCompanyData.m_ServiceConsuming;
+                                    y = math.max((int)((double)serviceCompanyData.m_ServiceConsuming / (double)Time2WorkLeisureSystem.kUpdateInterval), 1);
                                     if (serviceAvailable.m_ServiceAvailable > 0)
                                     {
-                                        serviceAvailable.m_ServiceAvailable -= serviceCompanyData.m_ServiceConsuming;
+                                        serviceAvailable.m_ServiceAvailable -= y;
                                         serviceAvailable.m_MeanPriority = math.lerp(serviceAvailable.m_MeanPriority, (float)serviceAvailable.m_ServiceAvailable / (float)serviceCompanyData.m_MaxService, 0.1f);
                                         this.m_ServiceAvailables[leisureEvent.m_Provider] = serviceAvailable;
                                         num1 = EconomyUtils.GetServicePriceMultiplier((float)serviceAvailable.m_ServiceAvailable, serviceCompanyData.m_MaxService);
@@ -374,6 +401,8 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<CarKeeper> m_CarKeepers;
             [ReadOnly]
+            public ComponentLookup<BicycleOwner> m_BicycleOwners;
+            [ReadOnly]
             public ComponentLookup<ParkedCar> m_ParkedCarData;
             [ReadOnly]
             public ComponentLookup<Game.Vehicles.PersonalCar> m_PersonalCarData;
@@ -429,6 +458,8 @@ namespace Time2Work
             public ComponentTypeSet m_PathfindTypes;
             [ReadOnly]
             public NativeList<ArchetypeChunk> m_HumanChunks;
+            [ReadOnly]
+            public PersonalCarSelectData m_PersonalCarSelectData;
             public ComponentLookup<Shopper> m_Shopping;
             [ReadOnly]
             public ComponentLookup<CommercialProperty> CommercialPropertyLookup;
@@ -533,18 +564,18 @@ namespace Time2Work
                 }
                 if (!flag)
                 {
-                    citizen.m_LeisureCounter = (byte)math.min((int)byte.MaxValue, (int)citizen.m_LeisureCounter + provider.m_Efficiency);
                     this.m_LeisureQueue.Enqueue(new LeisureEvent()
                     {
                         m_Citizen = entity,
-                        m_Provider = providerEntity
+                        m_Provider = providerEntity,
+                        m_Efficiency = provider.m_Efficiency
                     });
                 } 
                 
 
                 SpecialEventData specialEventdata;
 
-                bool leisureCounterCondition = citizen.m_LeisureCounter > (byte)250;
+                bool leisureCounterCondition = (double)citizen.m_LeisureCounter > (double)byte.MaxValue - (double)provider.m_Efficiency / (double)Time2WorkLeisureSystem.kUpdateInterval;
                 if (m_SpecialEventDatas.TryGetComponent(specialEventDataEntity, out specialEventdata))
                 {
                     if (specialEventdata.day == day)
@@ -1054,13 +1085,26 @@ namespace Time2Work
                         m_WalkSpeed = (float2)humanData.m_WalkSpeed,
                         m_Weights = CitizenUtils.GetPathfindWeights(citizenData, household1, householdCitizen.Length),
                         m_Methods = PathMethod.Pedestrian | PathMethod.Taxi | RouteUtils.GetPublicTransportMethods(this.m_TimeOfDay),
-                        m_SecondaryIgnoredRules = VehicleUtils.GetIgnoredPathfindRulesTaxiDefaults(),
+                        m_TaxiIgnoredRules = VehicleUtils.GetIgnoredPathfindRulesTaxiDefaults(),
                         m_MaxCost = Time2WorkCitizenBehaviorSystem.kMaxPathfindCostLeisure
                     };
-                    if (this.m_PropertyRenters.HasComponent(household))
-                    {
-                        parameters.m_Authorization1 = this.m_PropertyRenters[household].m_Property;
-                    }
+                    SetupQueueTarget setupQueueTarget = new SetupQueueTarget();
+                    setupQueueTarget.m_Type = SetupTargetType.CurrentLocation;
+                    setupQueueTarget.m_Methods = PathMethod.Pedestrian;
+                    setupQueueTarget.m_RandomCost = 30f;
+                    SetupQueueTarget origin = setupQueueTarget;
+                    setupQueueTarget = new SetupQueueTarget();
+                    setupQueueTarget.m_Type = SetupTargetType.Leisure;
+                    setupQueueTarget.m_Methods = PathMethod.Pedestrian;
+                    setupQueueTarget.m_Value = (int)leisureType;
+                    setupQueueTarget.m_Value2 = num;
+                    setupQueueTarget.m_RandomCost = 30f;
+                    setupQueueTarget.m_ActivityMask = creatureData.m_SupportedActivities;
+                    SetupQueueTarget destination = setupQueueTarget;
+                    PropertyRenter componentData1;
+
+                    if (this.m_PropertyRenters.TryGetComponent(household, out componentData1))
+                        parameters.m_Authorization1 = componentData1.m_Property;
                     if (this.m_Workers.HasComponent(citizen))
                     {
                         Worker worker = this.m_Workers[citizen];
@@ -1080,26 +1124,48 @@ namespace Time2Work
                             parameters.m_ParkingSize = VehicleUtils.GetParkingSize(car, ref this.m_PrefabRefs, ref this.m_ObjectGeometryData);
                             parameters.m_Methods |= VehicleUtils.GetPathMethods(carData) | PathMethod.Parking;
                             parameters.m_IgnoredRules = VehicleUtils.GetIgnoredPathfindRules(carData);
-                            Game.Vehicles.PersonalCar componentData;
-                            if (this.m_PersonalCarData.TryGetComponent(car, out componentData) && (componentData.m_State & PersonalCarFlags.HomeTarget) == (PersonalCarFlags)0)
+                            Game.Vehicles.PersonalCar componentData2;
+                            if (this.m_PersonalCarData.TryGetComponent(car, out componentData2) && (componentData2.m_State & PersonalCarFlags.HomeTarget) == (PersonalCarFlags)0)
                                 parameters.m_PathfindFlags |= PathfindFlags.ParkingReset;
                         }
                     }
-                    SetupQueueTarget origin = new SetupQueueTarget()
+                    else
                     {
-                        m_Type = SetupTargetType.CurrentLocation,
-                        m_Methods = PathMethod.Pedestrian,
-                        m_RandomCost = 30f
-                    };
-                    SetupQueueTarget destination = new SetupQueueTarget()
-                    {
-                        m_Type = SetupTargetType.Leisure,
-                        m_Methods = PathMethod.Pedestrian,
-                        m_Value = (int)leisureType,
-                        m_Value2 = num,
-                        m_RandomCost = 30f,
-                        m_ActivityMask = creatureData.m_SupportedActivities
-                    };
+                        if (this.m_BicycleOwners.IsComponentEnabled(citizen))
+                        {
+                            Entity bicycle = this.m_BicycleOwners[citizen].m_Bicycle;
+                            PrefabRef componentData3;
+                            CurrentBuilding componentData4;
+                            if (!this.m_PrefabRefs.TryGetComponent(bicycle, out componentData3) && this.m_CurrentBuildings.TryGetComponent(citizen, out componentData4) && componentData4.m_CurrentBuilding == componentData1.m_Property)
+                            {
+                                Unity.Mathematics.Random pseudoRandom = citizenData.GetPseudoRandom(CitizenPseudoRandom.BicycleModel);
+                                componentData3.m_Prefab = this.m_PersonalCarSelectData.SelectVehiclePrefab(ref pseudoRandom, 1, 0, true, false, true, out Entity _);
+                            }
+                            CarData componentData5;
+                            ObjectGeometryData componentData6;
+                            if (this.m_PrefabCarData.TryGetComponent(componentData3.m_Prefab, out componentData5) && this.m_ObjectGeometryData.TryGetComponent(componentData3.m_Prefab, out componentData6))
+                            {
+                                parameters.m_MaxSpeed.x = componentData5.m_MaxSpeed;
+                                parameters.m_ParkingSize = VehicleUtils.GetParkingSize(componentData6, out float _);
+                                parameters.m_Methods |= PathMethod.Bicycle | PathMethod.BicycleParking;
+                                parameters.m_IgnoredRules = VehicleUtils.GetIgnoredPathfindRulesBicycleDefaults();
+                                ParkedCar componentData7;
+                                if (this.m_ParkedCarData.TryGetComponent(bicycle, out componentData7))
+                                {
+                                    parameters.m_ParkingTarget = componentData7.m_Lane;
+                                    parameters.m_ParkingDelta = componentData7.m_CurvePosition;
+                                    Game.Vehicles.PersonalCar componentData8;
+                                    if (this.m_PersonalCarData.TryGetComponent(bicycle, out componentData8) && (componentData8.m_State & PersonalCarFlags.HomeTarget) == (PersonalCarFlags)0)
+                                        parameters.m_PathfindFlags |= PathfindFlags.ParkingReset;
+                                }
+                                else
+                                {
+                                    origin.m_Methods |= PathMethod.Bicycle;
+                                    origin.m_RoadTypes |= RoadTypes.Bicycle;
+                                }
+                            }
+                        }
+                    }
                     this.m_PathfindQueue.Enqueue(new SetupQueueItem(citizen, parameters, origin, destination));
                 }
             }
@@ -1138,6 +1204,8 @@ namespace Time2Work
             public ComponentLookup<PropertyRenter> __Game_Buildings_PropertyRenter_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<CarKeeper> __Game_Citizens_CarKeeper_RO_ComponentLookup;
+            [ReadOnly]
+            public ComponentLookup<BicycleOwner> __Game_Citizens_BicycleOwner_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<ParkedCar> __Game_Vehicles_ParkedCar_RO_ComponentLookup;
             [ReadOnly]
@@ -1224,6 +1292,7 @@ namespace Time2Work
                 this.__Game_Buildings_Building_RO_ComponentLookup = state.GetComponentLookup<Building>(true);
                 this.__Game_Buildings_PropertyRenter_RO_ComponentLookup = state.GetComponentLookup<PropertyRenter>(true);
                 this.__Game_Citizens_CarKeeper_RO_ComponentLookup = state.GetComponentLookup<CarKeeper>(true);
+                this.__Game_Citizens_BicycleOwner_RO_ComponentLookup = state.GetComponentLookup<BicycleOwner>(true);
                 this.__Game_Vehicles_ParkedCar_RO_ComponentLookup = state.GetComponentLookup<ParkedCar>(true);
                 this.__Game_Vehicles_PersonalCar_RO_ComponentLookup = state.GetComponentLookup<Game.Vehicles.PersonalCar>(true);
                 this.__Game_Common_Target_RO_ComponentLookup = state.GetComponentLookup<Game.Common.Target>(true);

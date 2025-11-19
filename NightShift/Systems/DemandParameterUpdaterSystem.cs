@@ -29,6 +29,13 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
+            // Settings may not be initialized yet (e.g. in main menu / early load). 
+            // In that case, skip updating demand parameters.
+            if (Mod.m_Setting == null)
+            {
+                return;
+            }
+
             var prefabs = _query.ToEntityArray(Allocator.Temp);
 
             foreach (var tsd in prefabs)

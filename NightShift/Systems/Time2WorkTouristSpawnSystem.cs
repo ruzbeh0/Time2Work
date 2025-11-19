@@ -27,6 +27,7 @@ namespace Time2Work.Systems
         private EndFrameBarrier m_EndFrameBarrier;
         private SimulationSystem m_SimulationSystem;
         private ClimateSystem m_ClimateSystem;
+        private CityStatisticsSystem m_CityStatisticsSystem;
         private CitySystem m_CitySystem;
         private Time2WorkTouristSpawnSystem.TypeHandle __TypeHandle;
         private Setting.DTSimulationEnum m_daytype;
@@ -45,6 +46,7 @@ namespace Time2Work.Systems
             this.m_OutsideConnectionQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Objects.OutsideConnection>(), ComponentType.Exclude<Game.Objects.ElectricityOutsideConnection>(), ComponentType.Exclude<Game.Objects.WaterPipeOutsideConnection>(), ComponentType.Exclude<Temp>(), ComponentType.Exclude<Deleted>());
             this.m_DemandParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<DemandParameterData>());
             this.m_AttractivenessParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<AttractivenessParameterData>());
+            this.m_CityStatisticsSystem = this.World.GetOrCreateSystemManaged<CityStatisticsSystem>(); 
             this.RequireForUpdate(this.m_HouseholdPrefabQuery);
             this.RequireForUpdate(this.m_OutsideConnectionQuery);
             if (Mod.m_Setting.tourism_trips)
@@ -59,6 +61,10 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
+            // If settings or city stats system aren’t ready yet, don’t run
+            if (Mod.m_Setting == null || m_CityStatisticsSystem == null)
+                return;
+            
             if (Mod.m_Setting.tourism_trips)
             {
                 this.m_daytype = WeekSystem.currentDayOfTheWeek;
@@ -88,6 +94,8 @@ namespace Time2Work.Systems
                 m_Precipitation = (float)this.m_ClimateSystem.precipitation,
                 m_IsRaining = this.m_ClimateSystem.isRaining,
                 m_IsSnowing = this.m_ClimateSystem.isSnowing,
+                m_StatisticsLookup = this.m_CityStatisticsSystem.GetLookup(),
+                m_CityStatistics = InternalCompilerInterface.GetBufferLookup<CityStatistic>(ref this.__TypeHandle.__Game_City_CityStatistic_RO_BufferLookup, ref this.CheckedStateRef),
                 m_City = this.m_CitySystem.City,
                 m_Frame = this.m_SimulationSystem.frameIndex,
                 m_RandomSeed = RandomSeed.Next(),
@@ -137,6 +145,10 @@ namespace Time2Work.Systems
             public AttractivenessParameterData m_AttractivenessParameter;
             [ReadOnly]
             public DemandParameterData m_DemandParameterData;
+            [ReadOnly]
+            public NativeParallelHashMap<CityStatisticsSystem.StatisticsKey, Entity> m_StatisticsLookup;
+            [ReadOnly]
+            public BufferLookup<CityStatistic> m_CityStatistics;
             public RandomSeed m_RandomSeed;
             public Entity m_City;
             public uint m_Frame;
@@ -153,8 +165,9 @@ namespace Time2Work.Systems
                 if (!this.m_Tourisms.HasComponent(this.m_City))
                     return;
                 Random random = this.m_RandomSeed.GetRandom((int)this.m_Frame);
-                int attractiveness = this.m_Tourisms[this.m_City].m_Attractiveness;
-                if ((double)random.NextFloat() >= (double)Time2WorkTourismSystem.GetTouristProbability(this.m_AttractivenessParameter, attractiveness, this.m_WeatherClassification, this.m_Temperature, this.m_Precipitation, this.m_IsRaining, this.m_IsSnowing, this.m_daytype))
+
+                float touristProbability = Time2WorkTourismSystem.GetTouristProbability(this.m_AttractivenessParameter, this.m_Tourisms[this.m_City].m_Attractiveness, CityStatisticsSystem.GetStatisticValue(this.m_StatisticsLookup, this.m_CityStatistics, StatisticType.TouristCount), this.m_WeatherClassification, this.m_Temperature, this.m_Precipitation, this.m_IsRaining, this.m_IsSnowing, this.m_daytype);
+                if ((double)random.NextFloat() >= (double)touristProbability)
                     return;
                 int index = random.NextInt(this.m_HouseholdPrefabs.Length);
                 Entity prefabEntity = this.m_PrefabEntities[index];
@@ -194,6 +207,8 @@ namespace Time2Work.Systems
             public ComponentLookup<OutsideConnectionData> __Game_Prefabs_OutsideConnectionData_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<PrefabRef> __Game_Prefabs_PrefabRef_RO_ComponentLookup;
+            [ReadOnly]
+            public BufferLookup<CityStatistic> __Game_City_CityStatistic_RO_BufferLookup;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void __AssignHandles(ref SystemState state)
@@ -201,6 +216,7 @@ namespace Time2Work.Systems
                 this.__Game_City_Tourism_RO_ComponentLookup = state.GetComponentLookup<Tourism>(true);
                 this.__Game_Prefabs_OutsideConnectionData_RO_ComponentLookup = state.GetComponentLookup<OutsideConnectionData>(true);
                 this.__Game_Prefabs_PrefabRef_RO_ComponentLookup = state.GetComponentLookup<PrefabRef>(true);
+                this.__Game_City_CityStatistic_RO_BufferLookup = state.GetBufferLookup<CityStatistic>(true);
             }
         }
     }

@@ -1,5 +1,7 @@
-﻿using Game;
+﻿using Colossal.Entities;
+using Game;
 using Game.Agents;
+using Game.Areas;
 using Game.Buildings;
 using Game.Citizens;
 using Game.City;
@@ -68,7 +70,7 @@ namespace Time2Work
           int dow)
         {
             int age = (int)citizen.GetAge();
-            float2 float2_1 = new float2(0.775f, 0.21f);
+            float2 float2_1 = new float2(0.775f, 0.225f);
             float num = float2_1.y - float2_1.x;
             Unity.Mathematics.Random pseudoRandom = citizen.GetPseudoRandom(CitizenPseudoRandom.SleepOffset);
             float2 x1 = float2_1 + (float)(GaussianRandom.NextGaussianDouble(pseudoRandom) * 0.1f) + 0.1f;
@@ -385,9 +387,13 @@ namespace Time2Work
             {
                 m_CarKeepers = this.__TypeHandle.__Game_Citizens_CarKeeper_RW_ComponentLookup,
                 m_HouseholdMembers = this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentLookup,
+                m_PropertyRenters = InternalCompilerInterface.GetComponentLookup<PropertyRenter>(ref this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_OwnedVehicles = this.__TypeHandle.__Game_Vehicles_OwnedVehicle_RO_BufferLookup,
+                m_DistrictModifiers = InternalCompilerInterface.GetBufferLookup<DistrictModifier>(ref this.__TypeHandle.__Game_Areas_DistrictModifier_RO_BufferLookup, ref this.CheckedStateRef),
+                m_CurrentDistricts = InternalCompilerInterface.GetComponentLookup<CurrentDistrict>(ref this.__TypeHandle.__Game_Areas_CurrentDistrict_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_PersonalCars = this.__TypeHandle.__Game_Vehicles_PersonalCar_RW_ComponentLookup,
                 m_Citizens = this.__TypeHandle.__Game_Citizens_Citizen_RO_ComponentLookup,
+                m_BicycleOwners = InternalCompilerInterface.GetComponentLookup<BicycleOwner>(ref this.__TypeHandle.__Game_Citizens_BicycleOwner_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_ReserverQueue = this.m_CarReserveQueue
             }.Schedule<Time2WorkCitizenBehaviorSystem.CitizenReserveHouseholdCarJob>(JobHandle.CombineDependencies(jobHandle1, this.m_CarReserveWriters));
 
@@ -445,9 +451,17 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<HouseholdMember> m_HouseholdMembers;
             [ReadOnly]
+            public ComponentLookup<PropertyRenter> m_PropertyRenters;
+            [ReadOnly]
             public BufferLookup<OwnedVehicle> m_OwnedVehicles;
             [ReadOnly]
+            public BufferLookup<DistrictModifier> m_DistrictModifiers;
+            [ReadOnly]
+            public ComponentLookup<CurrentDistrict> m_CurrentDistricts;
+            [ReadOnly]
             public ComponentLookup<Citizen> m_Citizens;
+            [ReadOnly]
+            public ComponentLookup<BicycleOwner> m_BicycleOwners;
             public NativeQueue<Entity> m_ReserverQueue;
 
             public void Execute()
@@ -455,22 +469,37 @@ namespace Time2Work
                 Entity entity;
                 while (this.m_ReserverQueue.TryDequeue(out entity))
                 {
-                    if (this.m_HouseholdMembers.HasComponent(entity))
+                    Citizen componentData1;
+                    HouseholdMember componentData2;
+                    BicycleOwner component;
+                    Game.Vehicles.PersonalCar componentData3;
+
+                    if (this.m_Citizens.TryGetComponent(entity, out componentData1) && componentData1.GetAge() != CitizenAge.Child && !this.m_CarKeepers.IsComponentEnabled(entity) && this.m_HouseholdMembers.TryGetComponent(entity, out componentData2) && (!this.m_BicycleOwners.TryGetEnabledComponent<BicycleOwner>(entity, out component) || !this.m_PersonalCars.TryGetComponent(component.m_Bicycle, out componentData3) || (componentData3.m_State & PersonalCarFlags.HomeTarget) != (PersonalCarFlags)0))
                     {
-                        Entity household = this.m_HouseholdMembers[entity].m_Household;
-                        Entity car = Entity.Null;
+                        float num = 100f;
+                        PropertyRenter componentData4;
+                        CurrentDistrict componentData5;
+                        DynamicBuffer<DistrictModifier> bufferData;
 
-                        if (this.m_Citizens[entity].GetAge() != CitizenAge.Child && HouseholdBehaviorSystem.GetFreeCar(household, this.m_OwnedVehicles, this.m_PersonalCars, ref car) && !this.m_CarKeepers.IsComponentEnabled(entity))
+                        if (this.m_PropertyRenters.TryGetComponent(componentData2.m_Household, out componentData4) && this.m_CurrentDistricts.TryGetComponent(componentData4.m_Property, out componentData5) && this.m_DistrictModifiers.TryGetBuffer(componentData5.m_District, out bufferData))
+                            AreaUtils.ApplyModifier(ref num, bufferData, DistrictModifierType.CarReserveProbability);
+                        if ((double)componentData1.GetPseudoRandom(CitizenPseudoRandom.CarProbability).NextFloat(100f) <= (double)num)
                         {
-                            this.m_CarKeepers.SetComponentEnabled(entity, true);
-                            this.m_CarKeepers[entity] = new CarKeeper()
-                            {
-                                m_Car = car
-                            };
-                            Game.Vehicles.PersonalCar personalCar = this.m_PersonalCars[car];
-                            personalCar.m_Keeper = entity;
+                            Entity car = Entity.Null;
 
-                            this.m_PersonalCars[car] = personalCar;
+                            if (HouseholdBehaviorSystem.GetFreeCar(componentData2.m_Household, this.m_OwnedVehicles, this.m_PersonalCars, ref car))
+                            {
+                                this.m_CarKeepers.SetComponentEnabled(entity, true);
+                                this.m_CarKeepers[entity] = new CarKeeper()
+                                {
+                                    m_Car = car
+                                };
+                                Game.Vehicles.PersonalCar personalCar = this.m_PersonalCars[car] with
+                                {
+                                    m_Keeper = entity
+                                };
+                                this.m_PersonalCars[car] = personalCar;
+                            }
                         }
                     }
                 }
@@ -1462,7 +1491,12 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<HouseholdMember> __Game_Citizens_HouseholdMember_RO_ComponentLookup;
             [ReadOnly]
+            public BufferLookup<DistrictModifier> __Game_Areas_DistrictModifier_RO_BufferLookup;
+            [ReadOnly]
+            public ComponentLookup<CurrentDistrict> __Game_Areas_CurrentDistrict_RO_ComponentLookup;
+            [ReadOnly]
             public ComponentLookup<Citizen> __Game_Citizens_Citizen_RO_ComponentLookup;
+            public ComponentLookup<BicycleOwner> __Game_Citizens_BicycleOwner_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<CurrentBuilding> __Game_Citizens_CurrentBuilding_RO_ComponentLookup;
             [ReadOnly]
@@ -1524,7 +1558,10 @@ namespace Time2Work
                 this.__Game_Citizens_Criminal_RO_ComponentLookup = state.GetComponentLookup<Criminal>(true);
                 this.__Game_Citizens_CarKeeper_RW_ComponentLookup = state.GetComponentLookup<CarKeeper>();
                 this.__Game_Citizens_HouseholdMember_RO_ComponentLookup = state.GetComponentLookup<HouseholdMember>(true);
+                this.__Game_Areas_DistrictModifier_RO_BufferLookup = state.GetBufferLookup<DistrictModifier>(true);
+                this.__Game_Areas_CurrentDistrict_RO_ComponentLookup = state.GetComponentLookup<CurrentDistrict>(true);
                 this.__Game_Citizens_Citizen_RO_ComponentLookup = state.GetComponentLookup<Citizen>(true);
+                this.__Game_Citizens_BicycleOwner_RO_ComponentLookup = state.GetComponentLookup<BicycleOwner>(true);
                 this.__Game_Citizens_CurrentBuilding_RO_ComponentLookup = state.GetComponentLookup<CurrentBuilding>(true);
                 this.__Game_Prefabs_SpawnableBuildingData_RO_ComponentLookup = state.GetComponentLookup<SpawnableBuildingData>(true);
                 this.__Game_Prefabs_MailAccumulationData_RO_ComponentLookup = state.GetComponentLookup<MailAccumulationData>(true);

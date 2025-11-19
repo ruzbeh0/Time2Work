@@ -105,6 +105,12 @@ namespace Time2Work
             return (float)(this.GetTicks(data.m_FirstFrame, settings, data) % num) / (float)num;
         }
 
+        public int GetYear(TimeSettingsData settings, TimeData data, double renderingFrame)
+        {
+            int num = kTicksPerDay * settings.m_DaysPerYear;
+            return data.m_StartingYear + Mathf.FloorToInt((float)this.GetTimeWithOffset(settings, data, renderingFrame) / (float)num);
+        }
+
         public int GetYear(TimeSettingsData settings, TimeData data)
         {
             int num = kTicksPerDay * settings.m_DaysPerYear;

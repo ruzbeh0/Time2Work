@@ -53,6 +53,15 @@ namespace Time2Work
         protected override void OnUpdate()
         {
             base.OnUpdate();
+
+            // Bail out if the world/settings aren't fully initialized yet
+            if (m_SimulationSystem == null ||
+                m_TimeDataQuery.IsEmptyIgnoreFilter ||
+                Mod.m_Setting == null)
+            {
+                return;
+            }
+
             _weekUpdateThrottle.Update(World.Time.DeltaTime);
             TimeSettingsData timeSettingsData = this.GetTimeSettingsData();
             TimeData singleton = TimeData.GetSingleton(this.m_TimeDataQuery);
@@ -105,7 +114,13 @@ namespace Time2Work
 
         public int GetTicks()
         {
-            float num = 182.044449f * Mod.m_Setting.slow_time_factor;
+            float slowFactor = 1f;
+            if (Mod.m_Setting != null)
+            {
+                slowFactor = Mod.m_Setting.slow_time_factor;
+            }
+
+            float num = 182.044449f * slowFactor;
             return Mathf.FloorToInt(Mathf.Floor((float)(this.m_SimulationSystem.frameIndex - TimeData.GetSingleton(this.m_TimeDataQuery).m_FirstFrame) / num) * num);
         }
     }

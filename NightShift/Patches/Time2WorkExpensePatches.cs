@@ -3,6 +3,7 @@ using Game.Simulation;
 using HarmonyLib;
 using System.Linq;
 using System.Reflection;
+using Time2Work.Systems;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -32,4 +33,26 @@ namespace Time2Work.Patches
                 __result = (int)math.round(__result * factor);
         }
     }
+
+    //[HarmonyPatch(typeof(CityServiceBudgetSystem), nameof(CityServiceBudgetSystem.GetMoneyDelta))]
+    //public static class MoneyDeltaPatch
+    //{
+    //    // Postfix: replace the vanilla estimate with our rolling ledger-based value
+    //    public static void Postfix(CityServiceBudgetSystem __instance, ref int __result)
+    //    {
+    //        // Ensure our sampler system exists on the same world
+    //        var world = __instance.World;
+    //        LedgerTrendSystem.EnsureCreated(world);
+    //
+    //        var sampler = world.GetExistingSystemManaged<LedgerTrendSystem>();
+    //        if (sampler != null && sampler.TryGetDailyRateEstimate(out int dailyRate))
+    //        {
+    //            __result = dailyRate;
+    //        }
+    //        else
+    //        {
+    //            // Fallback: keep vanilla result
+    //        }
+    //    }
+    //}
 }

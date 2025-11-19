@@ -107,6 +107,8 @@ namespace Time2Work
                 m_EmergencyShelterData = InternalCompilerInterface.GetComponentLookup<Game.Buildings.EmergencyShelter>(ref this.__TypeHandle.__Game_Buildings_EmergencyShelter_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_Citizens = InternalCompilerInterface.GetComponentLookup<Citizen>(ref this.__TypeHandle.__Game_Citizens_Citizen_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_HealthProblems = InternalCompilerInterface.GetComponentLookup<HealthProblem>(ref this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_HouseholdMembers = InternalCompilerInterface.GetComponentLookup<HouseholdMember>(ref this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_MovingAways = InternalCompilerInterface.GetComponentLookup<MovingAway>(ref this.__TypeHandle.__Game_Agents_MovingAway_RO_ComponentLookup, ref this.CheckedStateRef),
                 CitizenScheduleLookup = InternalCompilerInterface.GetComponentLookup<CitizenSchedule>(ref this.__TypeHandle.CitizenScheduleLookup, ref this.CheckedStateRef),
                 m_Shopping = InternalCompilerInterface.GetComponentLookup<Shopper>(ref this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup, ref this.CheckedStateRef),
                 m_EconomyParameters = this.m_EconomyParameterGroup.GetSingleton<EconomyParameterData>(),
@@ -263,6 +265,9 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<HealthProblem> m_HealthProblems;
             [ReadOnly]
+            public ComponentLookup<HouseholdMember> m_HouseholdMembers;
+            [ReadOnly]
+            public ComponentLookup<MovingAway> m_MovingAways;
             public ComponentLookup<CitizenSchedule> CitizenScheduleLookup;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
             public NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive>.ParallelWriter m_ArriveQueue;
@@ -304,6 +309,12 @@ namespace Time2Work
             //public int avg_time_hospital;
             //public int avg_time_prison;
 
+            private bool IsSleepAllowed(Entity citizenEntity)
+            {
+                HouseholdMember componentData;
+                return this.m_HouseholdMembers.TryGetComponent(citizenEntity, out componentData) && !this.m_MovingAways.HasComponent(componentData.m_Household);
+            }
+
             public void Execute(
               in ArchetypeChunk chunk,
               int unfilteredChunkIndex,
@@ -343,7 +354,7 @@ namespace Time2Work
                             Citizen citizen = this.m_Citizens[entity];
 
                             float2 time2Sleep;
-                            if (!Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, time2Work, out time2Sleep, newyearseve, dow))
+                            if (!this.IsSleepAllowed(entity) || !Time2WorkCitizenBehaviorSystem.IsSleepTime(entity, citizen, ref this.m_EconomyParameters, this.m_NormalizedTime, ref this.m_Workers, ref this.m_Students, time2Work, out time2Sleep, newyearseve, dow))
                             {
 
                                 this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
@@ -978,12 +989,14 @@ namespace Time2Work
             public ComponentLookup<Citizen> __Game_Citizens_Citizen_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<HealthProblem> __Game_Citizens_HealthProblem_RO_ComponentLookup;
+            [ReadOnly]
+            public ComponentLookup<HouseholdMember> __Game_Citizens_HouseholdMember_RO_ComponentLookup;
+            [ReadOnly]
+            public ComponentLookup<MovingAway> __Game_Agents_MovingAway_RO_ComponentLookup;
             public ComponentLookup<CitizenPresence> __Game_Buildings_CitizenPresence_RW_ComponentLookup;
             public BufferLookup<Patient> __Game_Buildings_Patient_RW_BufferLookup;
             public BufferLookup<Occupant> __Game_Buildings_Occupant_RW_BufferLookup;
             public ComponentLookup<Household> __Game_Citizens_Household_RW_ComponentLookup;
-            [ReadOnly]
-            public ComponentLookup<HouseholdMember> __Game_Citizens_HouseholdMember_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<PropertyRenter> __Game_Buildings_PropertyRenter_RO_ComponentLookup;
             [ReadOnly]
@@ -993,8 +1006,6 @@ namespace Time2Work
             public ComponentTypeHandle<Citizen> __Game_Citizens_Citizen_RW_ComponentTypeHandle;
             [ReadOnly]
             public ComponentLookup<Household> __Game_Citizens_Household_RO_ComponentLookup;
-            [ReadOnly]
-            public ComponentLookup<MovingAway> __Game_Agents_MovingAway_RO_ComponentLookup;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void __AssignHandles(ref SystemState state)
@@ -1035,6 +1046,9 @@ namespace Time2Work
                 this.__Game_Citizens_Citizen_RO_ComponentLookup = state.GetComponentLookup<Citizen>(true);
                 
                 this.__Game_Citizens_HealthProblem_RO_ComponentLookup = state.GetComponentLookup<HealthProblem>(true);
+                this.__Game_Citizens_HouseholdMember_RO_ComponentLookup = state.GetComponentLookup<HouseholdMember>(true);
+
+                this.__Game_Agents_MovingAway_RO_ComponentLookup = state.GetComponentLookup<MovingAway>(true);
 
                 this.__Game_Buildings_CitizenPresence_RW_ComponentLookup = state.GetComponentLookup<CitizenPresence>();
                 
@@ -1043,9 +1057,7 @@ namespace Time2Work
                 this.__Game_Buildings_Occupant_RW_BufferLookup = state.GetBufferLookup<Occupant>();
                 
                 this.__Game_Citizens_Household_RW_ComponentLookup = state.GetComponentLookup<Household>();
-                
-                this.__Game_Citizens_HouseholdMember_RO_ComponentLookup = state.GetComponentLookup<HouseholdMember>(true);
-                
+
                 this.__Game_Buildings_PropertyRenter_RO_ComponentLookup = state.GetComponentLookup<PropertyRenter>(true);
                 
                 this.__Game_Citizens_HouseholdCitizen_RO_BufferLookup = state.GetBufferLookup<HouseholdCitizen>(true);
@@ -1055,8 +1067,6 @@ namespace Time2Work
                 this.__Game_Citizens_Citizen_RW_ComponentTypeHandle = state.GetComponentTypeHandle<Citizen>();
                 
                 this.__Game_Citizens_Household_RO_ComponentLookup = state.GetComponentLookup<Household>(true);
-                
-                this.__Game_Agents_MovingAway_RO_ComponentLookup = state.GetComponentLookup<MovingAway>(true);
             }
         }
     }

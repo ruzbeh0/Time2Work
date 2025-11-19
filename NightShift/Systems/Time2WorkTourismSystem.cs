@@ -44,9 +44,32 @@ namespace Time2Work.Systems
             return (float)attractiveness / 1000f;
         }
 
+        public static int GetTargetTourists(int attractiveness)
+        {
+            return attractiveness <= 100 ? attractiveness * 15 : 1500 + Mathf.RoundToInt(100f * Mathf.Log10(1f + (float)(attractiveness - 100)));
+        }
+
+        public static float GetSpawnProbability(int attractiveness, int currentTourists)
+        {
+            // ISSUE: reference to a compiler-generated method
+            int targetTourists = TourismSystem.GetTargetTourists(attractiveness);
+            int num1 = targetTourists * 110 / 100;
+            if (currentTourists >= targetTourists)
+            {
+                // ISSUE: reference to a compiler-generated method
+                return TourismSystem.GetRawTouristProbability(attractiveness);
+            }
+            float num2 = (float)currentTourists / (float)num1;
+            if ((double)num2 < 0.5)
+                return 1f;
+            float num3 = (float)(1.0 - ((double)num2 - 0.5) / 0.5);
+            return math.saturate(1.5f * num3 * num3);
+        }
+
         public static float GetTouristProbability(
           AttractivenessParameterData parameterData,
           int attractiveness,
+          int numberOfCurrentTourists,
           ClimateSystem.WeatherClassification weatherClassification,
           float temperature,
           float precipitation,
@@ -54,8 +77,8 @@ namespace Time2Work.Systems
           bool isSnowing,
           Setting.DTSimulationEnum dayType)
         {
-            float prob = Time2WorkTourismSystem.GetRawTouristProbability(attractiveness) * Time2WorkTourismSystem.GetWeatherEffect(parameterData, weatherClassification, temperature, precipitation, isRaining, isSnowing);
-            
+            float prob = Time2WorkTourismSystem.GetSpawnProbability(attractiveness, numberOfCurrentTourists) * Time2WorkTourismSystem.GetWeatherEffect(parameterData, weatherClassification, temperature, precipitation, isRaining, isSnowing);
+
             if(((int)dayType) == (int)Setting.DTSimulationEnum.Weekday)
             {
                 prob *= weekdayTourismFactor;
@@ -198,6 +221,8 @@ namespace Time2Work.Systems
             [ReadOnly]
             public int m_TouristCitizenCount;
             [ReadOnly]
+            public int m_Nu;
+            [ReadOnly]
             public ClimateSystem.WeatherClassification m_WeatherClassification;
 
             public Setting.DTSimulationEnum m_daytype;
@@ -235,7 +260,8 @@ namespace Time2Work.Systems
                 DynamicBuffer<CityModifier> cityModifier = this.m_CityModifiers[this.m_City];
                 CityUtils.ApplyModifier(ref f, cityModifier, CityModifierType.Attractiveness);
                 tourism.m_Attractiveness = Mathf.RoundToInt(f);
-                tourism.m_AverageTourists = Mathf.RoundToInt((float)(2.0 * (double)Time2WorkTourismSystem.GetTouristProbability(this.m_Parameters, tourism.m_Attractiveness, this.m_WeatherClassification, this.m_Temperature, this.m_Precipitation, this.m_IsRaining, this.m_IsSnowing, this.m_daytype) * 100000.0 / 16.0));
+                tourism.m_AverageTourists = Mathf.RoundToInt((float)(2.0 * (double)Time2WorkTourismSystem.GetTouristProbability(this.m_Parameters, tourism.m_Attractiveness, tourism.m_CurrentTourists, this.m_WeatherClassification, this.m_Temperature, this.m_Precipitation, this.m_IsRaining, this.m_IsSnowing, this.m_daytype) * 100000.0 / 16.0));
+
                 this.m_Tourisms[this.m_City] = tourism;
             }
         }
