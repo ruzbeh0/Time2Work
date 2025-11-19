@@ -73,6 +73,7 @@ namespace Time2Work
             m_Setting.RegisterInOptionsUI();
             GameManager.instance.localizationManager.AddSource("en-US", new LocaleEN(m_Setting));
             GameManager.instance.localizationManager.AddSource("pt-BR", new LocalePT(m_Setting));
+            GameManager.instance.localizationManager.AddSource("tr-TR", new LocaleTR(m_Setting));
 
             AssetDatabase.global.LoadSettings(nameof(Time2Work), m_Setting, new Setting(this));
             //AssetDatabase.global.LoadSettings("data_" + nameof(Time2Work), m_ModData, new ModData(this));
