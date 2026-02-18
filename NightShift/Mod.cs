@@ -29,7 +29,6 @@ namespace Time2Work
         public static ILog log = LogManager.GetLogger($"RealisticTrips").SetShowsErrorsInUI(false);
         public static Setting m_Setting;
         public static int numCurrentEvents = 999;
-        public static string version = "1.8.4";
         public static string modPath;
         public static Mod Instance { get; private set; }
         internal ILog Log { get; private set; }
@@ -41,8 +40,6 @@ namespace Time2Work
 
         public void OnLoad(UpdateSystem updateSystem)
         {
-            log.Info($"Realistic Trips - Version:{version}");
-
             if(!Directory.Exists(SettingsFolder))
             {
                 Directory.CreateDirectory(SettingsFolder);
@@ -87,6 +84,8 @@ namespace Time2Work
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TourismSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.TouristSpawnSystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.AttractionSystem>().Enabled = false;
+            //World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.ResourceBuyerSystem>().Enabled = false;
+            World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.BuyingCompanySystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.UI.InGame.TimeUISystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.UI.InGame.StatisticsUISystem>().Enabled = false;
 
@@ -112,7 +111,8 @@ namespace Time2Work
             updateSystem.UpdateAt<CitizenScheduleSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAfter<SpecialEventSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<SpecialEventChirpSystem>(SystemUpdatePhase.GameSimulation);
-            //updateSystem.UpdateAt<LedgerTrendSystem>(SystemUpdatePhase.GameSimulation);
+            //updateSystem.UpdateAt<Time2Work.Systems.Time2WorkResourceBuyerSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAt<Time2Work.Systems.Time2WorkBuyingCompanySystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<SpecialEventsUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkTimeUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<Time2WorkUISystem>(SystemUpdatePhase.UIUpdate);

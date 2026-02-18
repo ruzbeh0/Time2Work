@@ -30,18 +30,6 @@ namespace Time2Work.Patches
     [HarmonyPatch]
     public class Time2WorkPatches
     {
-        [HarmonyPatch(typeof(CityServiceBudgetSystem), "GetTotalExpenses", new Type[] { typeof(NativeArray<int>) })]
-        [HarmonyPostfix]
-        public static void CityServiceBudgetSystemPatches_GetTotalExpenses_Postfix(NativeArray<int> expenses, ref int __result)
-        {
-            DateTime currentDateTime = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
-            int hour = currentDateTime.Hour;
-            if (hour >= 23 || hour <= 6)
-            {
-                float r = (float)__result;
-                __result = (int)(r * ((float)(100 - Mod.m_Setting.service_expenses_night_reduction) / 100f));
-            }
-        }
 
         [HarmonyPatch(typeof(TimeSystem), "OnUpdate")]
         [HarmonyPostfix]
@@ -200,6 +188,84 @@ namespace Time2Work.Patches
             };
         
             return false;
+        }
+
+        [HarmonyPatch(typeof(CityServiceUpkeepSystem),
+                  nameof(CityServiceUpkeepSystem.CalculateUpkeep))]
+        public static class CityServiceUpkeepSystem_CalculateUpkeep_NightDiscount
+        {
+            [HarmonyPostfix]
+            public static void Postfix(ref int __result)
+            {
+                // No setting or 0% reduction → do nothing
+                int pct = math.clamp(Mod.m_Setting.service_expenses_night_reduction, 0, 100);
+                if (pct <= 0)
+                    return;
+
+                // Only at night (23–06)
+                var world = World.DefaultGameObjectInjectionWorld;
+                if (world == null)
+                    return;
+
+                var timeSys = world.GetExistingSystemManaged<Time2WorkTimeSystem>();
+                if (timeSys == null)
+                    return;
+
+                int hour = timeSys.GetCurrentDateTime().Hour;
+                if (!(hour >= 23 || hour <= 6))
+                    return;
+
+                float factor = (100f - pct) / 100f;
+                if (factor >= 0.9999f)
+                    return;
+
+                __result = (int)math.round(__result * factor);
+            }
+        }
+
+        [HarmonyPatch(typeof(CityServiceBudgetSystem), "OnUpdate")]
+        public static class CityServiceBudgetSystem_OnUpdate_NightDiscount
+        {
+            private static readonly FieldInfo s_ExpensesField =
+                AccessTools.Field(typeof(CityServiceBudgetSystem), "m_Expenses");
+            private static readonly FieldInfo s_ExpensesTempField =
+                AccessTools.Field(typeof(CityServiceBudgetSystem), "m_ExpensesTemp");
+
+            [HarmonyPostfix]
+            public static void Postfix(CityServiceBudgetSystem __instance)
+            {
+                int pct = math.clamp(Mod.m_Setting.service_expenses_night_reduction, 0, 100);
+                if (pct <= 0)
+                    return;
+
+                var world = World.DefaultGameObjectInjectionWorld;
+                if (world == null)
+                    return;
+
+                var timeSys = world.GetExistingSystemManaged<Time2WorkTimeSystem>();
+                if (timeSys == null)
+                    return;
+
+                int hour = timeSys.GetCurrentDateTime().Hour;
+                if (!(hour >= 23 || hour <= 6))
+                    return;
+
+                float factor = (100f - pct) / 100f;
+                if (factor >= 0.9999f)
+                    return;
+
+                // Grab the arrays via reflection
+                var expenses = (NativeArray<int>)s_ExpensesField.GetValue(__instance);
+                var expensesTemp = (NativeArray<int>)s_ExpensesTempField.GetValue(__instance);
+
+                int idx = (int)ExpenseSource.ServiceUpkeep; // uses the enum from Game.Economy
+
+                if (idx >= 0 && idx < expenses.Length)
+                    expenses[idx] = (int)math.round(expenses[idx] * factor);
+
+                if (idx >= 0 && idx < expensesTemp.Length)
+                    expensesTemp[idx] = (int)math.round(expensesTemp[idx] * factor);
+            }
         }
     }
 }

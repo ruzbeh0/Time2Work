@@ -8,6 +8,7 @@ using Game.Common;
 using Game.Prefabs;
 using Game.Simulation;
 using Game.Tools;
+using Game.Citizens;
 using System;
 using System.Collections.Generic;
 using Time2Work.Bridge; // CustomChirpsBridge, DepartmentAccountBridge
@@ -32,6 +33,7 @@ namespace Time2Work.Systems
     {
         private EntityQuery _eventsQ;
         private EntityQuery _timeDataQ;
+        private EntityQuery _citizensQ;
 
         private Time2WorkTimeSystem _time;
         private SimulationSystem _sim;
@@ -53,6 +55,7 @@ namespace Time2Work.Systems
             public int lastAnnounceDay;
             public byte startSoonSent;
             public byte endSoonSent;
+            public byte endReportSent;
         }
 
         public override int GetUpdateInterval(SystemUpdatePhase phase) => 16;
@@ -76,6 +79,17 @@ namespace Time2Work.Systems
             });
 
             _timeDataQ = GetEntityQuery(ComponentType.ReadOnly<TimeData>());
+
+            _citizensQ = GetEntityQuery(new EntityQueryDesc
+            {
+                All = new[]
+            {
+                ComponentType.ReadOnly<Citizen>(),
+                ComponentType.ReadOnly<CurrentBuilding>()
+            },
+                None = new[] { ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>() }
+            });
+
 
             RequireForUpdate(_eventsQ);
             RequireForUpdate(_timeDataQ);
@@ -180,6 +194,21 @@ namespace Time2Work.Systems
             }
         }
 
+        private int CountCitizensInBuilding(Entity buildingEntity)
+        {
+            int count = 0;
+
+            using var currentBuildings = _citizensQ.ToComponentDataArray<CurrentBuilding>(Allocator.Temp);
+            for (int i = 0; i < currentBuildings.Length; i++)
+            {
+                if (currentBuildings[i].m_CurrentBuilding == buildingEntity)
+                    count++;
+            }
+
+            return count;
+        }
+
+
         // ---- Imminent warnings ----
 
         private void TryPostImminentWarnings(int todaySimDay)
@@ -240,6 +269,7 @@ namespace Time2Work.Systems
                     st.lastAnnounceDay = todaySimDay;
                     st.startSoonSent = 0;
                     st.endSoonSent = 0;
+                    st.endReportSent = 0;
                 }
 
                 float tStart = math.frac(sed.start_time);
@@ -249,6 +279,26 @@ namespace Time2Work.Systems
 
                 string startSoon = T2WStrings.T("t2w.chirp.special_event.starting");
                 string endSoon = T2WStrings.T("t2w.chirp.special_event.ending");
+
+                // NEW: Attendance report at the actual end time
+                if (st.endReportSent == 0 && Crossed(tPrev, tNow, tEnd))
+                {
+                    int attendees = CountCitizensInBuilding(ent);
+
+                    // You already have "location" above in this method
+                    string msg = T2WStrings.T("t2w.chirp.special_event.attendees",
+                          ("attendees", $"{attendees}"));
+                    
+                    CustomChirpsBridge.PostChirp(
+                        text: msg,
+                        department: DepartmentAccountBridge.Transportation,
+                        entity: ent,
+                        customSenderName: T2WStrings.T("t2w.chirp.mod_name")
+                    );
+
+                    st.endReportSent = 1;
+                }
+
 
                 if (st.startSoonSent == 0 && Crossed(tPrev, tNow, tStartWarn))
                 {

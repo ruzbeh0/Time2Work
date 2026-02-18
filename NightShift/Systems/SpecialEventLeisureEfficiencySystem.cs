@@ -67,8 +67,8 @@ namespace Time2Work.Systems
                 seenPrefabs.Add(prefab);
 
                 // Active window check (wrap-safe): start..end, where time is 0..1
-                float start = sed.start_time - 1.5f/24f;
-                float end = sed.start_time + sed.duration*0.6f;
+                float start = sed.start_time - 2f/24f;
+                float end = sed.start_time + sed.duration*0.5f;
                 bool active = (start <= end)
                               ? (now >= start && now <= end)
                               : (now >= start || now <= math.frac(end));

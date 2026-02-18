@@ -583,6 +583,7 @@ namespace Time2Work
                         if(m_TimeOfDay >= specialEventdata.start_time && m_TimeOfDay <= (specialEventdata.start_time + specialEventdata.duration))
                         {
                             leisureCounterCondition = false;
+                            //Mod.log.Info($"Special event active: index:{entity.Index}, hour:{(int)Math.Round(this.m_TimeOfDay*24)}, timeOfDay: {this.m_TimeOfDay}, event start: {specialEventdata.start_time}, event end: {specialEventdata.start_time + specialEventdata.duration}");
                         }
                     }
                 }

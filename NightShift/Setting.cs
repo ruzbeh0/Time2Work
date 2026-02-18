@@ -155,7 +155,7 @@ namespace Time2Work
         float[] travel_saturday_ = new float[] { 0.05f, 0.05f, 0.045f, 0.055f, 0.06f, 0.06f, 0.06f, 0.045f, 0.045f, 0.065f, 0.06f, 0.05f };
         float[] travel_sunday_ = new float[] { 0.05f, 0.05f, 0.045f, 0.055f, 0.06f, 0.06f, 0.06f, 0.045f, 0.045f, 0.065f, 0.06f, 0.05f };
 
-        int[] traffic_reduction_ = new int[] { 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        int[] traffic_reduction_ = new int[] { 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
         public Setting(IMod mod) : base(mod)
         {
@@ -260,7 +260,7 @@ namespace Time2Work
             travel_saturday = travel_saturday_[index];
             travel_sunday = travel_sunday_[index];
             trafficReduction = traffic_reduction_[index];
-            resourceConsumption = 8;
+            resourceConsumption = 20;
         }
 
         public override void Apply()
@@ -1208,6 +1208,7 @@ namespace Time2Work
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Saturday), "Sat" },
 
                 { "t2w.chirp.special_event.today",   "Special event today from {start} to {end} at" },
+                { "t2w.chirp.special_event.attendees",   "{attendees} citizens attended the special event at" },
                 { "t2w.chirp.special_event.starting","Special event starting soon at" },
                 { "t2w.chirp.special_event.ending",  "Special event ending soon at" },
                 { "t2w.chirp.holiday.new_year",      "Happy New Year!" },
@@ -1589,6 +1590,7 @@ namespace Time2Work
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Saturday), "Sab" },
 
                 { "t2w.chirp.special_event.today",   "Evento especial hoje das {start} às {end} em" },
+                { "t2w.chirp.special_event.attendees",   "{attendees} cidadões compareceram ao evento especial em" },
                 { "t2w.chirp.special_event.starting","Evento especial começando em breve em" },
                 { "t2w.chirp.special_event.ending",  "Evento especial terminando em breve em" },
                 { "t2w.chirp.holiday.new_year",      "Feliz Ano Novo!" },

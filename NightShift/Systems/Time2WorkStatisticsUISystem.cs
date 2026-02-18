@@ -77,9 +77,10 @@ namespace Time2Work.Systems
             this.m_PrefabSystem = this.World.GetOrCreateSystemManaged<PrefabSystem>();
             this.m_ResourceSystem = this.World.GetOrCreateSystemManaged<ResourceSystem>();
             this.m_CityStatisticsSystem = (ICityStatisticsSystem)this.World.GetOrCreateSystemManaged<CityStatisticsSystem>();
-            this.m_CityStatisticsSystem.eventStatisticsUpdated += (System.Action)(() => this.m_DataBinding.Update());
             this.m_CityConfigurationSystem = this.World.GetOrCreateSystemManaged<CityConfigurationSystem>();
             this.m_TimeUISystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeUISystem>();
+            this.m_GameModeGovernmentSubsidiesSystem = this.World.GetOrCreateSystemManaged<GameModeGovernmentSubsidiesSystem>();
+
             this.AddBinding((IBinding)(this.m_GroupsMapBinding = new RawMapBinding<Entity>("statistics", "groups", (Action<IJsonWriter, Entity>)((binder, parent) =>
             {
                 this.CacheChildren(parent, this.m_GroupCache);
@@ -95,26 +96,12 @@ namespace Time2Work.Systems
             this.AddBinding((IBinding)(this.m_ActiveGroupBinding = new GetterValueBinding<Entity>("statistics", "activeGroup", (Func<Entity>)(() => this.m_ActiveGroup))));
             this.AddBinding((IBinding)(this.m_ActiveCategoryBinding = new GetterValueBinding<Entity>("statistics", "activeCategory", (Func<Entity>)(() => this.m_ActiveCategory))));
             this.AddBinding((IBinding)(this.m_StackedBinding = new GetterValueBinding<bool>("statistics", "stacked", (Func<bool>)(() => this.m_Stacked))));
-            this.AddBinding((IBinding)(this.m_CategoriesBinding = new RawValueBinding("statistics", "categories", (Action<IJsonWriter>)(binder =>
-            {
-                NativeList<Time2WorkStatisticsUISystem.StatCategory> sortedCategories = this.GetSortedCategories();
-                binder.ArrayBegin(sortedCategories.Length);
-                for (int index = 0; index < sortedCategories.Length; ++index)
-                {
-                    Time2WorkStatisticsUISystem.StatCategory statCategory = sortedCategories[index];
-                    PrefabBase prefab = this.m_PrefabSystem.GetPrefab<PrefabBase>(statCategory.m_PrefabData);
-                    bool flag = this.EntityManager.HasEnabledComponent<Locked>(statCategory.m_Entity);
-                    binder.TypeBegin("statistics.StatCategory");
-                    binder.PropertyName("entity");
-                    binder.Write(statCategory.m_Entity);
-                    binder.PropertyName("key");
-                    binder.Write(prefab.name);
-                    binder.PropertyName("locked");
-                    binder.Write(flag);
-                    binder.TypeEnd();
-                }
-                binder.ArrayEnd();
-            }))));
+            this.m_CategoriesBinding = new RawValueBinding(
+                "statistics",
+                "categories",
+            binder => BindCategories(binder)
+);
+            this.AddBinding((IBinding)this.m_CategoriesBinding);
 
             this.AddBinding((IBinding)(this.m_DataBinding = new RawValueBinding("statistics", "data", (Action<IJsonWriter>)(binder =>
             {
@@ -321,6 +308,8 @@ namespace Time2Work.Systems
                 this.m_SampleRangeBinding.Update(this.m_SampleRange);
                 this.UpdateStats();
             })));
+            this.m_CityStatisticsSystem.eventStatisticsUpdated += OnStatisticsUpdated;
+
         }
 
         private void BindUnlockingRequirements(IJsonWriter writer, Entity prefabEntity)
@@ -353,7 +342,7 @@ namespace Time2Work.Systems
         [Preserve]
         protected override void OnDestroy()
         {
-            this.m_CityStatisticsSystem.eventStatisticsUpdated -= (System.Action)(() => this.m_DataBinding.Update());
+            this.m_CityStatisticsSystem.eventStatisticsUpdated -= OnStatisticsUpdated;
             base.OnDestroy();
         }
 
@@ -372,24 +361,31 @@ namespace Time2Work.Systems
 
         private void BindCategories(IJsonWriter binder)
         {
-            NativeList<Time2WorkStatisticsUISystem.StatCategory> sortedCategories = this.GetSortedCategories();
-            binder.ArrayBegin(sortedCategories.Length);
-            for (int index = 0; index < sortedCategories.Length; ++index)
+            var sortedCategories = GetSortedCategories();
+            try
             {
-                Time2WorkStatisticsUISystem.StatCategory statCategory = sortedCategories[index];
-                PrefabBase prefab = this.m_PrefabSystem.GetPrefab<PrefabBase>(statCategory.m_PrefabData);
-                bool flag = this.EntityManager.HasEnabledComponent<Locked>(statCategory.m_Entity);
-                binder.TypeBegin("statistics.StatCategory");
-                binder.PropertyName("entity");
-                binder.Write(statCategory.m_Entity);
-                binder.PropertyName("key");
-                binder.Write(prefab.name);
-                binder.PropertyName("locked");
-                binder.Write(flag);
-                binder.TypeEnd();
+                binder.ArrayBegin(sortedCategories.Length);
+                for (int index = 0; index < sortedCategories.Length; ++index)
+                {
+                    Time2WorkStatisticsUISystem.StatCategory statCategory = sortedCategories[index];
+                    PrefabBase prefab = this.m_PrefabSystem.GetPrefab<PrefabBase>(statCategory.m_PrefabData);
+                    bool flag = this.EntityManager.HasEnabledComponent<Locked>(statCategory.m_Entity);
+                    binder.TypeBegin("statistics.StatCategory");
+                    binder.PropertyName("entity");
+                    binder.Write(statCategory.m_Entity);
+                    binder.PropertyName("key");
+                    binder.Write(prefab.name);
+                    binder.PropertyName("locked");
+                    binder.Write(flag);
+                    binder.TypeEnd();
+                }
+                binder.ArrayEnd();
             }
-            binder.ArrayEnd();
-        }
+            finally
+            {
+                sortedCategories.Dispose();
+            }
+}
 
         private NativeList<Time2WorkStatisticsUISystem.StatCategory> GetSortedCategories()
         {
@@ -529,11 +525,18 @@ namespace Time2Work.Systems
             binder.PropertyName("label");
             binder.Write(stat.key);
             binder.PropertyName("data");
-            NativeList<Time2WorkStatisticsUISystem.DataPoint> statisticData = this.GetStatisticData(stat);
-            binder.ArrayBegin(statisticData.Length);
-            for (int index = 0; index < statisticData.Length; ++index)
-                binder.Write<Time2WorkStatisticsUISystem.DataPoint>(statisticData[index]);
-            binder.ArrayEnd();
+            var statisticData = GetStatisticData(stat);
+            try
+            {
+                binder.ArrayBegin(statisticData.Length);
+                for (int index = 0; index < statisticData.Length; ++index)
+                    binder.Write<Time2WorkStatisticsUISystem.DataPoint>(statisticData[index]);
+                binder.ArrayEnd();
+                }
+            finally
+            {
+                statisticData.Dispose();
+            }
             binder.PropertyName("borderColor");
             binder.Write(stat.color.ToHexCode());
             binder.PropertyName("backgroundColor");
@@ -558,7 +561,7 @@ namespace Time2Work.Systems
             int num1 = (int)(math.min(this.m_SampleRange + 1, sampleCount) * Mod.m_Setting.slow_time_factor);
             if (sampleCount <= 1)
             {
-                NativeList<Time2WorkStatisticsUISystem.DataPoint> tempDataPoints = new NativeList<Time2WorkStatisticsUISystem.DataPoint>(1, (AllocatorManager.AllocatorHandle)Allocator.Temp);
+                var tempDataPoints = new NativeList<DataPoint>(1, Allocator.TempJob);
                 tempDataPoints.Add(new Time2WorkStatisticsUISystem.DataPoint()
                 {
                     x = (long)singleton.m_FirstFrame,
@@ -566,8 +569,10 @@ namespace Time2Work.Systems
                 });
                 return tempDataPoints;
             }
-            NativeArray<long> nativeArray1 = CollectionHelper.CreateNativeArray<long>(num1, (AllocatorManager.AllocatorHandle)Allocator.Temp);
-            StatisticParameterData[] statisticParameterDataArray1;
+            var nativeArray1 = CollectionHelper.CreateNativeArray<long>(num1, Allocator.TempJob);
+            try
+            {
+                StatisticParameterData[] statisticParameterDataArray1;
             if (!(prefab is ParametricStatistic parametricStatistic))
                 statisticParameterDataArray1 = new StatisticParameterData[1]
                 {
@@ -582,63 +587,104 @@ namespace Time2Work.Systems
                 for (int index1 = 0; index1 < statisticParameterDataArray2.Length; ++index1)
                 {
                     int parameter = statisticParameterDataArray2[index1].m_Value;
+                    var src = this.m_CityStatisticsSystem
+                        .GetStatisticDataArrayLong((StatisticType)stat.statisticType, parameter);
 
-                    NativeArray<long> nativeArray2 = this.EnsureDataSize(this.m_CityStatisticsSystem.GetStatisticDataArrayLong((StatisticType)stat.statisticType, parameter));
-                    for (int index2 = 0; index2 < num1; ++index2)
+                    var nativeArray2 = this.EnsureDataSize(src, Allocator.TempJob);
+                    try
                     {
-                        long num2 = nativeArray2[nativeArray2.Length - num1 + index2];
-                        if (stat.statisticType == 4 && prefab is ResourceStatistic resourceStatistic)
+                        for (int index2 = 0; index2 < num1; ++index2)
                         {
-                            Resource resource = EconomyUtils.GetResource(resourceStatistic.m_Resources[index1].m_Resource);
-                            ResourceData componentData = this.EntityManager.GetComponentData<ResourceData>(prefabs[resource]);
-                            num2 *= (long)(int)EconomyUtils.GetMarketPrice(componentData);
+                            long num2 = nativeArray2[nativeArray2.Length - num1 + index2];
+                            if (stat.statisticType == 4 && prefab is ResourceStatistic resourceStatistic)
+                            {
+                                Resource resource = EconomyUtils.GetResource(resourceStatistic.m_Resources[index1].m_Resource);
+                                ResourceData componentData = this.EntityManager.GetComponentData<ResourceData>(prefabs[resource]);
+                                num2 *= (long)(int)EconomyUtils.GetMarketPrice(componentData);
+                            }
+                            nativeArray1[index2] += num2;
                         }
-                        nativeArray1[index2] += num2;
+
+                    }
+                    finally
+                    {
+                        nativeArray2.Dispose();
                     }
                 }
             }
             else
             {
-                int parameter = statisticParameterDataArray2[stat.parameterIndex].m_Value;
-                NativeArray<long> statisticDataArrayLong = this.m_CityStatisticsSystem.GetStatisticDataArrayLong((StatisticType)stat.statisticType, parameter);
-                NativeArray<long> nativeArray3 = CollectionHelper.CreateNativeArray<long>(0, (AllocatorManager.AllocatorHandle)Allocator.Temp);
-                if (stat.statisticType == 16 || stat.statisticType == 15)
-                {
-                    nativeArray3 = this.EnsureDataSize(this.m_CityStatisticsSystem.GetStatisticDataArrayLong(StatisticType.Population));
-                }
-                NativeArray<long> nativeArray4 = this.EnsureDataSize(statisticDataArrayLong);
-                for (int index = 0; index < num1; ++index)
-                {
-                    long num3 = nativeArray4[nativeArray4.Length - num1 + index];
-                    if (stat.statisticType == 4 && prefab is ResourceStatistic resourceStatistic)
+                    int parameter = statisticParameterDataArray2[stat.parameterIndex].m_Value;
+                    NativeArray<long> statArray =
+                        this.m_CityStatisticsSystem.GetStatisticDataArrayLong(
+                            (StatisticType)stat.statisticType, parameter);
+
+                    NativeArray<long> nativeArray3 = default;
+                    NativeArray<long> nativeArray4 = default;
+
+                    try
                     {
-                        Resource resource = EconomyUtils.GetResource(resourceStatistic.m_Resources[stat.parameterIndex].m_Resource);
-                        ResourceData componentData = this.EntityManager.GetComponentData<ResourceData>(prefabs[resource]);
-                        num3 *= (long)(int)EconomyUtils.GetMarketPrice(componentData);
+                        if (stat.statisticType == 16 || stat.statisticType == 15)
+                        {
+                            var popArray = this.m_CityStatisticsSystem
+                                .GetStatisticDataArrayLong(StatisticType.Population);
+                            nativeArray3 = this.EnsureDataSize(popArray, Allocator.TempJob);
+                        }
+
+                        nativeArray4 = this.EnsureDataSize(statArray, Allocator.TempJob);
+
+                        for (int index = 0; index < num1; ++index)
+                        {
+                            long num3 = nativeArray4[nativeArray4.Length - num1 + index];
+                            if (stat.statisticType == 4 && prefab is ResourceStatistic resourceStatistic)
+                            {
+                                Resource resource = EconomyUtils.GetResource(resourceStatistic.m_Resources[stat.parameterIndex].m_Resource);
+                                ResourceData componentData = this.EntityManager.GetComponentData<ResourceData>(prefabs[resource]);
+                                num3 *= (long)(int)EconomyUtils.GetMarketPrice(componentData);
+                            }
+                            if (nativeArray3.Length > 0 && (stat.statisticType == 16 || stat.statisticType == 15))
+                            {
+                                long num4 = nativeArray3[nativeArray3.Length - num1 + index];
+                                if (num4 > 0L)
+                                    num3 /= num4;
+                            }
+                            nativeArray1[index] += num3;
+                        }
                     }
-                    if (nativeArray3.Length > 0 && (stat.statisticType == 16 || stat.statisticType == 15))
+                    finally
                     {
-                        long num4 = nativeArray3[nativeArray3.Length - num1 + index];
-                        if (num4 > 0L)
-                            num3 /= num4;
+                        if (nativeArray3.IsCreated) nativeArray3.Dispose();
+                        if (nativeArray4.IsCreated) nativeArray4.Dispose();
                     }
-                    nativeArray1[index] += num3;
                 }
-            }
             //Mod.log.Info($"Original Samples:{sampleCount}, range:{num1}");
             return this.GetDataPoints(num1, sampleCount, nativeArray1, singleton);
+            }
+            finally
+            {
+                nativeArray1.Dispose();
+            }
         }
 
-        private NativeArray<long> EnsureDataSize(NativeArray<long> data)
+        private NativeArray<long> EnsureDataSize(NativeArray<long> data, Allocator allocator)
         {
-            if (data.Length >= this.m_CityStatisticsSystem.sampleCount)
-                return data;
-            NativeArray<long> nativeArray = CollectionHelper.CreateNativeArray<long>(this.m_CityStatisticsSystem.sampleCount, (AllocatorManager.AllocatorHandle)Allocator.Temp);
-            int num = 0;
-            for (int index = 0; index < nativeArray.Length; ++index)
-                nativeArray[index] = index >= nativeArray.Length - data.Length ? data[num++] : 0L;
-            return nativeArray;
+            int sampleCount = this.m_CityStatisticsSystem.sampleCount;
+            var result = CollectionHelper.CreateNativeArray<long>(sampleCount, allocator);
+
+            int srcStart = math.max(0, sampleCount - data.Length);
+            int dstIndex = 0;
+
+            for (int i = 0; i < sampleCount; ++i)
+            {
+                if (i < srcStart)
+                    result[i] = 0;
+                else
+                    result[i] = data[dstIndex++];
+            }
+
+            return result;
         }
+
 
         private NativeList<Time2WorkStatisticsUISystem.DataPoint> GetDataPoints(
           int range,
