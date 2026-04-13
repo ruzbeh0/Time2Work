@@ -1,0 +1,13 @@
+div[class*=" editor-item_"],
+div[class^="editor-item_"] {
+
+    div[class*=" row_"],
+    div[class^="row_"] {
+
+        div[class*=" label_"],
+        div[class^="label_"] {
+            coh-font-fit-mode: shrink;
+            coh-font-fit-min-size: 5rem;
+        }
+    }
+}

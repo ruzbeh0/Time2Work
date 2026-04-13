@@ -9,7 +9,7 @@ namespace Time2Work.Systems
 {
     public partial class TimeSettingsMultiplierSystem : GameSystemBase
     {
-        private Dictionary<Entity, TimeSettingsData> _timeSettingsData = new Dictionary<Entity, TimeSettingsData>();
+        private readonly Dictionary<Entity, TimeSettingsData> _baseTimeSettingsData = new();
 
         private EntityQuery _query;
 
@@ -19,7 +19,8 @@ namespace Time2Work.Systems
 
             _query = GetEntityQuery(new EntityQueryDesc()
             {
-                All = new[] {
+                All = new[]
+                {
                     ComponentType.ReadWrite<TimeSettingsData>()
                 }
             });
@@ -29,33 +30,33 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
-            // Settings may not be initialized yet (e.g. in main menu / early load). 
-            // In that case, skip updating demand parameters.
             if (Mod.m_Setting == null)
             {
                 return;
             }
 
-            var prefabs = _query.ToEntityArray(Allocator.Temp);
+            using var prefabs = _query.ToEntityArray(Allocator.Temp);
 
             foreach (var tsd in prefabs)
             {
-                TimeSettingsData data;
-
-                if (!_timeSettingsData.TryGetValue(tsd, out data))
+                // Cache the original/base game value once
+                if (!_baseTimeSettingsData.TryGetValue(tsd, out var baseData))
                 {
-                    data = EntityManager.GetComponentData<TimeSettingsData>(tsd);
-                    _timeSettingsData.Add(tsd, data);
+                    baseData = EntityManager.GetComponentData<TimeSettingsData>(tsd);
+                    _baseTimeSettingsData[tsd] = baseData;
                 }
 
-                float factor = Mod.m_Setting.daysPerMonth;
+                var updatedData = baseData;
+                int factor = Math.Max(Mod.m_Setting.daysPerMonth, 1);
 
-                Mod.log.Info($"Days Per Year Factor: {factor}");
+                updatedData.m_DaysPerYear = Math.Max(baseData.m_DaysPerYear * factor, 1);
 
-                data.m_DaysPerYear = Math.Max((int)(Math.Floor(factor * data.m_DaysPerYear)), 1);
-                EntityManager.SetComponentData<TimeSettingsData>(tsd, data);
+                Mod.log.Info($"DaysPerMonth={factor}, baseDaysPerYear={baseData.m_DaysPerYear}, newDaysPerYear={updatedData.m_DaysPerYear}");
+
+                EntityManager.SetComponentData(tsd, updatedData);
             }
 
+            // Run once, then wait until Apply() re-enables us
             Enabled = false;
         }
     }

@@ -240,7 +240,8 @@ namespace Time2Work.Systems
             }
             finally
             {
-
+                if (entities.IsCreated)
+                    entities.Dispose();
             }
             
         }

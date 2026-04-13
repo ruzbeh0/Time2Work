@@ -25,10 +25,8 @@ namespace Time2Work
 
         public string BindGroupName => nameof(Time2Work);
 
-
         private void Refresh()
         {
-            
         }
 
         protected override void OnCreate()
@@ -41,6 +39,7 @@ namespace Time2Work
             AddBinding(_weekDay = new ValueBinding<string>(BindGroupName, "dayOfWeek", dateOutput));
             _weekUpdateThrottle = Throttle.BySeconds(1, () => { _weekDay.Update(dateOutput); });
         }
+
         private TimeSettingsData GetTimeSettingsData()
         {
             if (!this.m_TimeSettingsQuery.IsEmptyIgnoreFilter)
@@ -54,7 +53,6 @@ namespace Time2Work
         {
             base.OnUpdate();
 
-            // Bail out if the world/settings aren't fully initialized yet
             if (m_SimulationSystem == null ||
                 m_TimeDataQuery.IsEmptyIgnoreFilter ||
                 Mod.m_Setting == null)
@@ -63,51 +61,71 @@ namespace Time2Work
             }
 
             _weekUpdateThrottle.Update(World.Time.DeltaTime);
+
             TimeSettingsData timeSettingsData = this.GetTimeSettingsData();
             TimeData singleton = TimeData.GetSingleton(this.m_TimeDataQuery);
+
             int ticksPerDay = Time2WorkTimeSystem.kTicksPerDay;
             int daysPerYear = timeSettingsData.m_DaysPerYear;
-            int epochTicks = Mathf.RoundToInt(singleton.TimeOffset * Time2WorkTimeSystem.kTicksPerDay) + Mathf.RoundToInt(singleton.GetDateOffset(timeSettingsData.m_DaysPerYear) * Time2WorkTimeSystem.kTicksPerDay * (float)timeSettingsData.m_DaysPerYear);
+            int daysPerMonth = Math.Max(1, Mod.m_Setting.daysPerMonth);
+
+            int epochTicks =
+                Mathf.RoundToInt(singleton.TimeOffset * Time2WorkTimeSystem.kTicksPerDay) +
+                Mathf.RoundToInt(singleton.GetDateOffset(timeSettingsData.m_DaysPerYear) *
+                                 Time2WorkTimeSystem.kTicksPerDay *
+                                 (float)timeSettingsData.m_DaysPerYear);
+
             int epochYear = singleton.m_StartingYear;
 
-            //Mod.log.Info($"{ticksPerDay},{daysPerYear},{epochTicks},{epochYear}");
             int n = epochTicks + this.GetTicks();
-            int r = (int)Math.Floor((float)n / ticksPerDay);
-            int year = (int)epochYear + (int)Math.Floor((float)r / daysPerYear);
-            //Mod.log.Info($"year: {epochYear + Math.Floor((float)r / daysPerYear)}");
-            int monthsPerYear = 12;
-            int day = (int)(Math.Floor((float)(r / Mod.m_Setting.daysPerMonth)));
-            //Mod.log.Info($"monthsPerYear: {monthsPerYear}, day: {day}, {daysPerYear}, {Mod.m_Setting.daysPerMonth}");
-            int o = (day % monthsPerYear + monthsPerYear) % monthsPerYear + 1;
-            int daysMonth = 30;
-            if(o == 2)
+            int totalElapsedDays = (int)Math.Floor((float)n / ticksPerDay);
+
+            int year = epochYear + (int)Math.Floor((float)totalElapsedDays / daysPerYear);
+
+            // This is the important correction:
+            // derive month/day from the day INSIDE THE CURRENT YEAR,
+            // not from the total elapsed day/month counter.
+            int dayOfYear = totalElapsedDays % daysPerYear;
+            if (dayOfYear < 0)
             {
-                daysMonth = 28;
+                dayOfYear += daysPerYear;
             }
-            day = day % daysMonth + 1;
-            
-            //Mod.log.Info($"month: {o}");
+
+            int month = (dayOfYear / daysPerMonth) + 1;
+            int dayOfMonth = (dayOfYear % daysPerMonth) + 1;
+
+            if (month > 12)
+            {
+                month = 12;
+            }
 
             if (year > 0 && WeekSystem.getDayOfWeekInt() >= 0)
             {
-                try
-                {
-                    DateTime date = new DateTime(year, o, day, 0, 0, 0);
-                    Setting.months m = (Setting.months)date.Month;
-                    Setting.dayOfWeek w = (Setting.dayOfWeek)WeekSystem.getDayOfWeekInt();
+                Setting.months m = (Setting.months)month;
+                Setting.dayOfWeek w = (Setting.dayOfWeek)WeekSystem.getDayOfWeekInt();
 
-                    Colossal.Localization.LocalizationDictionary dic = GameManager.instance.localizationManager.activeDictionary;
+                Colossal.Localization.LocalizationDictionary dic = GameManager.instance.localizationManager.activeDictionary;
 
-                    string mm = "";
-                    string ww = "";
-                    dic.TryGetValue(Mod.m_Setting.GetEnumValueLocaleID(m), out mm);
-                    dic.TryGetValue(Mod.m_Setting.GetEnumValueLocaleID(w), out ww);
-                    dateOutput = ww + " " + mm + " " + date.Year.ToString();
-                }
-                catch (Exception)
+                string mm = "";
+                string ww = "";
+
+                dic.TryGetValue(Mod.m_Setting.GetEnumValueLocaleID(m), out mm);
+                dic.TryGetValue(Mod.m_Setting.GetEnumValueLocaleID(w), out ww);
+
+                switch (Mod.m_Setting.date_format)
                 {
-                    Mod.log.Error($"Invalid Date - year:{year}, month:{o}, day:{day}, Days Per Month: {Mod.m_Setting.daysPerMonth}");
-                    throw;
+                    case Setting.DateFormatEnum.DayOfWeek_DDMMYYYY:
+                        dateOutput = $"{ww} {dayOfMonth:00}/{month:00}/{year}";
+                        break;
+
+                    case Setting.DateFormatEnum.DayOfWeek_MMDDYYYY:
+                        dateOutput = $"{ww} {month:00}/{dayOfMonth:00}/{year}";
+                        break;
+
+                    case Setting.DateFormatEnum.DayOfWeek_Month_Year:
+                    default:
+                        dateOutput = $"{ww} {mm} {year}";
+                        break;
                 }
             }
         }
@@ -121,7 +139,9 @@ namespace Time2Work
             }
 
             float num = 182.044449f * slowFactor;
-            return Mathf.FloorToInt(Mathf.Floor((float)(this.m_SimulationSystem.frameIndex - TimeData.GetSingleton(this.m_TimeDataQuery).m_FirstFrame) / num) * num);
+            return Mathf.FloorToInt(
+                Mathf.Floor((float)(this.m_SimulationSystem.frameIndex - TimeData.GetSingleton(this.m_TimeDataQuery).m_FirstFrame) / num) * num
+            );
         }
     }
 }

@@ -1,4 +1,9 @@
-﻿
+﻿// Decompiled with JetBrains decompiler
+// Type: Game.Simulation.Time2WorkResourceBuyerSystem
+// Assembly: Game, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+// MVID: 3E88C96C-323D-452C-9A52-88722163A0A8
+// Assembly location: C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Game.dll
+
 using Game.Buildings;
 using Game.Citizens;
 using Game.City;
@@ -12,6 +17,7 @@ using Game.Prefabs;
 using Game.Routes;
 using Game.Tools;
 using Game.Vehicles;
+using Game;
 using Game.Simulation;
 using System;
 using System.Runtime.CompilerServices;
@@ -24,12 +30,11 @@ using Unity.Entities.Internal;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using Game;
 
 #nullable disable
 namespace Time2Work.Systems;
 
-//[CompilerGenerated]
+[CompilerGenerated]
 public partial class Time2WorkResourceBuyerSystem : GameSystemBase
 {
     private const int UPDATE_INTERVAL = 16 /*0x10*/;
@@ -51,8 +56,6 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
     private CityProductionStatisticSystem m_CityProductionStatisticSystem;
     private NativeQueue<Time2WorkResourceBuyerSystem.SalesEvent> m_SalesQueue;
     private Time2WorkResourceBuyerSystem.TypeHandle __TypeHandle;
-    private EntityArchetype m_GoodsDeliveryRequestArchetype;
-
 
     public override int GetUpdateInterval(SystemUpdatePhase phase) => 16 /*0x10*/;
 
@@ -118,12 +121,6 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
         this.m_ResidentPrefabQuery = this.GetEntityQuery(ComponentType.ReadOnly<ObjectData>(), ComponentType.ReadOnly<HumanData>(), ComponentType.ReadOnly<ResidentData>(), ComponentType.ReadOnly<PrefabData>());
         // ISSUE: reference to a compiler-generated field
         this.m_PathfindTypes = new ComponentTypeSet(ComponentType.ReadWrite<PathInformation>(), ComponentType.ReadWrite<PathElement>());
-
-        m_GoodsDeliveryRequestArchetype = EntityManager.CreateArchetype(
-        ComponentType.ReadWrite<ServiceRequest>(),
-        ComponentType.ReadWrite<GoodsDeliveryRequest>(),
-        ComponentType.ReadWrite<RequestGroup>()
-        );
         // ISSUE: reference to a compiler-generated field
         this.RequireForUpdate(this.m_BuyerQuery);
         // ISSUE: reference to a compiler-generated field
@@ -300,7 +297,7 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
             m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
             m_EconomyParameterData = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
             m_City = this.m_CitySystem.City,
-            m_GoodsDeliveryRequestArchetype = this.m_GoodsDeliveryRequestArchetype,
+            realisticPathfinding = Mod.realisticPathFindingPresent,
             m_SalesQueue = this.m_SalesQueue.AsParallelWriter()
         };
         // ISSUE: reference to a compiler-generated field
@@ -853,8 +850,7 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
         public EconomyParameterData m_EconomyParameterData;
         public Entity m_City;
         public NativeQueue<Time2WorkResourceBuyerSystem.SalesEvent>.ParallelWriter m_SalesQueue;
-        public EntityArchetype m_GoodsDeliveryRequestArchetype;
-
+        public bool realisticPathfinding;
 
         public void Execute(
           in ArchetypeChunk chunk,
@@ -879,7 +875,7 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
             // ISSUE: reference to a compiler-generated method
             this.ProcessResourceBought(unfilteredChunkIndex, nativeArray3, nativeArray1);
             // ISSUE: reference to a compiler-generated method
-            this.ProcessResourceBuyer(chunk, unfilteredChunkIndex, nativeArray2, nativeArray1, bufferAccessor, nativeArray4, random, nativeArray5);
+            this.ProcessResourceBuyer(chunk, unfilteredChunkIndex, nativeArray2, nativeArray1, bufferAccessor, nativeArray4, random, nativeArray5, realisticPathfinding);
         }
 
         private void ProcessResourceBought(
@@ -922,14 +918,14 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
           BufferAccessor<TripNeeded> tripBuffers,
           NativeArray<Citizen> citizens,
           Unity.Mathematics.Random random,
-          NativeArray<AttendingMeeting> meetings)
+          NativeArray<AttendingMeeting> meetings,
+          bool realisticPathfinding)
         {
             for (int index = 0; index < resourceBuyingRequests.Length; ++index)
             {
                 ResourceBuyer resourceBuyingRequest = resourceBuyingRequests[index];
                 Entity entity = entities[index];
                 DynamicBuffer<TripNeeded> tripBuffer = tripBuffers[index];
-                bool isCompanyChunk = citizens.Length == 0;
                 bool virtualGood = false;
                 // ISSUE: reference to a compiler-generated field
                 // ISSUE: reference to a compiler-generated field
@@ -939,6 +935,42 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                     // ISSUE: reference to a compiler-generated field
                     virtualGood = (double)EconomyUtils.GetWeight(resourceBuyingRequest.m_ResourceNeeded, this.m_ResourcePrefabs, ref this.m_ResourceDatas) == 0.0;
                 }
+
+                // If the good is virtual (weight == 0), skip pathfinding/trips and purchase immediately.
+                if (virtualGood)
+                {
+                    // Only do this if the payer can actually hold resources (safety)
+                    if (this.m_Resources.HasBuffer(resourceBuyingRequest.m_Payer) && resourceBuyingRequest.m_AmountNeeded != 0)
+                    {
+                        var saleFlags = Time2WorkResourceBuyerSystem.SaleFlags.Virtual;
+
+                        // If you want to treat this as "imported" economically, optionally add:
+                        // saleFlags |= Time2WorkResourceBuyerSystem.SaleFlags.ImportFromOC;
+
+                        var sale = new Time2WorkResourceBuyerSystem.SalesEvent
+                        {
+                            m_Amount = resourceBuyingRequest.m_AmountNeeded,
+                            m_Buyer = resourceBuyingRequest.m_Payer,
+                            m_Seller = Entity.Null,        // no physical seller entity
+                            m_Resource = resourceBuyingRequest.m_ResourceNeeded,
+                            m_Flags = saleFlags,
+                            m_Distance = 0f
+                        };
+
+                        this.m_SalesQueue.Enqueue(sale);
+                    }
+
+                    // Remove the request so we don't generate trips
+                    this.m_CommandBuffer.RemoveComponent<ResourceBuyer>(unfilteredChunkIndex, entity);
+
+                    // If a path was added earlier for some reason, strip it too
+                    if (this.m_PathInformation.HasComponent(entity))
+                        this.m_CommandBuffer.RemoveComponent(unfilteredChunkIndex, entity, in this.m_PathfindTypes);
+
+                    continue;
+                }
+
+
                 // ISSUE: variable of a compiler-generated type
                 Time2WorkResourceBuyerSystem.SalesEvent salesEvent1;
                 // ISSUE: reference to a compiler-generated field
@@ -950,8 +982,9 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                     {
                         Entity destination = pathInformation.m_Destination;
                         // ISSUE: reference to a compiler-generated field
+                        bool flag1 = this.m_OutsideConnections.HasComponent(destination);
                         // ISSUE: reference to a compiler-generated field
-                        if (this.m_Properties.HasComponent(destination) || this.m_OutsideConnections.HasComponent(destination))
+                        if (this.m_Properties.HasComponent(destination) | flag1)
                         {
                             // ISSUE: reference to a compiler-generated field
                             DynamicBuffer<Game.Economy.Resources> resource = this.m_Resources[destination];
@@ -965,8 +998,7 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                                 int buyingResourcesTrucks = VehicleUtils.GetAllBuyingResourcesTrucks(destination, resourceBuyingRequest.m_ResourceNeeded, ref this.m_DeliveryTrucks, ref this.m_GuestVehicles, ref this.m_LayoutElements);
                                 resources -= buyingResourcesTrucks;
                             }
-                            int y1 = math.max(resources, 0);
-                            if (y1 <= resourceBuyingRequest.m_AmountNeeded / 2)
+                            if (resources <= 0 || !flag1 && resources < resourceBuyingRequest.m_AmountNeeded / 2)
                             {
                                 // ISSUE: reference to a compiler-generated field
                                 // ISSUE: reference to a compiler-generated field
@@ -974,17 +1006,16 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                             }
                             else
                             {
-                                resourceBuyingRequest.m_AmountNeeded = math.min(resourceBuyingRequest.m_AmountNeeded, y1);
+                                resourceBuyingRequest.m_AmountNeeded = math.min(resourceBuyingRequest.m_AmountNeeded, resources);
                                 // ISSUE: reference to a compiler-generated field
                                 int num1 = this.m_ServiceAvailables.HasComponent(destination) ? 1 : 0;
                                 // ISSUE: reference to a compiler-generated field
-                                bool flag1 = this.m_StorageCompanies.HasComponent(destination);
+                                bool flag2 = this.m_StorageCompanies.HasComponent(destination);
                                 // ISSUE: variable of a compiler-generated type
                                 Time2WorkResourceBuyerSystem.SaleFlags saleFlags = num1 != 0 ? Time2WorkResourceBuyerSystem.SaleFlags.CommercialSeller : Time2WorkResourceBuyerSystem.SaleFlags.None;
                                 if (virtualGood)
                                     saleFlags |= Time2WorkResourceBuyerSystem.SaleFlags.Virtual;
-                                // ISSUE: reference to a compiler-generated field
-                                if (this.m_OutsideConnections.HasComponent(destination))
+                                if (flag1)
                                     saleFlags |= Time2WorkResourceBuyerSystem.SaleFlags.ImportFromOC;
                                 // ISSUE: reference to a compiler-generated field
                                 // ISSUE: reference to a compiler-generated field
@@ -997,35 +1028,30 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                                     // ISSUE: reference to a compiler-generated field
                                     float marketPrice = EconomyUtils.GetMarketPrice(resourceBuyingRequest.m_ResourceNeeded, this.m_ResourcePrefabs, ref this.m_ResourceDatas);
                                     float num3 = 1.4f;
-                                    int y2 = (double)num2 > 0.0 ? (int)((double)num2 / ((double)marketPrice * (double)num3)) : 0;
-                                    resourceBuyingRequest.m_AmountNeeded = math.min(resourceBuyingRequest.m_AmountNeeded, y2);
+                                    int y = (double)num2 > 0.0 ? (int)((double)num2 / ((double)marketPrice * (double)num3)) : 0;
+                                    resourceBuyingRequest.m_AmountNeeded = math.min(resourceBuyingRequest.m_AmountNeeded, y);
                                 }
-                                bool flag2 = resourceBuyingRequest.m_AmountNeeded > 0;
-                                if (flag2)
+                                bool flag3 = resourceBuyingRequest.m_AmountNeeded > 0;
+                                if (flag3)
                                 {
-                                    // For citizens and for virtual goods, keep the old behavior
-                                    // For company + physical goods, the delivery truck system will handle the money
-                                    if (!isCompanyChunk || virtualGood)
-                                    {
-                                        // ISSUE: object of a compiler-generated type is created
-                                        salesEvent1 = new Time2WorkResourceBuyerSystem.SalesEvent();
-                                        // ISSUE: reference to a compiler-generated field
-                                        salesEvent1.m_Amount = resourceBuyingRequest.m_AmountNeeded;
-                                        // ISSUE: reference to a compiler-generated field
-                                        salesEvent1.m_Buyer = resourceBuyingRequest.m_Payer;
-                                        // ISSUE: reference to a compiler-generated field
-                                        salesEvent1.m_Seller = destination;
-                                        // ISSUE: reference to a compiler-generated field
-                                        salesEvent1.m_Resource = resourceBuyingRequest.m_ResourceNeeded;
-                                        // ISSUE: reference to a compiler-generated field
-                                        salesEvent1.m_Flags = saleFlags;
-                                        // ISSUE: reference to a compiler-generated field
-                                        salesEvent1.m_Distance = pathInformation.m_Distance;
-                                        // ISSUE: variable of a compiler-generated type
-                                        Time2WorkResourceBuyerSystem.SalesEvent salesEvent2 = salesEvent1;
-                                        // ISSUE: reference to a compiler-generated field
-                                        this.m_SalesQueue.Enqueue(salesEvent2);
-                                    }
+                                    // ISSUE: object of a compiler-generated type is created
+                                    salesEvent1 = new Time2WorkResourceBuyerSystem.SalesEvent();
+                                    // ISSUE: reference to a compiler-generated field
+                                    salesEvent1.m_Amount = resourceBuyingRequest.m_AmountNeeded;
+                                    // ISSUE: reference to a compiler-generated field
+                                    salesEvent1.m_Buyer = resourceBuyingRequest.m_Payer;
+                                    // ISSUE: reference to a compiler-generated field
+                                    salesEvent1.m_Seller = destination;
+                                    // ISSUE: reference to a compiler-generated field
+                                    salesEvent1.m_Resource = resourceBuyingRequest.m_ResourceNeeded;
+                                    // ISSUE: reference to a compiler-generated field
+                                    salesEvent1.m_Flags = saleFlags;
+                                    // ISSUE: reference to a compiler-generated field
+                                    salesEvent1.m_Distance = pathInformation.m_Distance;
+                                    // ISSUE: variable of a compiler-generated type
+                                    Time2WorkResourceBuyerSystem.SalesEvent salesEvent2 = salesEvent1;
+                                    // ISSUE: reference to a compiler-generated field
+                                    this.m_SalesQueue.Enqueue(salesEvent2);
                                 }
                                 // ISSUE: reference to a compiler-generated field
                                 // ISSUE: reference to a compiler-generated field
@@ -1036,74 +1062,36 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                                 // ISSUE: reference to a compiler-generated field
                                 int population = this.m_Populations[this.m_City].m_Population;
                                 // ISSUE: reference to a compiler-generated field
-                                bool flag3 = citizens.Length > 0 && random.NextInt(100) < 100 - Mathf.RoundToInt(100f / math.max(1f, math.sqrt((float)((double)this.m_EconomyParameterData.m_TrafficReduction * (double)population * 0.10000000149011612))));
-
-                                if (((virtualGood ? 0 : (!flag3 ? 1 : 0)) & (flag2 ? 1 : 0)) != 0)
+                                bool flag4 = citizens.Length > 0 && random.NextInt(100) < 100 - Mathf.RoundToInt(100f / math.max(1f, math.sqrt((float)((double)this.m_EconomyParameterData.m_TrafficReduction * (double)population * 0.10000000149011612))));
+                                if (((virtualGood ? 0 : (!flag4 ? 1 : 0)) & (flag3 ? 1 : 0)) != 0)
                                 {
-                                    if (isCompanyChunk && !virtualGood)
+                                    // ISSUE: reference to a compiler-generated field
+                                    // ISSUE: reference to a compiler-generated field
+                                    // ISSUE: reference to a compiler-generated field
+                                    // ISSUE: reference to a compiler-generated field
+                                    // ISSUE: reference to a compiler-generated field
+                                    this.m_CommandBuffer.AddBuffer<CurrentTrading>(unfilteredChunkIndex, entity).Add(new CurrentTrading()
                                     {
-                                        // NEW: use the same goods-delivery pattern as BuildingUpkeepSystem
-
-                                        // Figure out which entity should receive the goods.
-                                        // For companies, we want the property/building they occupy.
-                                        Entity resourceNeeder = resourceBuyingRequest.m_Payer;
-                                        if (this.m_Properties.HasComponent(resourceNeeder))
-                                        {
-                                            resourceNeeder = this.m_Properties[resourceNeeder].m_Property;
-                                        }
-
-                                        Entity request = this.m_CommandBuffer.CreateEntity(
-                                            unfilteredChunkIndex,
-                                            this.m_GoodsDeliveryRequestArchetype
-                                        );
-
-                                        this.m_CommandBuffer.SetComponent(unfilteredChunkIndex, request,
-                                            new GoodsDeliveryRequest
-                                            {
-                                                m_ResourceNeeder = resourceNeeder,
-                                                m_Amount = resourceBuyingRequest.m_AmountNeeded,
-                                                m_Resource = resourceBuyingRequest.m_ResourceNeeded
-                                            });
-
-                                        // Use the same group as BuildingUpkeepSystem (32U) so these
-                                        // requests participate in the same multi-stop routing logic.
-                                        this.m_CommandBuffer.SetComponent(unfilteredChunkIndex, request,
-                                            new RequestGroup(32u));
-
-                                        // IMPORTANT: do NOT add TripNeeded or CurrentTrading here.
-                                        // The goods delivery / truck AI will pick up this request and
-                                        // bundle it with other GoodsDeliveryRequest entities.
-                                    }
-                                    else
+                                        m_TradingResource = resourceBuyingRequest.m_ResourceNeeded,
+                                        m_TradingResourceAmount = resourceBuyingRequest.m_AmountNeeded,
+                                        m_OutsideConnectionType = this.m_OutsideConnections.HasComponent(destination) ? BuildingUtils.GetOutsideConnectionType(destination, ref this.m_PrefabRefData, ref this.m_OutsideConnectionDatas) : OutsideConnectionTransferType.None,
+                                        m_TradingStartFrameIndex = this.m_FrameIndex
+                                    });
+                                    tripBuffer.Add(new TripNeeded()
                                     {
-                                        // EXISTING BEHAVIOR for households & citizens (and any virtual goods):
-                                        //   - Add CurrentTrading on the buyer
-                                        //   - Add TripNeeded to tripBuffer
-                                        //   - Add Target if needed
-
-                                        this.m_CommandBuffer.AddBuffer<CurrentTrading>(unfilteredChunkIndex, entity).Add(new CurrentTrading()
-                                        {
-                                            m_TradingResource = resourceBuyingRequest.m_ResourceNeeded,
-                                            m_TradingResourceAmount = resourceBuyingRequest.m_AmountNeeded,
-                                            m_OutsideConnectionType = this.m_OutsideConnections.HasComponent(destination) ? BuildingUtils.GetOutsideConnectionType(destination, ref this.m_PrefabRefData, ref this.m_OutsideConnectionDatas) : OutsideConnectionTransferType.None,
-                                            m_TradingStartFrameIndex = this.m_FrameIndex
-                                        });
-                                        tripBuffer.Add(new TripNeeded()
-                                        {
-                                            m_TargetAgent = destination,
-                                            m_Purpose = flag1 ? Game.Citizens.Purpose.CompanyShopping : Game.Citizens.Purpose.Shopping,
-                                            m_Data = resourceBuyingRequest.m_AmountNeeded,
-                                            m_Resource = resourceBuyingRequest.m_ResourceNeeded
-                                        });
+                                        m_TargetAgent = destination,
+                                        m_Purpose = flag2 ? Game.Citizens.Purpose.CompanyShopping : Game.Citizens.Purpose.Shopping,
+                                        m_Data = resourceBuyingRequest.m_AmountNeeded,
+                                        m_Resource = resourceBuyingRequest.m_ResourceNeeded
+                                    });
+                                    // ISSUE: reference to a compiler-generated field
+                                    if (!this.m_Targets.HasComponent(entities[index]))
+                                    {
                                         // ISSUE: reference to a compiler-generated field
-                                        if (!this.m_Targets.HasComponent(entities[index]))
+                                        this.m_CommandBuffer.AddComponent<Game.Common.Target>(unfilteredChunkIndex, entity, new Game.Common.Target()
                                         {
-                                            // ISSUE: reference to a compiler-generated field
-                                            this.m_CommandBuffer.AddComponent<Game.Common.Target>(unfilteredChunkIndex, entity, new Game.Common.Target()
-                                            {
-                                                m_Target = destination
-                                            });
-                                        }
+                                            m_Target = destination
+                                        });
                                     }
                                 }
                             }
@@ -1182,7 +1170,12 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                             // ISSUE: reference to a compiler-generated field
                             DynamicBuffer<HouseholdCitizen> householdCitizen = this.m_HouseholdCitizens[household1];
                             // ISSUE: reference to a compiler-generated method
-                            this.FindShopForCitizen(chunk, unfilteredChunkIndex, entity, resourceBuyingRequest.m_ResourceNeeded, resourceBuyingRequest.m_AmountNeeded, resourceBuyingRequest.m_Flags, citizen2, household2, householdCitizen.Length, virtualGood);
+                            bool bicycleFlag = realisticPathfinding;
+                            if(!bicycleFlag)
+                            {
+                                bicycleFlag = (double)random.NextFloat(100f) < 20.0;
+                            }
+                            this.FindShopForCitizen(ref random, chunk, unfilteredChunkIndex, entity, resourceBuyingRequest.m_ResourceNeeded, resourceBuyingRequest.m_AmountNeeded, resourceBuyingRequest.m_Flags, citizen2, household2, householdCitizen.Length, virtualGood, bicycleFlag);
                         }
                         else
                         {
@@ -1195,6 +1188,7 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
         }
 
         private void FindShopForCitizen(
+          ref Unity.Mathematics.Random random,
           ArchetypeChunk chunk,
           int index,
           Entity buyer,
@@ -1204,7 +1198,8 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
           Citizen citizenData,
           Household householdData,
           int householdCitizenCount,
-          bool virtualGood)
+          bool virtualGood,
+          bool bicycleFlag)
         {
             // ISSUE: reference to a compiler-generated field
             // ISSUE: reference to a compiler-generated field
@@ -1273,6 +1268,7 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                 // ISSUE: reference to a compiler-generated field
                 parameters.m_Authorization2 = !this.m_Properties.HasComponent(worker.m_Workplace) ? worker.m_Workplace : this.m_Properties[worker.m_Workplace].m_Property;
             }
+            bool flag = bicycleFlag;
             // ISSUE: reference to a compiler-generated field
             if (this.m_CarKeepers.IsComponentEnabled(buyer))
             {
@@ -1304,7 +1300,7 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
             else
             {
                 // ISSUE: reference to a compiler-generated field
-                if (this.m_BicycleOwners.IsComponentEnabled(buyer))
+                if (this.m_BicycleOwners.IsComponentEnabled(buyer) & flag)
                 {
                     // ISSUE: reference to a compiler-generated field
                     Entity bicycle = this.m_BicycleOwners[buyer].m_Bicycle;

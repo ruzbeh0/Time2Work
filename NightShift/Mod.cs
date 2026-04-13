@@ -30,6 +30,7 @@ namespace Time2Work
         public static Setting m_Setting;
         public static int numCurrentEvents = 999;
         public static string modPath;
+        public static bool realisticPathFindingPresent = false;
         public static Mod Instance { get; private set; }
         internal ILog Log { get; private set; }
 
@@ -59,12 +60,19 @@ namespace Time2Work
             m_Setting = new Setting(this);
             //m_ModData = new ModData();
 
+
             foreach (var modInfo in GameManager.instance.modManager)
             {
                 if (modInfo.asset.name.Equals("RealPop"))
                 {
                     Mod.log.Info($"Loaded mod with conflict: {modInfo.asset.name}");
                 }
+                if (modInfo.asset.name.Equals("RealisticPathFinding"))
+                {
+                    Mod.log.Info($"RealisticPathFinding Mod present");
+                    realisticPathFindingPresent = true;
+                }
+                
             }
 
             m_Setting.RegisterInOptionsUI();

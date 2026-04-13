@@ -266,10 +266,22 @@ namespace Time2Work
         public override void Apply()
         {
             base.Apply();
-            var system1 = World.DefaultGameObjectInjectionWorld.GetExistingSystemManaged<WorkPlaceShiftUpdateSystem>();
-            system1.Enabled = true;
-            var system2 = World.DefaultGameObjectInjectionWorld.GetExistingSystemManaged<WorkerShiftUpdateSystem>();
-            system2.Enabled = true;
+
+            var world = World.DefaultGameObjectInjectionWorld;
+            if (world == null)
+                return;
+
+            var system1 = world.GetExistingSystemManaged<WorkPlaceShiftUpdateSystem>();
+            if (system1 != null)
+                system1.Enabled = true;
+
+            var system2 = world.GetExistingSystemManaged<WorkerShiftUpdateSystem>();
+            if (system2 != null)
+                system2.Enabled = true;
+
+            var timeSettingsMultiplierSystem = world.GetExistingSystemManaged<Time2Work.Systems.TimeSettingsMultiplierSystem>();
+            if (timeSettingsMultiplierSystem != null)
+                timeSettingsMultiplierSystem.Enabled = true;
         }
 
         [SettingsUISection(SettingsSection, SettingsGroup)]
@@ -638,6 +650,9 @@ namespace Time2Work
         [SettingsUISection(Weeksection, SlowerTimeGroup)]
         public int daysPerMonth { get; set; } = 1;
 
+        [SettingsUISection(Weeksection, SlowerTimeGroup)]
+        public DateFormatEnum date_format { get; set; } = DateFormatEnum.DayOfWeek_Month_Year;
+
         //[SettingsUISection(Weeksection, WeekGroup)]
         //[SettingsUIMultilineText]
         //public string WeekText => string.Empty;
@@ -766,6 +781,14 @@ namespace Time2Work
             Sunday,
             sevendayweek
         }
+
+        public enum DateFormatEnum
+        {
+            DayOfWeek_Month_Year,
+            DayOfWeek_DDMMYYYY,
+            DayOfWeek_MMDDYYYY
+        }
+
         public enum SettingsEnum
         {
             Balanced = 0,
@@ -1207,6 +1230,13 @@ namespace Time2Work
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Friday), "Fri" },
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Saturday), "Sat" },
 
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.date_format)), "Date Format in UI" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.date_format)), "Choose how the day and date are shown in the Game UI." },
+
+                { m_Setting.GetEnumValueLocaleID(Setting.DateFormatEnum.DayOfWeek_Month_Year), "Day of Week, Month Year" },
+                { m_Setting.GetEnumValueLocaleID(Setting.DateFormatEnum.DayOfWeek_DDMMYYYY), "Day of Week, DD/MM/YYYY" },
+                { m_Setting.GetEnumValueLocaleID(Setting.DateFormatEnum.DayOfWeek_MMDDYYYY), "Day of Week, MM/DD/YYYY" },
+
                 { "t2w.chirp.special_event.today",   "Special event today from {start} to {end} at" },
                 { "t2w.chirp.special_event.attendees",   "{attendees} citizens attended the special event at" },
                 { "t2w.chirp.special_event.starting","Special event starting soon at" },
@@ -1588,6 +1618,13 @@ namespace Time2Work
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Thursday), "Qui" },
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Friday), "Sex" },
                 { m_Setting.GetEnumValueLocaleID(Setting.dayOfWeek.Saturday), "Sab" },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.date_format)), "Formato da data na interface" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.date_format)), "Escolha como o dia da semana e a data serão exibidos na interface superior." },
+
+                { m_Setting.GetEnumValueLocaleID(Setting.DateFormatEnum.DayOfWeek_Month_Year), "Dia da Semana, Mês Ano" },
+                { m_Setting.GetEnumValueLocaleID(Setting.DateFormatEnum.DayOfWeek_DDMMYYYY), "Dia da Semana, DD/MM/AAAA" },
+                { m_Setting.GetEnumValueLocaleID(Setting.DateFormatEnum.DayOfWeek_MMDDYYYY), "Dia da Semana, MM/DD/AAAA" },
 
                 { "t2w.chirp.special_event.today",   "Evento especial hoje das {start} às {end} em" },
                 { "t2w.chirp.special_event.attendees",   "{attendees} cidadões compareceram ao evento especial em" },

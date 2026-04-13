@@ -70,8 +70,8 @@ namespace Time2Work.Systems
 
         private void calculateWorkShifts()
         {
-            
-            var workplaces = _query.ToEntityArray(Allocator.Temp);
+
+            using var workplaces = _query.ToEntityArray(Allocator.Temp);
 
             float sum_W_WPD_NS = 0;
             float sum_W_WPD_ES = 0;

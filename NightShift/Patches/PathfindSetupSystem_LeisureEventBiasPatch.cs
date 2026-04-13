@@ -159,23 +159,23 @@ namespace Time2Work.Patches
             // NOTE: This calls Complete() only every ~2 seconds, for debugging.
             // Remove this block once you’ve confirmed it triggers as expected.
             long nowMs = Environment.TickCount;
-            if (nowMs >= s_NextBiasLogTickMs)
-            {
-                // Complete so it is safe to read s_BiasCounts on the main thread
-                handle.Complete();
-
-                int total = 0;
-                for (int i = 0; i < s_BiasCounts.Length; i++)
-                    total += s_BiasCounts[i];
-
-                Mod.log.Info($"[Time2Work] Leisure event bias triggered {total} times (SetupData.Length={setupData.Length}, day={day}, t={normalizedTime:0.000})");
-
-                s_NextBiasLogTickMs = nowMs + LOG_EVERY_MS;
-
-                // Since we completed it for logging, return a completed handle
-                __result = handle;
-                return false;
-            }
+            //if (nowMs >= s_NextBiasLogTickMs)
+            //{
+            //    // Complete so it is safe to read s_BiasCounts on the main thread
+            //    handle.Complete();
+            //
+            //    int total = 0;
+            //    for (int i = 0; i < s_BiasCounts.Length; i++)
+            //        total += s_BiasCounts[i];
+            //
+            //    Mod.log.Info($"[Time2Work] Leisure event bias triggered {total} times (SetupData.Length={setupData.Length}, day={day}, t={normalizedTime:0.000})");
+            //
+            //    s_NextBiasLogTickMs = nowMs + LOG_EVERY_MS;
+            //
+            //    // Since we completed it for logging, return a completed handle
+            //    __result = handle;
+            //    return false;
+            //}
 
             __result = handle;
             return false; // skip vanilla leisure branch
@@ -286,18 +286,17 @@ namespace Time2Work.Patches
             private static bool IsActiveEvent(in SpecialEventData sed, LeisureType requestedType, int today, float t)
             {
                 if (sed.day != today) return false;
-                //// If you ever want to enforce leisure type matching, re-enable this:
-                //// if (sed.leisureType != requestedType) return false;
-                //
-                //// Keep your current "early arrival" / "end" logic as-is
-                float start = sed.start_time - -2f / 24f;
+                //if (sed.leisureType != requestedType) return false;
+
+                float start = sed.start_time - 2f / 24f;
+
                 float end = sed.start_time + sed.duration * 0.5f;
-                //
-                return t >= start && t <= end;
-                //
-                //end = math.frac(end);
-                //return (t >= start) || (t <= end);
-                return true;
+
+                if (end <= 1f)
+                    return t >= start && t <= end;
+
+                end = math.frac(end);
+                return (t >= start) || (t <= end);
             }
         }
     }

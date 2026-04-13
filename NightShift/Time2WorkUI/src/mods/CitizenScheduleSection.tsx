@@ -1,7 +1,7 @@
 ﻿import { getModule } from "cs2/modding";
 import { Theme } from "cs2/bindings";
 import { useValue, trigger, bindValue } from "cs2/api";
-import { VanillaComponentResolver } from "mods/VanillaComponentResolver/VanillaComponentResolver";
+import { VanillaComponentResolver } from "../VanillaComponentResolver";
 import mod from "mod.json";
 import React from "react";
 const selectedCitizen$ = bindValue<CitizenSchedule>(mod.id, "schedule");

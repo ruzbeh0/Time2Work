@@ -135,7 +135,7 @@ namespace Time2Work.Systems
         protected override void OnUpdate()
         {
             // Gather today + reset per-frame buffers
-            var entities = _query.ToEntityArray(Allocator.Temp);
+            using var entities = _query.ToEntityArray(Allocator.Temp);
             Game.Common.TimeData timeData = m_TimeDataQuery.GetSingleton<Game.Common.TimeData>();
             m_SimulationFrame = m_SimulationSystem.frameIndex;
 
