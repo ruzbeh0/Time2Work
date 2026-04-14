@@ -14,6 +14,9 @@ const coTimeControlsStyles: Record<string, string> = getModule(
     "classes"
 );
 
+// Stable binding instance shared by both portals
+const dayOfWeek$ = bindValue<string>(mod.id, "dayOfWeek");
+
 export const register: ModRegistrar = (moduleRegistry) => {
     moduleRegistry.extend(
         "game-ui/game/components/toolbar/bottom/time-controls/time-controls.tsx",
@@ -50,7 +53,6 @@ export const register: ModRegistrar = (moduleRegistry) => {
 };
 
 function TimeControlsPortal(props: { children: ReactElement }): ReactElement {
-    const dayOfWeek$ = bindValue<string>(mod.id, "dayOfWeek");
     const dayOfWeek = useValue(dayOfWeek$);
 
     const [dateLabelEl, setDateLabelEl] = useState<{
@@ -121,13 +123,12 @@ function TimeControlsPortal(props: { children: ReactElement }): ReactElement {
         return () => {
             subscription.dispose();
         };
-    }, [dayOfWeek$]);
+    }, []);
 
     return <>{props.children}</>;
 }
 
 function TimeControlsNewPortal(props: { children: ReactElement }): ReactElement {
-    const dayOfWeek$ = bindValue<string>(mod.id, "dayOfWeek");
     const dayOfWeek = useValue(dayOfWeek$);
 
     const [dateLabelEl, setDateLabelEl] = useState<{
@@ -236,7 +237,7 @@ function TimeControlsNewPortal(props: { children: ReactElement }): ReactElement 
         return () => {
             subscription.dispose();
         };
-    }, [dayOfWeek$]);
+    }, []);
 
     return <>{props.children}</>;
 }
