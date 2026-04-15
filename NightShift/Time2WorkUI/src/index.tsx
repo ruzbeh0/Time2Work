@@ -108,6 +108,7 @@ function TimeControlsPortal(props: { children: ReactElement }): ReactElement {
         dateLabelEl.vanilla.style.display = "none";
         dateLabelEl.modded.style.display = "block";
         dateLabelEl.timeControls.style.width = "calc(3.5em + 300px)";
+        dateLabelEl.timeControls.style.overflow = "visible";
     }, [dateLabelEl]);
 
     useEffect(() => {
@@ -186,13 +187,18 @@ function TimeControlsNewPortal(props: { children: ReactElement }): ReactElement 
 
             const modDateEl = document.createElement("div");
             modDateEl.setAttribute("data-time2work-new-date", "true");
-            modDateEl.style.minWidth = "180rem";
-            modDateEl.style.whiteSpace = "nowrap";
-            modDateEl.style.overflow = "hidden";
-            modDateEl.style.textOverflow = "ellipsis";
             modDateEl.style.display = "flex";
             modDateEl.style.alignItems = "center";
             modDateEl.style.justifyContent = "center";
+            modDateEl.style.textAlign = "center";
+            modDateEl.style.minWidth = "160rem";
+            modDateEl.style.width = "max-content";
+            modDateEl.style.maxWidth = "none";
+            modDateEl.style.whiteSpace = "nowrap";
+            modDateEl.style.overflow = "visible";
+            modDateEl.style.textOverflow = "clip";
+            modDateEl.style.flex = "0 0 auto";
+
 
             candidate.insertAdjacentElement("afterend", modDateEl);
 
@@ -220,13 +226,19 @@ function TimeControlsNewPortal(props: { children: ReactElement }): ReactElement 
         dateLabelEl.modded.style.display = "flex";
 
         if (dateLabelEl.container) {
-            dateLabelEl.container.style.minWidth = "180rem";
+            dateLabelEl.container.style.minWidth = "160rem";
+            dateLabelEl.container.style.width = "auto";
+            dateLabelEl.container.style.overflow = "visible";
+            dateLabelEl.container.style.display = "flex";
+            dateLabelEl.container.style.alignItems = "center";
+            dateLabelEl.container.style.justifyContent = "center";
+            dateLabelEl.container.style.gap = "8px";
         }
     }, [dateLabelEl]);
 
     useEffect(() => {
         if (!dateLabelEl) return;
-        dateLabelEl.modded.innerHTML = dayOfWeek ?? "";
+        dateLabelEl.modded.textContent = dayOfWeek ?? "";
     }, [dayOfWeek, dateLabelEl]);
 
     useEffect(() => {
