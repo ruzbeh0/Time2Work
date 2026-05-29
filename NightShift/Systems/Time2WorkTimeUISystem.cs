@@ -94,19 +94,7 @@ namespace Time2Work
                     this.m_UnpausedBeforeForcedPause = true;
                 }
             })));
-            PlatformManager.instance.onAppStateChanged += (OnAppStateChanged)((psi, state) =>
-            {
-                if (state == AppState.Default)
-                {
-                    this.m_HasFocus = true;
-                }
-                else
-                {
-                    if (state != AppState.Constrained)
-                        return;
-                    this.m_HasFocus = false;
-                }
-            });
+            PlatformManager.instance.onAppStateChanged += HandleAppStateChanged;
         }
 
         private void HandleAppStateChanged(IPlatformServiceIntegration psi, AppState state)
@@ -127,6 +115,12 @@ namespace Time2Work
         {
             base.OnGameLoaded(serializationContext);
             this.m_SpeedBeforePause = 1f;
+        }
+
+        protected override void OnDestroy()
+        {
+            PlatformManager.instance.onAppStateChanged -= HandleAppStateChanged;
+            base.OnDestroy();
         }
 
         [Preserve]

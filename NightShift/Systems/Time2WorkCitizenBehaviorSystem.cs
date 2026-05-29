@@ -46,6 +46,7 @@ namespace Time2Work
         private EntityQuery m_LeisureParameterQuery;
         private EntityQuery m_TimeDataQuery;
         private EntityQuery m_PopulationQuery;
+        private EntityQuery m_HouseholdShoppingCooldownInitQuery;
         private SimulationSystem m_SimulationSystem;
         private Time2WorkTimeSystem m_TimeSystem;
         private EndFrameBarrier m_EndFrameBarrier;
@@ -272,7 +273,8 @@ namespace Time2Work
             });
             this.m_OutsideConnectionQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Objects.OutsideConnection>(), ComponentType.Exclude<Game.Objects.ElectricityOutsideConnection>(), ComponentType.Exclude<Game.Objects.WaterPipeOutsideConnection>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
             this.m_TimeDataQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Common.TimeData>());
-            this.m_HouseholdArchetype = this.World.EntityManager.CreateArchetype(ComponentType.ReadWrite<Household>(), ComponentType.ReadWrite<HouseholdNeed>(), ComponentType.ReadWrite<HouseholdCitizen>(), ComponentType.ReadWrite<TaxPayer>(), ComponentType.ReadWrite<Game.Economy.Resources>(), ComponentType.ReadWrite<UpdateFrame>(), ComponentType.ReadWrite<Created>());
+            this.m_HouseholdShoppingCooldownInitQuery = this.GetEntityQuery(ComponentType.ReadOnly<Household>(), ComponentType.Exclude<HouseholdShoppingCooldown>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Temp>());
+            this.m_HouseholdArchetype = this.World.EntityManager.CreateArchetype(ComponentType.ReadWrite<Household>(), ComponentType.ReadWrite<HouseholdNeed>(), ComponentType.ReadWrite<HouseholdCitizen>(), ComponentType.ReadWrite<TaxPayer>(), ComponentType.ReadWrite<Game.Economy.Resources>(), ComponentType.ReadWrite<UpdateFrame>(), ComponentType.ReadWrite<Created>(), ComponentType.ReadWrite<HouseholdShoppingCooldown>());
             this.RequireForUpdate(this.m_CitizenQuery);
             this.RequireForUpdate(this.m_EconomyParameterQuery);
             this.RequireForUpdate(this.m_LeisureParameterQuery);
@@ -284,16 +286,32 @@ namespace Time2Work
         [UnityEngine.Scripting.Preserve]
         protected override void OnDestroy()
         {
-            this.m_CarReserveQueue.Dispose();
+            // Make sure no job is still using the persistent queue before disposing it.
+            this.m_CarReserveWriters.Complete();
+
+            if (this.m_CarReserveQueue.IsCreated)
+            {
+                this.m_CarReserveQueue.Dispose();
+            }
+
             base.OnDestroy();
         }
 
         [UnityEngine.Scripting.Preserve]
         protected override void OnUpdate()
         {
+            if (!this.m_HouseholdShoppingCooldownInitQuery.IsEmptyIgnoreFilter)
+            {
+                this.World.EntityManager.AddComponent<HouseholdShoppingCooldown>(this.m_HouseholdShoppingCooldownInitQuery);
+            }
+
             uint frameWithInterval = SimulationUtils.GetUpdateFrameWithInterval(this.m_SimulationSystem.frameIndex, (uint)this.GetUpdateInterval(SystemUpdatePhase.GameSimulation), 16);
-            NativeQueue<Entity> nativeQueue1 = new NativeQueue<Entity>((AllocatorManager.AllocatorHandle)Allocator.TempJob);
-            NativeQueue<Entity> nativeQueue2 = new NativeQueue<Entity>((AllocatorManager.AllocatorHandle)Allocator.TempJob);
+            NativeQueue<Entity> nativeQueue1 = new NativeQueue<Entity>(Allocator.Persistent);
+            NativeQueue<Entity> nativeQueue2 = new NativeQueue<Entity>(Allocator.Persistent);
+
+            // Capture current queue writers once for this update.
+            // Do not keep accumulating this handle forever.
+            JobHandle previousCarReserveWriters = this.m_CarReserveWriters;
 
             var now = m_TimeSystem.GetCurrentDateTime();
 
@@ -312,6 +330,7 @@ namespace Time2Work
                 m_TripType = InternalCompilerInterface.GetBufferTypeHandle<TripNeeded>(ref this.__TypeHandle.__Game_Citizens_TripNeeded_RW_BufferTypeHandle, ref this.CheckedStateRef),
                 m_LeisureType = InternalCompilerInterface.GetComponentTypeHandle<Leisure>(ref this.__TypeHandle.__Game_Citizens_Leisure_RO_ComponentTypeHandle, ref this.CheckedStateRef),
                 m_HouseholdNeeds = InternalCompilerInterface.GetComponentLookup<HouseholdNeed>(ref this.__TypeHandle.__Game_Citizens_HouseholdNeed_RW_ComponentLookup, ref this.CheckedStateRef),
+                m_HouseholdShoppingCooldowns = InternalCompilerInterface.GetComponentLookup<HouseholdShoppingCooldown>(ref this.__TypeHandle.__Time2Work_Components_HouseholdShoppingCooldown_RW_ComponentLookup, ref this.CheckedStateRef),
                 m_Households = InternalCompilerInterface.GetComponentLookup<Household>(ref this.__TypeHandle.__Game_Citizens_Household_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_PropertyRenters = InternalCompilerInterface.GetComponentLookup<PropertyRenter>(ref this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_Transforms = InternalCompilerInterface.GetComponentLookup<Game.Objects.Transform>(ref this.__TypeHandle.__Game_Objects_Transform_RO_ComponentLookup, ref this.CheckedStateRef),
@@ -341,7 +360,9 @@ namespace Time2Work
                 OfficePropertyLookup = InternalCompilerInterface.GetComponentLookup<OfficeProperty>(ref this.__TypeHandle.OfficePropertyLookup, ref this.CheckedStateRef),
                 PropertyRenterLookup = InternalCompilerInterface.GetComponentLookup<PropertyRenter>(ref this.__TypeHandle.PropertyRenterLookup, ref this.CheckedStateRef),
                 PrefabRefLookup = InternalCompilerInterface.GetComponentLookup<PrefabRef>(ref this.__TypeHandle.PrefabRefLookup, ref this.CheckedStateRef),
-                m_OutsideConnectionEntities = this.m_OutsideConnectionQuery.ToEntityListAsync((AllocatorManager.AllocatorHandle)Allocator.TempJob, out outJobHandle),
+                m_OutsideConnectionEntities = this.m_OutsideConnectionQuery.ToEntityListAsync(
+                    Allocator.Persistent,
+                out outJobHandle),
                 m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                 m_LeisureParameters = this.m_LeisureParameterQuery.GetSingleton<LeisureParametersData>(),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
@@ -376,12 +397,35 @@ namespace Time2Work
                 specialEventStartTime = SpecialEventSystem.startTime,
                 specialEventEndTime = SpecialEventSystem.endTime,
                 remote_work_prob = Mod.m_Setting.remote_percentage,
-                newyearseve = (now.Day == (Mod.m_Setting.daysPerMonth*12))
+                newyearseve = (now.Day == (Mod.m_Setting.daysPerMonth*12)),
+                resourceConsumption = Mod.m_Setting.resourceConsumption,
+                shoppingTripGatesEnabled = Mod.m_Setting.shopping_trip_gates_enabled,
+                shoppingGateMealsPct = Mod.m_Setting.shopping_gate_meals_pct,
+                shoppingGateGroceriesPct = Mod.m_Setting.shopping_gate_groceries_pct,
+                shoppingGateHealthFuelPct = Mod.m_Setting.shopping_gate_health_fuel_pct,
+                shoppingGateHouseholdGoodsPct = Mod.m_Setting.shopping_gate_household_goods_pct,
+                shoppingGateConsumerGoodsPct = Mod.m_Setting.shopping_gate_consumer_goods_pct,
+                shoppingGateLargePurchasesPct = Mod.m_Setting.shopping_gate_large_purchases_pct,
+                householdShoppingCooldownEnabled = Mod.m_Setting.household_shopping_cooldown_enabled,
+                householdCooldownGroceriesPct = Mod.m_Setting.household_cooldown_groceries_pct,
+                householdCooldownHealthFuelPct = Mod.m_Setting.household_cooldown_health_fuel_pct,
+                householdCooldownHouseholdGoodsPct = Mod.m_Setting.household_cooldown_household_goods_pct,
+                householdCooldownLargePurchasesPct = Mod.m_Setting.household_cooldown_large_purchases_pct,
+                householdCooldownOtherPct = Mod.m_Setting.household_cooldown_other_pct,
+                householdCooldownRegularHours = Mod.m_Setting.household_cooldown_regular_hours,
+                householdCooldownLargePurchaseHours = Mod.m_Setting.household_cooldown_large_purchase_hours
             };
-            JobHandle jobHandle1 = jobData.ScheduleParallel<Time2WorkCitizenBehaviorSystem.CitizenAITickJob>(this.m_CitizenQuery, JobHandle.CombineDependencies(this.m_CarReserveWriters, JobHandle.CombineDependencies(this.Dependency, outJobHandle)));
-            jobData.m_OutsideConnectionEntities.Dispose(jobHandle1);
+            JobHandle jobHandle1 = jobData.ScheduleParallel<Time2WorkCitizenBehaviorSystem.CitizenAITickJob>(
+            this.m_CitizenQuery,
+            JobHandle.CombineDependencies(
+                    previousCarReserveWriters,
+                    JobHandle.CombineDependencies(this.Dependency, outJobHandle)));
+
+            JobHandle disposeOutsideConnections = jobData.m_OutsideConnectionEntities.Dispose(jobHandle1);
+
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle1);
-            this.AddCarReserveWriter(jobHandle1);
+
+            JobHandle carReserveInputDeps = JobHandle.CombineDependencies(previousCarReserveWriters, jobHandle1);
 
             JobHandle jobHandle2 = new Time2WorkCitizenBehaviorSystem.CitizenReserveHouseholdCarJob()
             {
@@ -395,10 +439,13 @@ namespace Time2Work
                 m_Citizens = this.__TypeHandle.__Game_Citizens_Citizen_RO_ComponentLookup,
                 m_BicycleOwners = InternalCompilerInterface.GetComponentLookup<BicycleOwner>(ref this.__TypeHandle.__Game_Citizens_BicycleOwner_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_ReserverQueue = this.m_CarReserveQueue
-            }.Schedule<Time2WorkCitizenBehaviorSystem.CitizenReserveHouseholdCarJob>(JobHandle.CombineDependencies(jobHandle1, this.m_CarReserveWriters));
+            }.Schedule<Time2WorkCitizenBehaviorSystem.CitizenReserveHouseholdCarJob>(carReserveInputDeps);
 
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle2);
-            this.AddCarReserveWriter(jobHandle2);
+
+            // Keep only the latest actual queue dependency.
+            // Do not accumulate the whole historical dependency chain.
+            this.m_CarReserveWriters = jobHandle2;
 
             JobHandle jobHandle3 = new Time2WorkCitizenBehaviorSystem.CitizenTryCollectMailJob()
             {
@@ -413,7 +460,7 @@ namespace Time2Work
             }.Schedule<Time2WorkCitizenBehaviorSystem.CitizenTryCollectMailJob>(jobHandle1);
 
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle3);
-            nativeQueue1.Dispose(jobHandle3);
+            JobHandle disposeMailQueue = nativeQueue1.Dispose(jobHandle3);
 
             JobHandle jobHandle4 = new Time2WorkCitizenBehaviorSystem.CitizeSleepJob()
             {
@@ -421,8 +468,11 @@ namespace Time2Work
                 m_CitizenPresenceData = InternalCompilerInterface.GetComponentLookup<CitizenPresence>(ref this.__TypeHandle.__Game_Buildings_CitizenPresence_RW_ComponentLookup, ref this.CheckedStateRef),
                 m_SleepQueue = nativeQueue2
             }.Schedule<Time2WorkCitizenBehaviorSystem.CitizeSleepJob>(jobHandle1);
-            nativeQueue2.Dispose(jobHandle4);
+            JobHandle disposeSleepQueue = nativeQueue2.Dispose(jobHandle4);
+
             this.Dependency = JobHandle.CombineDependencies(jobHandle2, jobHandle3, jobHandle4);
+            this.Dependency = JobHandle.CombineDependencies(this.Dependency, disposeOutsideConnections);
+            this.Dependency = JobHandle.CombineDependencies(this.Dependency, disposeMailQueue, disposeSleepQueue);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -627,6 +677,8 @@ namespace Time2Work
             public ComponentTypeHandle<Leisure> m_LeisureType;
             [NativeDisableParallelForRestriction]
             public ComponentLookup<HouseholdNeed> m_HouseholdNeeds;
+            [NativeDisableParallelForRestriction]
+            public ComponentLookup<HouseholdShoppingCooldown> m_HouseholdShoppingCooldowns;
             [ReadOnly]
             public ComponentLookup<Household> m_Households;
             [ReadOnly]
@@ -724,6 +776,22 @@ namespace Time2Work
             public NativeArray<float> specialEventEndTime;
             public int remote_work_prob;
             public bool newyearseve;
+            public int resourceConsumption;
+            public bool shoppingTripGatesEnabled;
+            public int shoppingGateMealsPct;
+            public int shoppingGateGroceriesPct;
+            public int shoppingGateHealthFuelPct;
+            public int shoppingGateHouseholdGoodsPct;
+            public int shoppingGateConsumerGoodsPct;
+            public int shoppingGateLargePurchasesPct;
+            public bool householdShoppingCooldownEnabled;
+            public int householdCooldownGroceriesPct;
+            public int householdCooldownHealthFuelPct;
+            public int householdCooldownHouseholdGoodsPct;
+            public int householdCooldownLargePurchasesPct;
+            public int householdCooldownOtherPct;
+            public float householdCooldownRegularHours;
+            public float householdCooldownLargePurchaseHours;
 
 
             private bool CheckSleep(
@@ -848,10 +916,21 @@ namespace Time2Work
               HouseholdNeed need,
               float3 position)
             {
+                need = AdjustShoppingNeed(citizen, need);
+                if (need.m_Resource == Resource.NoResource || need.m_Amount <= 0)
+                    return;
+
+                if (ShouldSkipShoppingTrip(citizen, need))
+                    return;
+
+                if (ShouldSuppressByHouseholdShoppingCooldown(citizen, household, need))
+                    return;
+
                 if (!this.m_CarKeepers.IsComponentEnabled(citizen))
                 {
                     this.m_CarReserverQueue.Enqueue(citizen);
                 }
+                SetHouseholdShoppingCooldown(household, need);
                 this.m_MailSenderQueue.Enqueue(citizen);
                 this.m_CommandBuffer.AddComponent<ResourceBuyer>(chunkIndex, citizen, new ResourceBuyer()
                 {
@@ -862,6 +941,240 @@ namespace Time2Work
                     m_AmountNeeded = need.m_Amount
                 });
 
+            }
+
+            private bool ShouldSuppressByHouseholdShoppingCooldown(Entity citizen, Entity household, HouseholdNeed need)
+            {
+                if (!UsesHouseholdShoppingCooldown(need.m_Resource))
+                    return false;
+
+                HouseholdShoppingCooldown cooldown;
+                if (!this.m_HouseholdShoppingCooldowns.TryGetComponent(household, out cooldown) || this.m_SimulationFrame >= cooldown.shoppingAllowedFrame)
+                    return false;
+
+                Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex(math.hash(new int4(
+                    citizen.Index,
+                    citizen.Version,
+                    household.Index,
+                    (int)(this.m_SimulationFrame / 32u) ^ (int)need.m_Resource)));
+
+                return random.NextInt(100) < GetHouseholdCooldownSuppressionChance(need.m_Resource);
+            }
+
+            private void SetHouseholdShoppingCooldown(Entity household, HouseholdNeed need)
+            {
+                if (!UsesHouseholdShoppingCooldown(need.m_Resource) || !this.m_HouseholdShoppingCooldowns.HasComponent(household))
+                    return;
+
+                HouseholdShoppingCooldown cooldown = this.m_HouseholdShoppingCooldowns[household];
+                cooldown.version = 1;
+                cooldown.shoppingAllowedFrame = math.max(cooldown.shoppingAllowedFrame, this.m_SimulationFrame + GetHouseholdShoppingCooldownFrames(need.m_Resource));
+                this.m_HouseholdShoppingCooldowns[household] = cooldown;
+            }
+
+            private HouseholdNeed AdjustShoppingNeed(Entity citizen, HouseholdNeed need)
+            {
+                if (need.m_Resource == Resource.NoResource || need.m_Amount <= 0)
+                    return need;
+
+                Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex(math.hash(new int4(
+                    citizen.Index,
+                    citizen.Version,
+                    (int)need.m_Resource,
+                    (int)(this.m_SimulationFrame / 16u))));
+
+                if (ShouldConvertToMeal(need.m_Resource, ref random))
+                {
+                    need.m_Resource = Resource.Meals;
+                    need.m_Amount = random.NextInt(8, 21);
+                    return need;
+                }
+
+                float settingScale = math.max(0f, this.resourceConsumption / 20f);
+                float resourceScale = GetShoppingResourceScale(need.m_Resource);
+                need.m_Amount = math.max(1, (int)math.round(need.m_Amount * settingScale * resourceScale));
+                return need;
+            }
+
+            private bool ShouldSkipShoppingTrip(Entity citizen, HouseholdNeed need)
+            {
+                if (!this.shoppingTripGatesEnabled)
+                    return false;
+
+                int skipChance = GetShoppingTripSkipChance(need.m_Resource, need.m_Amount);
+                if (skipChance <= 0)
+                    return false;
+
+                Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex(math.hash(new int4(
+                    citizen.Index,
+                    citizen.Version,
+                    (int)need.m_Resource,
+                    (int)(this.m_SimulationFrame / 32u) ^ need.m_Amount)));
+
+                return random.NextInt(100) < math.clamp(skipChance, 0, 95);
+            }
+
+            private bool ShouldConvertToMeal(Resource resource, ref Unity.Mathematics.Random random)
+            {
+                if (resource != Resource.Food && resource != Resource.ConvenienceFood && resource != Resource.Beverages)
+                    return false;
+
+                float hour = math.frac(this.m_NormalizedTime) * 24f;
+                int chance = 0;
+
+                if (hour >= 6.5f && hour < 9.5f)
+                {
+                    chance = resource == Resource.ConvenienceFood ? 20 : 12;
+                }
+                else if (hour >= 11f && hour < 14.5f)
+                {
+                    chance = resource == Resource.Beverages ? 28 : 48;
+                }
+                else if (hour >= 17f && hour < 21.5f)
+                {
+                    chance = resource == Resource.Beverages ? 36 : 56;
+                }
+                else if (hour >= 21.5f && hour < 23.5f)
+                {
+                    chance = resource == Resource.ConvenienceFood ? 18 : 11;
+                }
+
+                return chance > 0 && random.NextInt(100) < chance;
+            }
+
+            private static float GetShoppingResourceScale(Resource resource)
+            {
+                switch (resource)
+                {
+                    case Resource.Meals:
+                        return 1f;
+                    case Resource.Food:
+                        return 0.5f;
+                    case Resource.ConvenienceFood:
+                        return 0.45f;
+                    case Resource.Beverages:
+                        return 0.45f;
+                    case Resource.Pharmaceuticals:
+                        return 0.2f;
+                    case Resource.Paper:
+                        return 0.25f;
+                    case Resource.Textiles:
+                        return 0.12f;
+                    case Resource.Petrochemicals:
+                        return 0.18f;
+                    case Resource.Plastics:
+                    case Resource.Chemicals:
+                        return 0.2f;
+                    case Resource.Electronics:
+                        return 0.18f;
+                    case Resource.Furniture:
+                        return 0.1f;
+                    case Resource.Vehicles:
+                        return 0.03f;
+                    default:
+                        return 0.5f;
+                }
+            }
+
+            private int GetShoppingTripSkipChance(Resource resource, int amount)
+            {
+                int chance;
+                switch (resource)
+                {
+                    case Resource.Meals:
+                        chance = this.shoppingGateMealsPct;
+                        break;
+                    case Resource.Food:
+                    case Resource.ConvenienceFood:
+                    case Resource.Beverages:
+                        chance = this.shoppingGateGroceriesPct;
+                        break;
+                    case Resource.Petrochemicals:
+                    case Resource.Pharmaceuticals:
+                        chance = this.shoppingGateHealthFuelPct;
+                        break;
+                    case Resource.Paper:
+                    case Resource.Textiles:
+                        chance = this.shoppingGateHouseholdGoodsPct;
+                        break;
+                    case Resource.Plastics:
+                    case Resource.Chemicals:
+                    case Resource.Electronics:
+                        chance = this.shoppingGateConsumerGoodsPct;
+                        break;
+                    case Resource.Furniture:
+                    case Resource.Vehicles:
+                        chance = this.shoppingGateLargePurchasesPct;
+                        break;
+                    default:
+                        chance = 35;
+                        break;
+                }
+
+                if (resource != Resource.Meals && resource != Resource.Food && resource != Resource.ConvenienceFood && resource != Resource.Beverages)
+                {
+                    if (amount <= 2)
+                        chance += 20;
+                    else if (amount <= 5)
+                        chance += 10;
+                }
+
+                return chance;
+            }
+
+            private bool UsesHouseholdShoppingCooldown(Resource resource)
+            {
+                if (!this.householdShoppingCooldownEnabled)
+                    return false;
+
+                switch (resource)
+                {
+                    case Resource.Meals:
+                        return false;
+                    default:
+                        return true;
+                }
+            }
+
+            private int GetHouseholdCooldownSuppressionChance(Resource resource)
+            {
+                switch (resource)
+                {
+                    case Resource.Pharmaceuticals:
+                    case Resource.Petrochemicals:
+                        return this.householdCooldownHealthFuelPct;
+                    case Resource.Food:
+                    case Resource.ConvenienceFood:
+                    case Resource.Beverages:
+                        return this.householdCooldownGroceriesPct;
+                    case Resource.Paper:
+                    case Resource.Textiles:
+                        return this.householdCooldownHouseholdGoodsPct;
+                    case Resource.Furniture:
+                    case Resource.Electronics:
+                    case Resource.Vehicles:
+                        return this.householdCooldownLargePurchasesPct;
+                    default:
+                        return this.householdCooldownOtherPct;
+                }
+            }
+
+            private uint GetHouseholdShoppingCooldownFrames(Resource resource)
+            {
+                float hours;
+                switch (resource)
+                {
+                    case Resource.Furniture:
+                    case Resource.Electronics:
+                    case Resource.Vehicles:
+                        hours = this.householdCooldownLargePurchaseHours;
+                        break;
+                    default:
+                        hours = this.householdCooldownRegularHours;
+                        break;
+                }
+
+                return (uint)math.max(1, (int)math.round((float)this.ticksPerDay * hours / 24f));
             }
 
             private float GetTimeLeftUntilInterval(float2 interval)
@@ -1443,6 +1756,7 @@ namespace Time2Work
             [ReadOnly]
             public ComponentTypeHandle<Leisure> __Game_Citizens_Leisure_RO_ComponentTypeHandle;
             public ComponentLookup<HouseholdNeed> __Game_Citizens_HouseholdNeed_RW_ComponentLookup;
+            public ComponentLookup<HouseholdShoppingCooldown> __Time2Work_Components_HouseholdShoppingCooldown_RW_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<Household> __Game_Citizens_Household_RO_ComponentLookup;
             [ReadOnly]
@@ -1533,6 +1847,7 @@ namespace Time2Work
                 this.__Game_Citizens_TripNeeded_RW_BufferTypeHandle = state.GetBufferTypeHandle<TripNeeded>();
                 this.__Game_Citizens_Leisure_RO_ComponentTypeHandle = state.GetComponentTypeHandle<Leisure>(true);
                 this.__Game_Citizens_HouseholdNeed_RW_ComponentLookup = state.GetComponentLookup<HouseholdNeed>();
+                this.__Time2Work_Components_HouseholdShoppingCooldown_RW_ComponentLookup = state.GetComponentLookup<HouseholdShoppingCooldown>();
                 this.__Game_Citizens_Household_RO_ComponentLookup = state.GetComponentLookup<Household>(true);
                 this.__Game_Buildings_PropertyRenter_RO_ComponentLookup = state.GetComponentLookup<PropertyRenter>(true);
                 this.__Game_Objects_Transform_RO_ComponentLookup = state.GetComponentLookup<Game.Objects.Transform>(true);

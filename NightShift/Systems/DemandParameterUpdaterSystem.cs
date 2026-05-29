@@ -29,14 +29,13 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
-            // Settings may not be initialized yet (e.g. in main menu / early load). 
-            // In that case, skip updating demand parameters.
+            // Settings may not be initialized yet.
             if (Mod.m_Setting == null)
             {
                 return;
             }
 
-            var prefabs = _query.ToEntityArray(Allocator.Temp);
+            using var prefabs = _query.ToEntityArray(Allocator.Temp);
 
             foreach (var tsd in prefabs)
             {
@@ -44,30 +43,32 @@ namespace Time2Work.Systems
 
                 bool updateCommuters = Mod.m_Setting.commuter_trips;
 
-                if(updateCommuters)
+                if (updateCommuters)
                 {
                     this.m_daytype = WeekSystem.currentDayOfTheWeek;
                     data.m_CommuterOCSpawnParameters = new Unity.Mathematics.float4(0.5f, 0.3f, 0.2f, 0.0f);
-                } else
+                }
+                else
                 {
                     this.m_daytype = Setting.DTSimulationEnum.AverageDay;
                     data.m_CommuterOCSpawnParameters = new Unity.Mathematics.float4(0.8f, 0.2f, 0.0f, 0.0f);
                 }
 
-
                 if (((int)this.m_daytype) == (int)Setting.DTSimulationEnum.AverageDay)
                 {
                     data.m_CommuterWorkerRatioLimit = 8;
-                } else if (((int)this.m_daytype) == (int)Setting.DTSimulationEnum.Saturday ||
-                    ((int)this.m_daytype) == (int)Setting.DTSimulationEnum.Sunday)
+                }
+                else if (((int)this.m_daytype) == (int)Setting.DTSimulationEnum.Saturday ||
+                         ((int)this.m_daytype) == (int)Setting.DTSimulationEnum.Sunday)
                 {
                     data.m_CommuterWorkerRatioLimit = 9;
-                } else
+                }
+                else
                 {
                     data.m_CommuterWorkerRatioLimit = 7;
                 }
 
-                EntityManager.SetComponentData<DemandParameterData>(tsd, data);
+                EntityManager.SetComponentData(tsd, data);
             }
         }
 

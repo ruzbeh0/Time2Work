@@ -150,8 +150,13 @@ namespace Time2Work.Systems
 
             Time2WorkTourismSystem.TourismJob jobData = new Time2WorkTourismSystem.TourismJob()
             {
-                m_m_AttractivenessProviderChunks = this.m_AttractivenessProviderGroup.ToArchetypeChunkArray((AllocatorManager.AllocatorHandle)Allocator.TempJob),
-                m_HotelChunks = this.m_HotelGroup.ToArchetypeChunkArray((AllocatorManager.AllocatorHandle)Allocator.TempJob),
+                m_m_AttractivenessProviderChunks =
+                this.m_AttractivenessProviderGroup.ToArchetypeChunkArray(
+                Allocator.Persistent),
+
+                m_HotelChunks =
+                this.m_HotelGroup.ToArchetypeChunkArray(
+                Allocator.Persistent),
                 m_LodgingProviderType = InternalCompilerInterface.GetComponentTypeHandle<LodgingProvider>(ref this.__TypeHandle.__Game_Companies_LodgingProvider_RO_ComponentTypeHandle, ref this.CheckedStateRef),
                 m_RenterType = InternalCompilerInterface.GetBufferTypeHandle<Renter>(ref this.__TypeHandle.__Game_Buildings_Renter_RO_BufferTypeHandle, ref this.CheckedStateRef),
                 m_CityModifiers = InternalCompilerInterface.GetBufferLookup<CityModifier>(ref this.__TypeHandle.__Game_City_CityModifier_RO_BufferLookup, ref this.CheckedStateRef),

@@ -21,7 +21,6 @@ namespace Time2Work.Systems
 {
     public partial class SpecialEventsUISystem : ExtendedUISystemBase
     {
-        private Dictionary<Entity, AttractivenessProvider> _attractivenessProviderDictionary = new Dictionary<Entity, AttractivenessProvider>();
         private EntityQuery _query;
         private Setting.DTSimulationEnum m_daytype;
         private uint m_SimulationFrame;
@@ -176,16 +175,6 @@ namespace Time2Work.Systems
 
             foreach (var ent in entities)
             {
-                // Lazily cache AttractivenessProvider lookups (kept from your original code)
-                if (!_attractivenessProviderDictionary.TryGetValue(ent, out var attractivenessProvider))
-                {
-                    if (EntityManager.HasComponent<AttractivenessProvider>(ent))
-                    {
-                        attractivenessProvider = EntityManager.GetComponentData<AttractivenessProvider>(ent);
-                        _attractivenessProviderDictionary[ent] = attractivenessProvider;
-                    }
-                }
-
                 // Need a prefab to resolve SpecialEventData & a readable name
                 if (!EntityManager.TryGetComponent<PrefabRef>(ent, out var prefabRef))
                     continue;
@@ -287,6 +276,7 @@ namespace Time2Work.Systems
         protected override void OnDestroy()
         {
             _cameraUpdateSystem = null;
+            LatestEventLocations.Clear();
             if (m_Results.IsCreated)
                 m_Results.Dispose();
             base.OnDestroy();

@@ -3,9 +3,6 @@
 // Patch PathfindSetupSystem.FindTargets(SetupTargetType, in SetupData)
 // and replace ONLY the Leisure branch with a Burst job that biases toward active SpecialEventData venues.
 //
-// Adds a Burst-safe counter for how many times the event-bias condition triggers,
-// and logs it (managed side) via Mod.log.Info() at a throttled interval.
-//
 // Fixes the "Dependency is inaccessible" compile error by reading SystemBase.Dependency via reflection.
 // Keeps the pathfind setup TempJob queue lifetime correct (because we return the JobHandle that FindTargets returns).
 
@@ -26,10 +23,8 @@ using Time2Work.Components;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
-using Unity.Jobs.LowLevel.Unsafe;
 using Unity.Mathematics;
 
 namespace Time2Work.Patches
@@ -40,14 +35,6 @@ namespace Time2Work.Patches
         // You said -500000 was what made it work. Keep this configurable here.
         // (You can keep your larger value if you prefer; just change the number.)
         private const float EVENT_COST_BONUS = -500000f;
-
-        // --- Bias trigger counter (Burst-safe) ---
-        // One int per worker thread; increment from Burst job via NativeThreadIndex.
-        private static NativeArray<int> s_BiasCounts; // length = JobsUtility.MaxJobThreadCount
-
-        // Throttle logging to avoid spamming
-        private static long s_NextBiasLogTickMs;
-        private const int LOG_EVERY_MS = 20000;
 
         // Reflection accessor for SystemBase.Dependency (protected)
         private static readonly MethodInfo MI_DependencyGetter =
@@ -75,16 +62,6 @@ namespace Time2Work.Patches
             if (targetType != SetupTargetType.Leisure)
                 return true; // run vanilla for everything else
 
-            // Ensure counter storage exists
-            if (!s_BiasCounts.IsCreated)
-            {
-                s_BiasCounts = new NativeArray<int>(JobsUtility.MaxJobThreadCount, Allocator.Persistent);
-            }
-
-            // Reset counters for this pass
-            for (int i = 0; i < s_BiasCounts.Length; i++)
-                s_BiasCounts[i] = 0;
-
             // Get the same dependency vanilla passes around: this.Dependency
             var dependsOnObj = MI_DependencyGetter.Invoke(__instance, null);
             JobHandle dependsOn = dependsOnObj is JobHandle h ? h : default;
@@ -93,9 +70,8 @@ namespace Time2Work.Patches
             var simSystem = __instance.World.GetExistingSystemManaged<SimulationSystem>();
             var timeSystem = __instance.World.GetExistingSystemManaged<TimeSystem>();
 
-            var timeData = __instance.EntityManager
-                .CreateEntityQuery(ComponentType.ReadOnly<TimeData>())
-                .GetSingleton<TimeData>();
+            using var timeDataQuery = __instance.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<TimeData>());
+            var timeData = timeDataQuery.GetSingleton<TimeData>();
 
             int day = Time2WorkTimeSystem.GetDay(simSystem.frameIndex, timeData, Time2WorkTimeSystem.kTicksPerDay);
             float normalizedTime = timeSystem.normalizedTime;
@@ -147,35 +123,10 @@ namespace Time2Work.Patches
                 m_SpecialEvents = specialEvents,
                 m_Today = day,
                 m_NormalizedTime = normalizedTime,
-                m_EventCostBonus = EVENT_COST_BONUS,
-
-                // counter
-                m_BiasCounts = s_BiasCounts
+                m_EventCostBonus = EVENT_COST_BONUS
             }.ScheduleParallel(leisureProviderQuery, dependsOn);
 
             resourceSystem.AddPrefabsReader(handle);
-
-            // ---- Throttled managed-side log of how many times bias triggered ----
-            // NOTE: This calls Complete() only every ~2 seconds, for debugging.
-            // Remove this block once you’ve confirmed it triggers as expected.
-            long nowMs = Environment.TickCount;
-            //if (nowMs >= s_NextBiasLogTickMs)
-            //{
-            //    // Complete so it is safe to read s_BiasCounts on the main thread
-            //    handle.Complete();
-            //
-            //    int total = 0;
-            //    for (int i = 0; i < s_BiasCounts.Length; i++)
-            //        total += s_BiasCounts[i];
-            //
-            //    Mod.log.Info($"[Time2Work] Leisure event bias triggered {total} times (SetupData.Length={setupData.Length}, day={day}, t={normalizedTime:0.000})");
-            //
-            //    s_NextBiasLogTickMs = nowMs + LOG_EVERY_MS;
-            //
-            //    // Since we completed it for logging, return a completed handle
-            //    __result = handle;
-            //    return false;
-            //}
 
             __result = handle;
             return false; // skip vanilla leisure branch
@@ -203,12 +154,6 @@ namespace Time2Work.Patches
             public int m_Today;
             public float m_NormalizedTime;
             public float m_EventCostBonus;
-
-            // --- counter plumbing ---
-            [NativeSetThreadIndex] public int NativeThreadIndex;
-
-            [NativeDisableParallelForRestriction]
-            public NativeArray<int> m_BiasCounts;
 
             public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
             {
@@ -272,9 +217,6 @@ namespace Time2Work.Patches
                             if (IsActiveEvent(in sed, requestedType, m_Today, m_NormalizedTime))
                             {
                                 cost += m_EventCostBonus;
-
-                                // Count trigger (Burst-safe: per-thread counter)
-                                m_BiasCounts[NativeThreadIndex] = m_BiasCounts[NativeThreadIndex] + 1;
                             }
                         }
 

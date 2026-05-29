@@ -1,12 +1,11 @@
 import { getModule, type ModRegistrar } from "cs2/modding";
 import { bindValue, trigger, useValue } from "cs2/api";
-import { type ReactElement, useEffect, useState } from "react";
+import { type ReactElement, type ReactNode, useEffect, useState } from "react";
 
 import timeControlsStyles from "mods/time-controls.module.scss";
 import mod from "../mod.json";
 
 import RealisticTripsMenu from "./mods/RealisticTripsContent/RealisticTripsMenu";
-import { VanillaComponentResolver } from "VanillaComponentResolver";
 import { CitizenScheduleSection } from "./mods/CitizenScheduleSection";
 
 const coTimeControlsStyles: Record<string, string> = getModule(
@@ -16,6 +15,10 @@ const coTimeControlsStyles: Record<string, string> = getModule(
 
 // Stable binding instance shared by both portals
 const dayOfWeek$ = bindValue<string>(mod.id, "dayOfWeek");
+
+type PortalProps = {
+    children?: ReactNode;
+};
 
 export const register: ModRegistrar = (moduleRegistry) => {
     moduleRegistry.extend(
@@ -52,7 +55,7 @@ export const register: ModRegistrar = (moduleRegistry) => {
     moduleRegistry.append("GameTopLeft", RealisticTripsMenu);
 };
 
-function TimeControlsPortal(props: { children: ReactElement }): ReactElement {
+function TimeControlsPortal(props: PortalProps): ReactElement {
     const dayOfWeek = useValue(dayOfWeek$);
 
     const [dateLabelEl, setDateLabelEl] = useState<{
@@ -85,8 +88,28 @@ function TimeControlsPortal(props: { children: ReactElement }): ReactElement {
             return;
         }
 
+        const existing = timeControls.querySelector(
+            "[data-time2work-date='true']"
+        );
+
+        if (existing instanceof HTMLElement) {
+            setDateLabelEl({
+                timeControls,
+                vanilla: dateEl,
+                modded: existing
+            });
+            return;
+        }
+
         const modDateEl = document.createElement("div");
+        modDateEl.setAttribute("data-time2work-date", "true");
         modDateEl.className = coTimeControlsStyles.date ?? "";
+        modDateEl.style.display = "none";
+        modDateEl.style.whiteSpace = "nowrap";
+        modDateEl.style.overflow = "hidden";
+        modDateEl.style.textOverflow = "ellipsis";
+        modDateEl.style.pointerEvents = "none";
+
         dateEl.insertAdjacentElement("afterend", modDateEl);
 
         setDateLabelEl({
@@ -107,13 +130,15 @@ function TimeControlsPortal(props: { children: ReactElement }): ReactElement {
 
         dateLabelEl.vanilla.style.display = "none";
         dateLabelEl.modded.style.display = "block";
-        dateLabelEl.timeControls.style.width = "calc(3.5em + 300px)";
-        dateLabelEl.timeControls.style.overflow = "visible";
+
+        // Keep conservative to avoid layout blowups
+        dateLabelEl.timeControls.style.width = "";
+        dateLabelEl.timeControls.style.overflow = "";
     }, [dateLabelEl]);
 
     useEffect(() => {
         if (!dateLabelEl) return;
-        dateLabelEl.modded.innerHTML = dayOfWeek ?? "";
+        dateLabelEl.modded.textContent = dayOfWeek ?? "";
     }, [dayOfWeek, dateLabelEl]);
 
     useEffect(() => {
@@ -129,11 +154,10 @@ function TimeControlsPortal(props: { children: ReactElement }): ReactElement {
     return <>{props.children}</>;
 }
 
-function TimeControlsNewPortal(props: { children: ReactElement }): ReactElement {
+function TimeControlsNewPortal(props: PortalProps): ReactElement {
     const dayOfWeek = useValue(dayOfWeek$);
 
     const [dateLabelEl, setDateLabelEl] = useState<{
-        container: HTMLElement;
         vanilla: HTMLElement;
         modded: HTMLElement;
     }>();
@@ -142,44 +166,72 @@ function TimeControlsNewPortal(props: { children: ReactElement }): ReactElement 
         let disposed = false;
         let tries = 0;
         let timer: number | undefined;
+        let createdEl: HTMLElement | undefined;
 
         const tryAttach = () => {
             if (disposed) return;
 
-            const roots = Array.from(document.querySelectorAll("div")) as HTMLElement[];
+            const dateTimeContainerNewClass =
+                coTimeControlsStyles.dateTimeContainerNew ??
+                coTimeControlsStyles["date-time-container-new"];
 
-            const candidate = roots.find((el) => {
-                const txt = (el.textContent ?? "").trim();
-                if (!txt) return false;
+            const dateTimeClass =
+                coTimeControlsStyles.dateTime ??
+                coTimeControlsStyles["date-time"];
 
-                const looksLikeYear = /\b20\d{2}\b/.test(txt) || /\b19\d{2}\b/.test(txt);
-                const hasTimeLike = /\b\d{1,2}:\d{2}\b/.test(txt);
+            const dateClass = coTimeControlsStyles.date;
 
-                const rect = el.getBoundingClientRect();
-                const nearBottom = rect.bottom > window.innerHeight - 220;
-                const wideEnough = rect.width > 120;
-
-                return looksLikeYear && hasTimeLike && nearBottom && wideEnough;
-            });
-
-            if (!(candidate instanceof HTMLElement)) {
+            if (!dateTimeContainerNewClass || !dateTimeClass || !dateClass) {
                 tries++;
-                if (tries < 40) {
-                    timer = window.setTimeout(tryAttach, 250);
-                } else {
-                    console.error("Cannot find new UI time/date element.");
+                if (tries < 30) {
+                    timer = window.setTimeout(tryAttach, 300);
                 }
                 return;
             }
 
-            const existing = candidate.parentElement?.querySelector(
+            const containerClass = dateTimeContainerNewClass.split(" ")[0]!;
+            const innerClass = dateTimeClass.split(" ")[0]!;
+            const dateOnlyClass = dateClass.split(" ")[0]!;
+
+            const containers = Array.from(
+                document.getElementsByClassName(containerClass)
+            ).filter((x): x is HTMLElement => x instanceof HTMLElement);
+
+            let vanillaDateEl: HTMLElement | null = null;
+
+            for (const container of containers) {
+                const inner = container.getElementsByClassName(innerClass)[0];
+                if (!(inner instanceof HTMLElement)) continue;
+
+                const dateEl = inner.getElementsByClassName(dateOnlyClass)[0];
+                if (dateEl instanceof HTMLElement) {
+                    vanillaDateEl = dateEl;
+                    break;
+                }
+            }
+
+            if (!(vanillaDateEl instanceof HTMLElement)) {
+                tries++;
+                if (tries < 30) {
+                    timer = window.setTimeout(tryAttach, 300);
+                } else {
+                    console.error("Cannot find new UI date element.");
+                }
+                return;
+            }
+
+            const parent = vanillaDateEl.parentElement;
+            if (!(parent instanceof HTMLElement)) {
+                return;
+            }
+
+            const existing = parent.querySelector(
                 "[data-time2work-new-date='true']"
             );
 
             if (existing instanceof HTMLElement) {
                 setDateLabelEl({
-                    container: candidate.parentElement as HTMLElement,
-                    vanilla: candidate,
+                    vanilla: vanillaDateEl,
                     modded: existing
                 });
                 return;
@@ -187,24 +239,19 @@ function TimeControlsNewPortal(props: { children: ReactElement }): ReactElement 
 
             const modDateEl = document.createElement("div");
             modDateEl.setAttribute("data-time2work-new-date", "true");
-            modDateEl.style.display = "flex";
-            modDateEl.style.alignItems = "center";
-            modDateEl.style.justifyContent = "center";
-            modDateEl.style.textAlign = "center";
-            modDateEl.style.minWidth = "160rem";
-            modDateEl.style.width = "max-content";
-            modDateEl.style.maxWidth = "none";
+
+            // Reuse the same date styling as vanilla new UI
+            modDateEl.className = dateClass;
+            modDateEl.style.display = "none";
+            modDateEl.style.pointerEvents = "none";
             modDateEl.style.whiteSpace = "nowrap";
-            modDateEl.style.overflow = "visible";
-            modDateEl.style.textOverflow = "clip";
-            modDateEl.style.flex = "0 0 auto";
+            modDateEl.style.textAlign = "center";
 
-
-            candidate.insertAdjacentElement("afterend", modDateEl);
+            vanillaDateEl.insertAdjacentElement("afterend", modDateEl);
+            createdEl = modDateEl;
 
             setDateLabelEl({
-                container: candidate.parentElement as HTMLElement,
-                vanilla: candidate,
+                vanilla: vanillaDateEl,
                 modded: modDateEl
             });
         };
@@ -216,6 +263,9 @@ function TimeControlsNewPortal(props: { children: ReactElement }): ReactElement 
             if (timer !== undefined) {
                 window.clearTimeout(timer);
             }
+            if (createdEl?.parentElement) {
+                createdEl.remove();
+            }
         };
     }, []);
 
@@ -223,17 +273,7 @@ function TimeControlsNewPortal(props: { children: ReactElement }): ReactElement 
         if (!dateLabelEl) return;
 
         dateLabelEl.vanilla.style.display = "none";
-        dateLabelEl.modded.style.display = "flex";
-
-        if (dateLabelEl.container) {
-            dateLabelEl.container.style.minWidth = "160rem";
-            dateLabelEl.container.style.width = "auto";
-            dateLabelEl.container.style.overflow = "visible";
-            dateLabelEl.container.style.display = "flex";
-            dateLabelEl.container.style.alignItems = "center";
-            dateLabelEl.container.style.justifyContent = "center";
-            dateLabelEl.container.style.gap = "8px";
-        }
+        dateLabelEl.modded.style.display = "block";
     }, [dateLabelEl]);
 
     useEffect(() => {

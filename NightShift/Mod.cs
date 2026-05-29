@@ -127,6 +127,8 @@ namespace Time2Work
             updateSystem.UpdateAt<Time2WorkStatisticsUISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAfter<TimeSettingsMultiplierSystem>(SystemUpdatePhase.PrefabUpdate);
             updateSystem.UpdateBefore<TimeSettingsMultiplierSystem>(SystemUpdatePhase.PrefabReferences);
+            updateSystem.UpdateAfter<HealthEventProbabilityScalerSystem>(SystemUpdatePhase.PrefabUpdate);
+            updateSystem.UpdateBefore<HealthEventProbabilityScalerSystem>(SystemUpdatePhase.PrefabReferences);
             updateSystem.UpdateAfter<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabUpdate);
             updateSystem.UpdateBefore<DemandParameterUpdaterSystem>(SystemUpdatePhase.PrefabReferences);
             CitizenScheduleSection citizenScheduleSection = World.DefaultGameObjectInjectionWorld?.GetOrCreateSystemManaged<CitizenScheduleSection>();
@@ -144,7 +146,7 @@ namespace Time2Work
                 log.Info($"Patched: {patchedMethod.DeclaringType?.FullName}.{patchedMethod.Name}");
             }
 
-            //Unity.Collections.NativeLeakDetection.Mode = Unity.Collections.NativeLeakDetectionMode.EnabledWithStackTrace;
+            Unity.Collections.NativeLeakDetection.Mode = Unity.Collections.NativeLeakDetectionMode.EnabledWithStackTrace;
         }
 
         public void OnDispose()

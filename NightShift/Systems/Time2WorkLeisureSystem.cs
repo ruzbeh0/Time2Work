@@ -18,7 +18,10 @@ using Game.Simulation;
 using Game.Tools;
 using Game.Vehicles;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Time2Work.Components;
 using Time2Work.Systems;
 using Time2Work.Utils;
@@ -57,6 +60,12 @@ namespace Time2Work
         private EntityQuery m_CarPrefabQuery;
         private ComponentTypeSet m_PathfindTypes;
         private NativeQueue<LeisureEvent> m_LeisureQueue;
+        private NativeQueue<LeisureLogEvent> m_LeisureLogQueue;
+        private readonly Dictionary<LeisureType, LeisureHourlyTotals> m_LeisureHourlyTotals = new Dictionary<LeisureType, LeisureHourlyTotals>();
+        private DateTime m_LeisureLogHourStart;
+        private bool m_LeisureLogHourInitialized;
+        private bool m_LeisureLogSettingInitialized;
+        private bool m_LastLeisureLogEnabled;
         private PersonalCarSelectData m_PersonalCarSelectData;
         private Time2WorkLeisureSystem.TypeHandle __TypeHandle;
         private Setting.DTSimulationEnum m_daytype;
@@ -107,6 +116,7 @@ namespace Time2Work
             this.m_CarPrefabQuery = this.GetEntityQuery(PersonalCarSelectData.GetEntityQueryDesc());
             this.m_PathfindTypes = new ComponentTypeSet(ComponentType.ReadWrite<PathInformation>(), ComponentType.ReadWrite<PathElement>());
             this.m_LeisureQueue = new NativeQueue<LeisureEvent>((AllocatorManager.AllocatorHandle)Allocator.Persistent);
+            this.m_LeisureLogQueue = new NativeQueue<LeisureLogEvent>((AllocatorManager.AllocatorHandle)Allocator.Persistent);
             this.RequireForUpdate(this.m_LeisureQuery);
             this.RequireForUpdate(this.m_EconomyParameterQuery);
             this.RequireForUpdate(this.m_LeisureParameterQuery);
@@ -115,7 +125,17 @@ namespace Time2Work
 
         protected override void OnDestroy()
         {
-            this.m_LeisureQueue.Dispose();
+            this.Dependency.Complete();
+
+            if (this.m_LeisureQueue.IsCreated)
+            {
+                this.m_LeisureQueue.Dispose();
+            }
+            if (this.m_LeisureLogQueue.IsCreated)
+            {
+                this.m_LeisureLogQueue.Dispose();
+            }
+
             base.OnDestroy();
         }
 
@@ -131,8 +151,15 @@ namespace Time2Work
             JobHandle outJobHandle;
             JobHandle deps1;
 
+            NativeList<ArchetypeChunk> humanChunks =
+                this.m_ResidentPrefabQuery.ToArchetypeChunkListAsync(
+                Allocator.Persistent,
+                out outJobHandle);
+
             DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
             int hour = currentDateTime.Hour;
+            bool logLeisure = Mod.m_Setting != null && Mod.m_Setting.shopping_log_enabled;
+            LogLeisureSettingState(logLeisure, currentDateTime);
 
             JobHandle jobHandle2 = new Time2WorkLeisureSystem.LeisureJob()
             {
@@ -173,8 +200,12 @@ namespace Time2Work
                 m_HouseholdCitizens = InternalCompilerInterface.GetBufferLookup<HouseholdCitizen>(ref this.__TypeHandle.__Game_Citizens_HouseholdCitizen_RO_BufferLookup, ref this.CheckedStateRef),
                 m_RenterBufs = InternalCompilerInterface.GetBufferLookup<Renter>(ref this.__TypeHandle.__Game_Buildings_Renter_RO_BufferLookup, ref this.CheckedStateRef),
                 m_ConsumptionDatas = InternalCompilerInterface.GetComponentLookup<ConsumptionData>(ref this.__TypeHandle.__Game_Prefabs_ConsumptionData_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_CurrentDistrictData = InternalCompilerInterface.GetComponentLookup<CurrentDistrict>(ref this.__TypeHandle.__Game_Areas_CurrentDistrict_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_DistrictModifiers = InternalCompilerInterface.GetBufferLookup<DistrictModifier>(ref this.__TypeHandle.__Game_Areas_DistrictModifier_RO_BufferLookup, ref this.CheckedStateRef),
                 m_Shopping = InternalCompilerInterface.GetComponentLookup<Shopper>(ref this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup, ref this.CheckedStateRef),
                 m_SpecialEventDatas = InternalCompilerInterface.GetComponentLookup<SpecialEventData>(ref this.__TypeHandle.__Game_Citizens_SpecialEventData_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_ResourceBuyers = InternalCompilerInterface.GetComponentLookup<ResourceBuyer>(ref this.__TypeHandle.__Game_Companies_ResourceBuyer_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_Transforms = InternalCompilerInterface.GetComponentLookup<Game.Objects.Transform>(ref this.__TypeHandle.__Game_Objects_Transform_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                 m_SimulationFrame = this.m_SimulationSystem.frameIndex,
                 m_TimeOfDay = this.m_TimeSystem.normalizedTime,
@@ -188,12 +219,14 @@ namespace Time2Work
                 m_Temperature = ((float)this.m_ClimateSystem.temperature),
                 m_RandomSeed = RandomSeed.Next(),
                 m_PathfindTypes = this.m_PathfindTypes,
-                m_HumanChunks = this.m_ResidentPrefabQuery.ToArchetypeChunkListAsync((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle),
+                m_HumanChunks = humanChunks,
                 m_PersonalCarSelectData = this.m_PersonalCarSelectData,
                 m_PathfindQueue = this.m_PathFindSetupSystem.GetQueue((object)this, 512).AsParallelWriter(),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 m_MeetingQueue = this.m_AddMeetingSystem.GetMeetingQueue(out deps1).AsParallelWriter(),
                 m_LeisureQueue = this.m_LeisureQueue.AsParallelWriter(),
+                m_LeisureLogQueue = this.m_LeisureLogQueue.AsParallelWriter(),
+                m_LogLeisure = logLeisure,
                 m_TimeData = this.m_TimeDataQuery.GetSingleton<TimeData>(),
                 m_PopulationEntity = this.m_PopulationQuery.GetSingletonEntity(),
                 lunch_break_pct = Mod.m_Setting.lunch_break_percentage,
@@ -245,9 +278,14 @@ namespace Time2Work
                 shopping_hourly_factor = LeisureProbabilityCalculator.GetShoppingProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
                 park_hourly_factor = LeisureProbabilityCalculator.GetParkProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
                 travel_hourly_factor = LeisureProbabilityCalculator.GetTravelProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour)
-            }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(this.m_LeisureQuery, JobUtils.CombineDependencies(this.Dependency, outJobHandle, deps1, jobHandle1));
+            }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(
+                this.m_LeisureQuery,
+                JobUtils.CombineDependencies(this.Dependency, outJobHandle, deps1, jobHandle1));
+
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle2);
             this.m_PathFindSetupSystem.AddQueueWriter(jobHandle2);
+
+            JobHandle disposeHumanChunks = humanChunks.Dispose(jobHandle2);
             JobHandle deps2;
             JobHandle jobHandle3 = new Time2WorkLeisureSystem.SpendLeisurejob()
             {
@@ -260,14 +298,197 @@ namespace Time2Work
                 m_Prefabs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
                 m_ResourceDatas = this.__TypeHandle.__Game_Prefabs_ResourceData_RO_ComponentLookup,
                 m_ServiceCompanyDatas = this.__TypeHandle.__Game_Companies_ServiceCompanyData_RO_ComponentLookup,
+                m_LeisureProviderDatas = this.__TypeHandle.__Game_Prefabs_LeisureProviderData_RO_ComponentLookup,
                 m_ResourcePrefabs = this.m_ResourceSystem.GetPrefabs(),
                 m_CitizensConsumptionAccumulator = this.m_CityProductionStatisticSystem.GetCityResourceUsageAccumulator(CityProductionStatisticSystem.CityResourceUsage.Consumer.Citizens, out deps2),
-                m_LeisureQueue = this.m_LeisureQueue
+                m_LeisureQueue = this.m_LeisureQueue,
+                m_LeisureLogQueue = this.m_LeisureLogQueue.AsParallelWriter(),
+                m_LogLeisure = logLeisure
             }.Schedule<Time2WorkLeisureSystem.SpendLeisurejob>(JobHandle.CombineDependencies(jobHandle2, deps2));
             this.m_ResourceSystem.AddPrefabsReader(jobHandle3);
 
-            this.m_CityProductionStatisticSystem.AddCityUsageAccumulatorWriter(CityProductionStatisticSystem.CityResourceUsage.Consumer.Citizens, jobHandle3);
-            this.Dependency = jobHandle3;
+            this.m_CityProductionStatisticSystem.AddCityUsageAccumulatorWriter(
+                CityProductionStatisticSystem.CityResourceUsage.Consumer.Citizens,
+                jobHandle3);
+
+            this.Dependency = JobHandle.CombineDependencies(jobHandle3, disposeHumanChunks);
+            this.m_PersonalCarSelectData.PostUpdate(this.Dependency);
+
+            if (logLeisure)
+            {
+                this.Dependency.Complete();
+                DrainLeisureLogs(currentDateTime);
+            }
+            else
+            {
+                ClearLeisureLogState();
+            }
+        }
+
+        private void DrainLeisureLogs(DateTime now)
+        {
+            EnsureLeisureLogHour(now);
+
+            while (this.m_LeisureLogQueue.TryDequeue(out LeisureLogEvent logEvent))
+            {
+                if (!this.m_LeisureHourlyTotals.TryGetValue(logEvent.leisureType, out LeisureHourlyTotals totals))
+                {
+                    totals = default;
+                }
+
+                totals.startedTrips += logEvent.startedTrips;
+                totals.completedTrips += logEvent.completedTrips;
+                totals.failedTrips += logEvent.failedTrips;
+                totals.failedInactive += logEvent.failedInactive;
+                totals.failedNoService += logEvent.failedNoService;
+                totals.failedNoResources += logEvent.failedNoResources;
+                totals.mealVisits += logEvent.mealVisits;
+                totals.resourceAmount += logEvent.resourceAmount;
+                totals.cost += logEvent.cost;
+                totals.durationMinutes += logEvent.durationMinutes;
+                totals.resourceEvents += logEvent.resourceEvents;
+                this.m_LeisureHourlyTotals[logEvent.leisureType] = totals;
+            }
+        }
+
+        private void LogLeisureSettingState(bool logLeisure, DateTime now)
+        {
+            if (this.m_LeisureLogSettingInitialized && this.m_LastLeisureLogEnabled == logLeisure)
+                return;
+
+            this.m_LeisureLogSettingInitialized = true;
+            this.m_LastLeisureLogEnabled = logLeisure;
+
+            if (logLeisure)
+            {
+                EnsureLeisureLogHour(now);
+                Mod.log.Info($"Leisure diagnostics log enabled at {now:yyyy-MM-dd HH:mm}; first LeisureHourlyLog is written when the in-game hour changes.");
+            }
+            else
+            {
+                Mod.log.Info("Leisure diagnostics log disabled.");
+            }
+        }
+
+        private void EnsureLeisureLogHour(DateTime now)
+        {
+            DateTime currentHour = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0);
+            if (!this.m_LeisureLogHourInitialized)
+            {
+                this.m_LeisureLogHourStart = currentHour;
+                this.m_LeisureLogHourInitialized = true;
+                return;
+            }
+
+            if (currentHour != this.m_LeisureLogHourStart)
+            {
+                FlushLeisureHourlyTotals();
+                this.m_LeisureLogHourStart = currentHour;
+            }
+        }
+
+        private void FlushLeisureHourlyTotals()
+        {
+            if (!this.m_LeisureLogHourInitialized)
+                return;
+
+            int totalStartedTrips = 0;
+            int totalCompletedTrips = 0;
+            int totalFailedTrips = 0;
+            int totalFailedInactive = 0;
+            int totalFailedNoService = 0;
+            int totalFailedNoResources = 0;
+            int totalMealVisits = 0;
+            int totalResourceAmount = 0;
+            int totalCost = 0;
+            int totalResourceEvents = 0;
+            float totalDuration = 0f;
+
+            foreach (LeisureHourlyTotals totals in this.m_LeisureHourlyTotals.Values)
+            {
+                totalStartedTrips += totals.startedTrips;
+                totalCompletedTrips += totals.completedTrips;
+                totalFailedTrips += totals.failedTrips;
+                totalFailedInactive += totals.failedInactive;
+                totalFailedNoService += totals.failedNoService;
+                totalFailedNoResources += totals.failedNoResources;
+                totalMealVisits += totals.mealVisits;
+                totalResourceAmount += totals.resourceAmount;
+                totalCost += totals.cost;
+                totalResourceEvents += totals.resourceEvents;
+                totalDuration += totals.durationMinutes;
+            }
+
+            StringBuilder typeSummary = new StringBuilder();
+            foreach (LeisureType leisureType in Enum.GetValues(typeof(LeisureType)))
+            {
+                if (!this.m_LeisureHourlyTotals.TryGetValue(leisureType, out LeisureHourlyTotals totals) || (totals.startedTrips == 0 && totals.completedTrips == 0 && totals.failedTrips == 0 && totals.resourceEvents == 0))
+                    continue;
+
+                if (typeSummary.Length > 0)
+                    typeSummary.Append("; ");
+
+                float avgTypeDuration = totals.completedTrips > 0 ? totals.durationMinutes / totals.completedTrips : 0f;
+                typeSummary.Append(leisureType);
+                typeSummary.Append("(started=");
+                typeSummary.Append(totals.startedTrips);
+                typeSummary.Append(",completed=");
+                typeSummary.Append(totals.completedTrips);
+                typeSummary.Append(",failed=");
+                typeSummary.Append(totals.failedTrips);
+                if (totals.failedInactive > 0)
+                {
+                    typeSummary.Append(",failedInactive=");
+                    typeSummary.Append(totals.failedInactive);
+                }
+                if (totals.failedNoService > 0)
+                {
+                    typeSummary.Append(",failedNoService=");
+                    typeSummary.Append(totals.failedNoService);
+                }
+                if (totals.failedNoResources > 0)
+                {
+                    typeSummary.Append(",failedNoResources=");
+                    typeSummary.Append(totals.failedNoResources);
+                }
+                if (totals.mealVisits > 0)
+                {
+                    typeSummary.Append(",mealVisits=");
+                    typeSummary.Append(totals.mealVisits);
+                }
+                typeSummary.Append(",amount=");
+                typeSummary.Append(totals.resourceAmount);
+                typeSummary.Append(",spend=");
+                typeSummary.Append(totals.cost);
+                typeSummary.Append(",resourceEvents=");
+                typeSummary.Append(totals.resourceEvents);
+                typeSummary.Append(",avgDuration=");
+                typeSummary.Append(FormatLogFloat(avgTypeDuration));
+                typeSummary.Append(")");
+            }
+
+            float avgDuration = totalCompletedTrips > 0 ? totalDuration / totalCompletedTrips : 0f;
+            string types = typeSummary.Length > 0 ? typeSummary.ToString() : "none";
+
+            Mod.log.Info(
+                $"LeisureHourlyLog hour={this.m_LeisureLogHourStart:yyyy-MM-dd HH}:00 started={totalStartedTrips} completed={totalCompletedTrips} failed={totalFailedTrips} failedInactive={totalFailedInactive} failedNoService={totalFailedNoService} failedNoResources={totalFailedNoResources} mealVisits={totalMealVisits} amount={totalResourceAmount} spend={totalCost} resourceEvents={totalResourceEvents} avgDurationMinutes={FormatLogFloat(avgDuration)} types={types}");
+
+            this.m_LeisureHourlyTotals.Clear();
+        }
+
+        private static string FormatLogFloat(float value)
+        {
+            return value.ToString("F1", CultureInfo.InvariantCulture);
+        }
+
+        private void ClearLeisureLogState()
+        {
+            while (this.m_LeisureLogQueue.IsCreated && this.m_LeisureLogQueue.TryDequeue(out LeisureLogEvent _))
+            {
+            }
+
+            this.m_LeisureHourlyTotals.Clear();
+            this.m_LeisureLogHourInitialized = false;
         }
 
         private void __AssignQueries(ref SystemState state)
@@ -286,10 +507,43 @@ namespace Time2Work
         {
         }
 
+        private struct LeisureLogEvent
+        {
+            public LeisureType leisureType;
+            public Resource resource;
+            public int startedTrips;
+            public int completedTrips;
+            public int failedTrips;
+            public int failedInactive;
+            public int failedNoService;
+            public int failedNoResources;
+            public int mealVisits;
+            public int resourceAmount;
+            public int cost;
+            public int resourceEvents;
+            public float durationMinutes;
+        }
+
+        private struct LeisureHourlyTotals
+        {
+            public int startedTrips;
+            public int completedTrips;
+            public int failedTrips;
+            public int failedInactive;
+            public int failedNoService;
+            public int failedNoResources;
+            public int mealVisits;
+            public int resourceAmount;
+            public int cost;
+            public int resourceEvents;
+            public float durationMinutes;
+        }
+
         [BurstCompile]
         private struct SpendLeisurejob : IJob
         {
             public NativeQueue<LeisureEvent> m_LeisureQueue;
+            public NativeQueue<LeisureLogEvent>.ParallelWriter m_LeisureLogQueue;
             public ComponentLookup<ServiceAvailable> m_ServiceAvailables;
             public ComponentLookup<CompanyStatisticData> m_CompanyStatisticDatas;
             public BufferLookup<Game.Economy.Resources> m_Resources;
@@ -299,6 +553,8 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<IndustrialProcessData> m_IndustrialProcesses;
             [ReadOnly]
+            public ComponentLookup<LeisureProviderData> m_LeisureProviderDatas;
+            [ReadOnly]
             public ComponentLookup<HouseholdMember> m_HouseholdMembers;
             [ReadOnly]
             public ComponentLookup<ResourceData> m_ResourceDatas;
@@ -307,6 +563,7 @@ namespace Time2Work
             [ReadOnly]
             public ResourcePrefabs m_ResourcePrefabs;
             public NativeArray<int> m_CitizensConsumptionAccumulator;
+            public bool m_LogLeisure;
 
             public void Execute()
             {
@@ -367,6 +624,23 @@ namespace Time2Work
                                     EconomyUtils.AddResources(Resource.Money, Mathf.RoundToInt((float)f), resource2);
                                     EconomyUtils.AddResources(Resource.Money, -Mathf.RoundToInt((float)f), resource3);
                                     this.m_CitizensConsumptionAccumulator[EconomyUtils.GetResourceIndex(resource1)] += num2;
+                                    if (this.m_LogLeisure)
+                                    {
+                                        LeisureType leisureType = LeisureType.Count;
+                                        if (this.m_LeisureProviderDatas.HasComponent(prefab))
+                                        {
+                                            leisureType = this.m_LeisureProviderDatas[prefab].m_LeisureType;
+                                        }
+
+                                        this.m_LeisureLogQueue.Enqueue(new LeisureLogEvent()
+                                        {
+                                            leisureType = leisureType,
+                                            resource = resource1,
+                                            resourceAmount = num2,
+                                            cost = Mathf.RoundToInt((float)f),
+                                            resourceEvents = 1
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -425,6 +699,10 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<SpecialEventData> m_SpecialEventDatas;
             [ReadOnly]
+            public ComponentLookup<ResourceBuyer> m_ResourceBuyers;
+            [ReadOnly]
+            public ComponentLookup<Game.Objects.Transform> m_Transforms;
+            [ReadOnly]
             public ComponentLookup<PropertyRenter> m_Renters;
             [NativeDisableParallelForRestriction]
             public ComponentLookup<Citizen> m_CitizenDatas;
@@ -453,6 +731,10 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<ConsumptionData> m_ConsumptionDatas;
             [ReadOnly]
+            public ComponentLookup<CurrentDistrict> m_CurrentDistrictData;
+            [ReadOnly]
+            public BufferLookup<DistrictModifier> m_DistrictModifiers;
+            [ReadOnly]
             public RandomSeed m_RandomSeed;
             [ReadOnly]
             public ComponentTypeSet m_PathfindTypes;
@@ -475,6 +757,7 @@ namespace Time2Work
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
             public NativeQueue<SetupQueueItem>.ParallelWriter m_PathfindQueue;
             public NativeQueue<LeisureEvent>.ParallelWriter m_LeisureQueue;
+            public NativeQueue<LeisureLogEvent>.ParallelWriter m_LeisureLogQueue;
             public NativeQueue<AddMeetingSystem.AddMeeting>.ParallelWriter m_MeetingQueue;
             public uint m_SimulationFrame;
             public uint m_UpdateFrameIndex;
@@ -536,10 +819,132 @@ namespace Time2Work
             public float travel_hourly_factor;
             public float park_hourly_factor;
             public int remote_work_prob;
+            public bool m_LogLeisure;
+
+            private static float GetElapsed(float start, float end)
+            {
+                start = math.frac(start);
+                end = math.frac(end);
+                return end >= start ? end - start : 1f - start + end;
+            }
+
+            private static bool IsInWindow(float start, float end, float time)
+            {
+                start = math.frac(start);
+                end = math.frac(end);
+                time = math.frac(time);
+                return start <= end ? time >= start && time <= end : time >= start || time <= end;
+            }
+
+            private float GetPostEventDepartureDelay(Citizen citizen, Entity eventEntity, int day)
+            {
+                uint seed = (uint)(citizen.m_PseudoRandom + eventEntity.Index * 397 + day * 1009 + 17);
+                Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex(seed);
+                float minutes = math.max(0f, (float)GaussianRandom.NextGaussianDouble(random) * 10f);
+                return math.min(minutes, 45f) / 1440f;
+            }
+
+            private bool IsEventAttendanceWindow(in SpecialEventData specialEventData, Citizen citizen, Entity eventEntity, int day)
+            {
+                if (specialEventData.day != day)
+                    return false;
+
+                float start = math.frac(specialEventData.start_time);
+                float end = math.frac(specialEventData.start_time + specialEventData.duration);
+                float departureEnd = math.frac(specialEventData.start_time + specialEventData.duration + GetPostEventDepartureDelay(citizen, eventEntity, day));
+                return IsInWindow(start, departureEnd, m_TimeOfDay);
+            }
+
+            private bool IsPostEventDepartureDue(in SpecialEventData specialEventData, Citizen citizen, Entity eventEntity, int day)
+            {
+                if (specialEventData.day != day)
+                    return false;
+
+                float start = math.frac(specialEventData.start_time);
+                float end = math.frac(specialEventData.start_time + specialEventData.duration);
+                if (IsInWindow(start, end, m_TimeOfDay))
+                    return false;
+
+                float elapsedSinceEnd = GetElapsed(end, m_TimeOfDay);
+                float delay = GetPostEventDepartureDelay(citizen, eventEntity, day);
+                return elapsedSinceEnd >= delay && elapsedSinceEnd <= (90f / 1440f);
+            }
+
+            private bool TryStartPostEventMeal(
+                int index,
+                Entity entity,
+                Entity household,
+                Entity currentBuilding,
+                Entity providerEntity,
+                Citizen citizen,
+                LeisureProviderData provider,
+                in SpecialEventData specialEventData,
+                int day)
+            {
+                if (!IsPostEventDepartureDue(in specialEventData, citizen, providerEntity, day) ||
+                    this.m_ResourceBuyers.HasComponent(entity) ||
+                    !this.m_Households.HasComponent(household))
+                {
+                    return false;
+                }
+
+                float hour = m_TimeOfDay * 24f;
+                int chance = 15;
+                if (hour >= 17f && hour <= 23.5f)
+                    chance += 15;
+                else if (hour < 1.5f)
+                    chance += 5;
+                else
+                    chance -= 10;
+
+                if (this.m_TouristHouseholds.HasComponent(household))
+                    chance += 10;
+
+                CitizenAge age = citizen.GetAge();
+                if (age == CitizenAge.Child)
+                    chance = math.min(chance, 5);
+                else if (age == CitizenAge.Teen)
+                    chance = math.max(5, chance - 5);
+                else if (age == CitizenAge.Elderly)
+                    chance = math.max(5, chance - 5);
+
+                if (provider.m_LeisureType == LeisureType.Meals)
+                    chance = math.min(chance, 8);
+
+                chance = math.clamp(chance, 0, 60);
+                uint seed = (uint)(citizen.m_PseudoRandom + providerEntity.Index * 521 + day * 1543 + 83);
+                Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex(seed);
+                if (random.NextInt(100) >= chance)
+                    return false;
+
+                Entity positionEntity = this.m_Transforms.HasComponent(currentBuilding) ? currentBuilding : providerEntity;
+                if (!this.m_Transforms.HasComponent(positionEntity))
+                    return false;
+
+                this.m_CommandBuffer.AddComponent<ResourceBuyer>(index, entity, new ResourceBuyer()
+                {
+                    m_Payer = household,
+                    m_Flags = SetupTargetFlags.Commercial,
+                    m_Location = this.m_Transforms[positionEntity].m_Position,
+                    m_ResourceNeeded = Resource.Meals,
+                    m_AmountNeeded = random.NextInt(1, 3)
+                });
+
+                if (this.m_Purposes.HasComponent(entity))
+                    this.m_CommandBuffer.RemoveComponent<TravelPurpose>(index, entity);
+                if (this.m_Targets.HasComponent(entity))
+                    this.m_CommandBuffer.RemoveComponent<Game.Common.Target>(index, entity);
+                if (this.m_Shopping.HasComponent(entity))
+                    this.m_CommandBuffer.RemoveComponent<Shopper>(index, entity);
+
+                return true;
+            }
 
             private void SpendLeisure(
               int index,
               Entity entity,
+              Entity household,
+              Entity currentBuilding,
               ref Citizen citizen,
               ref Leisure leisure,
               Entity providerEntity,
@@ -547,10 +952,22 @@ namespace Time2Work
               Entity specialEventDataEntity,
               int day)
             {
-                bool flag = this.m_BuildingData.HasComponent(providerEntity) && BuildingUtils.CheckOption(this.m_BuildingData[providerEntity], BuildingOption.Inactive);
+                bool flag = false;
+                bool failedInactive = false;
+                bool failedNoService = false;
+                bool failedNoResources = false;
 
-                if (this.m_ServiceAvailables.HasComponent(providerEntity) && this.m_ServiceAvailables[providerEntity].m_ServiceAvailable <= 0)
+                if (this.m_BuildingData.HasComponent(providerEntity) && BuildingUtils.CheckOption(this.m_BuildingData[providerEntity], BuildingOption.Inactive))
+                {
                     flag = true;
+                    failedInactive = true;
+                }
+
+                if (!flag && this.m_ServiceAvailables.HasComponent(providerEntity) && this.m_ServiceAvailables[providerEntity].m_ServiceAvailable <= 0)
+                {
+                    flag = true;
+                    failedNoService = true;
+                }
 
                 Entity prefab = this.m_PrefabRefs[providerEntity].m_Prefab;
 
@@ -560,7 +977,10 @@ namespace Time2Work
 
                     resource = this.m_IndustrialProcesses[prefab].m_Output.m_Resource;
                     if (resource != Resource.NoResource && this.m_Resources.HasBuffer(providerEntity) && EconomyUtils.GetResources(resource, this.m_Resources[providerEntity]) <= 0)
+                    {
                         flag = true;
+                        failedNoResources = true;
+                    }
                 }
                 if (!flag)
                 {
@@ -580,7 +1000,7 @@ namespace Time2Work
                 {
                     if (specialEventdata.day == day)
                     {  
-                        if(m_TimeOfDay >= specialEventdata.start_time && m_TimeOfDay <= (specialEventdata.start_time + specialEventdata.duration))
+                        if(IsEventAttendanceWindow(in specialEventdata, citizen, specialEventDataEntity, day))
                         {
                             leisureCounterCondition = false;
                             //Mod.log.Info($"Special event active: index:{entity.Index}, hour:{(int)Math.Round(this.m_TimeOfDay*24)}, timeOfDay: {this.m_TimeOfDay}, event start: {specialEventdata.start_time}, event end: {specialEventdata.start_time + specialEventdata.duration}");
@@ -590,6 +1010,33 @@ namespace Time2Work
 
                 if (((leisureCounterCondition ? 1 : (this.m_SimulationFrame >= leisure.m_LastPossibleFrame ? 1 : 0)) | (flag ? 1 : 0)) == 0)
                     return;
+
+                if (this.m_LogLeisure)
+                {
+                    float durationMinutes = 0f;
+                    Shopper shopper;
+                    if (this.m_Shopping.TryGetComponent(entity, out shopper))
+                    {
+                        durationMinutes = GetElapsed(shopper.start_time, this.m_TimeOfDay) * 1440f;
+                    }
+
+                    this.m_LeisureLogQueue.Enqueue(new LeisureLogEvent()
+                    {
+                        leisureType = provider.m_LeisureType,
+                        completedTrips = flag ? 0 : 1,
+                        failedTrips = flag ? 1 : 0,
+                        failedInactive = failedInactive ? 1 : 0,
+                        failedNoService = failedNoService ? 1 : 0,
+                        failedNoResources = failedNoResources ? 1 : 0,
+                        mealVisits = !flag && provider.m_LeisureType == LeisureType.Meals ? 1 : 0,
+                        durationMinutes = flag ? 0f : durationMinutes
+                    });
+                }
+
+                if (m_SpecialEventDatas.TryGetComponent(specialEventDataEntity, out specialEventdata))
+                {
+                    TryStartPostEventMeal(index, entity, household, currentBuilding, providerEntity, citizen, provider, in specialEventdata, day);
+                }
 
                 this.m_CommandBuffer.RemoveComponent<Leisure>(index, entity);
             }
@@ -772,7 +1219,8 @@ namespace Time2Work
 
                     if (entity2 != Entity.Null)
                     {
-                        this.SpendLeisure(unfilteredChunkIndex, entity1, ref citizenData, ref leisure,providerEntity, provider, providerEntity, day);
+                        Entity currentBuildingForMeal = this.m_CurrentBuildings.HasComponent(entity1) ? this.m_CurrentBuildings[entity1].m_CurrentBuilding : Entity.Null;
+                        this.SpendLeisure(unfilteredChunkIndex, entity1, nativeArray3[index].m_Household, currentBuildingForMeal, ref citizenData, ref leisure, providerEntity, provider, providerEntity, day);
                         nativeArray2[index] = leisure;
                         this.m_CitizenDatas[entity1] = citizenData;
                     }
@@ -823,6 +1271,14 @@ namespace Time2Work
                                             m_TargetAgent = destination,
                                             m_Purpose = Game.Citizens.Purpose.Leisure
                                         });
+                                        if (this.m_LogLeisure)
+                                        {
+                                            this.m_LeisureLogQueue.Enqueue(new LeisureLogEvent()
+                                            {
+                                                leisureType = provider.m_LeisureType,
+                                                startedTrips = 1
+                                            });
+                                        }
                                         this.m_CommandBuffer.AddComponent<Game.Common.Target>(unfilteredChunkIndex, entity1, new Game.Common.Target()
                                         {
                                             m_Target = destination
@@ -1111,6 +1567,12 @@ namespace Time2Work
                         Worker worker = this.m_Workers[citizen];
                         parameters.m_Authorization2 = !this.m_PropertyRenters.HasComponent(worker.m_Workplace) ? worker.m_Workplace : this.m_PropertyRenters[worker.m_Workplace].m_Property;
                     }
+                    float bikeProbability = 20f;
+                    CurrentDistrict currentDistrict;
+                    DynamicBuffer<DistrictModifier> districtModifiers;
+                    if (this.m_CurrentDistrictData.TryGetComponent(componentData1.m_Property, out currentDistrict) && this.m_DistrictModifiers.TryGetBuffer(currentDistrict.m_District, out districtModifiers))
+                        AreaUtils.ApplyModifier(ref bikeProbability, districtModifiers, DistrictModifierType.BikeProbability);
+                    bool preferBike = (double)random.NextFloat(100f) < (double)bikeProbability;
                     if (this.m_CarKeepers.IsComponentEnabled(citizen))
                     {
                         Entity car = this.m_CarKeepers[citizen].m_Car;
@@ -1132,7 +1594,7 @@ namespace Time2Work
                     }
                     else
                     {
-                        if (this.m_BicycleOwners.IsComponentEnabled(citizen))
+                        if (this.m_BicycleOwners.IsComponentEnabled(citizen) && preferBike)
                         {
                             Entity bicycle = this.m_BicycleOwners[citizen].m_Bicycle;
                             PrefabRef componentData3;
@@ -1226,6 +1688,10 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<SpecialEventData> __Game_Citizens_SpecialEventData_RO_ComponentLookup;
             [ReadOnly]
+            public ComponentLookup<ResourceBuyer> __Game_Companies_ResourceBuyer_RO_ComponentLookup;
+            [ReadOnly]
+            public ComponentLookup<Game.Objects.Transform> __Game_Objects_Transform_RO_ComponentLookup;
+            [ReadOnly]
             public BufferLookup<Game.Economy.Resources> __Game_Economy_Resources_RO_BufferLookup;
             public ComponentLookup<Citizen> __Game_Citizens_Citizen_RW_ComponentLookup;
             [ReadOnly]
@@ -1252,6 +1718,10 @@ namespace Time2Work
             public BufferLookup<Renter> __Game_Buildings_Renter_RO_BufferLookup;
             [ReadOnly]
             public ComponentLookup<ConsumptionData> __Game_Prefabs_ConsumptionData_RO_ComponentLookup;
+            [ReadOnly]
+            public ComponentLookup<CurrentDistrict> __Game_Areas_CurrentDistrict_RO_ComponentLookup;
+            [ReadOnly]
+            public BufferLookup<DistrictModifier> __Game_Areas_DistrictModifier_RO_BufferLookup;
             public ComponentLookup<ServiceAvailable> __Game_Companies_ServiceAvailable_RW_ComponentLookup;
             public ComponentLookup<CompanyStatisticData> __Game_Companies_CompanyStatisticData_RW_ComponentLookup;
             public BufferLookup<Game.Economy.Resources> __Game_Economy_Resources_RW_BufferLookup;
@@ -1276,6 +1746,7 @@ namespace Time2Work
             public ComponentLookup<PrefabRef> PrefabRefLookup;
             [ReadOnly]
             public ComponentLookup<CitizenSchedule> CitizenScheduleLookup;
+
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void __AssignHandles(ref SystemState state)
@@ -1303,6 +1774,8 @@ namespace Time2Work
                 this.__Game_Citizens_Worker_RO_ComponentLookup = state.GetComponentLookup<Worker>(true);
                 this.__Game_Citizens_Household_RO_ComponentLookup = state.GetComponentLookup<Household>(true);
                 this.__Game_Citizens_SpecialEventData_RO_ComponentLookup = state.GetComponentLookup<SpecialEventData>(true);
+                this.__Game_Companies_ResourceBuyer_RO_ComponentLookup = state.GetComponentLookup<ResourceBuyer>(true);
+                this.__Game_Objects_Transform_RO_ComponentLookup = state.GetComponentLookup<Game.Objects.Transform>(true);
                 this.__Game_Economy_Resources_RO_BufferLookup = state.GetBufferLookup<Game.Economy.Resources>(true);
                 this.__Game_Citizens_Citizen_RW_ComponentLookup = state.GetComponentLookup<Citizen>();
                 this.__Game_Prefabs_CarData_RO_ComponentLookup = state.GetComponentLookup<CarData>(true);
@@ -1322,6 +1795,8 @@ namespace Time2Work
                 this.__Game_Companies_ServiceCompanyData_RO_ComponentLookup = state.GetComponentLookup<ServiceCompanyData>(true);
                 this.__Game_Buildings_Renter_RO_BufferLookup = state.GetBufferLookup<Renter>(true);
                 this.__Game_Prefabs_ConsumptionData_RO_ComponentLookup = state.GetComponentLookup<ConsumptionData>(true);
+                this.__Game_Areas_CurrentDistrict_RO_ComponentLookup = state.GetComponentLookup<CurrentDistrict>(true);
+                this.__Game_Areas_DistrictModifier_RO_BufferLookup = state.GetBufferLookup<DistrictModifier>(true);
                 this.__Game_Prefabs_ResourceData_RO_ComponentLookup = state.GetComponentLookup<ResourceData>(true);
                 this.__Game_Companies_ServiceCompanyData_RO_ComponentLookup = state.GetComponentLookup<ServiceCompanyData>(true);
                 this.__Game_Citizens_Shopping_RW_ComponentLookup = state.GetComponentLookup<Shopper>(false);

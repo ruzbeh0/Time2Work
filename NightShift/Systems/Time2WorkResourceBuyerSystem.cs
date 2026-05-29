@@ -21,6 +21,7 @@ using Game;
 using Game.Simulation;
 using System;
 using System.Runtime.CompilerServices;
+using Time2Work.Components;
 using Unity.Assertions;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
@@ -298,7 +299,9 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
             m_EconomyParameterData = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
             m_City = this.m_CitySystem.City,
             realisticPathfinding = Mod.realisticPathFindingPresent,
-            m_SalesQueue = this.m_SalesQueue.AsParallelWriter()
+            m_SalesQueue = this.m_SalesQueue.AsParallelWriter(),
+            m_ShoppingPurchaseData = InternalCompilerInterface.GetComponentLookup<ShoppingPurchaseData>(ref this.__TypeHandle.__Time2Work_Components_ShoppingPurchaseData_RO_ComponentLookup, ref this.CheckedStateRef),
+            m_LogShopping = Mod.m_Setting != null && Mod.m_Setting.shopping_log_enabled
         };
         // ISSUE: reference to a compiler-generated field
         this.Dependency = jobData1.ScheduleParallel<Time2WorkResourceBuyerSystem.HandleBuyersJob>(this.m_BuyerQuery, JobHandle.CombineDependencies(this.Dependency, outJobHandle, jobHandle));
@@ -381,7 +384,9 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
             m_PopulationData = InternalCompilerInterface.GetComponentLookup<Population>(ref this.__TypeHandle.__Game_City_Population_RO_ComponentLookup, ref this.CheckedStateRef),
             m_PopulationEntity = this.m_PopulationQuery.GetSingletonEntity(),
             m_CitizenConsumptionAccumulator = this.m_CityProductionStatisticSystem.GetCityResourceUsageAccumulator(CityProductionStatisticSystem.CityResourceUsage.Consumer.Citizens, out deps),
-            m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer()
+            m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer(),
+            m_ShoppingPurchaseData = InternalCompilerInterface.GetComponentLookup<ShoppingPurchaseData>(ref this.__TypeHandle.__Time2Work_Components_ShoppingPurchaseData_RO_ComponentLookup, ref this.CheckedStateRef),
+            m_LogShopping = Mod.m_Setting != null && Mod.m_Setting.shopping_log_enabled
         };
         this.Dependency = jobData2.Schedule<Time2WorkResourceBuyerSystem.BuyJob>(JobHandle.CombineDependencies(this.Dependency, deps));
         // ISSUE: reference to a compiler-generated field
@@ -433,9 +438,12 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
         public Time2WorkResourceBuyerSystem.SaleFlags m_Flags;
         public Entity m_Buyer;
         public Entity m_Seller;
+        public Entity m_Citizen;
         public Resource m_Resource;
         public int m_Amount;
         public float m_Distance;
+        public bool m_ExpectVisit;
+        public bool m_HasPlannedPurchaseData;
     }
 
     [BurstCompile]
@@ -481,7 +489,30 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
         public RandomSeed m_RandomSeed;
         public EntityCommandBuffer m_CommandBuffer;
         [ReadOnly]
+        public ComponentLookup<ShoppingPurchaseData> m_ShoppingPurchaseData;
+        public bool m_LogShopping;
+        [ReadOnly]
         public uint m_FrameIndex;
+
+        private void RecordShoppingPurchase(Time2WorkResourceBuyerSystem.SalesEvent salesEvent, int cost)
+        {
+            if (!m_LogShopping || salesEvent.m_Citizen == Entity.Null || !salesEvent.m_ExpectVisit)
+                return;
+
+            ShoppingPurchaseData data = new ShoppingPurchaseData(
+                salesEvent.m_Resource,
+                salesEvent.m_Amount,
+                math.abs(cost),
+                salesEvent.m_Distance,
+                m_FrameIndex,
+                ShoppingPurchaseData.SourceActual,
+                false);
+
+            if (m_ShoppingPurchaseData.HasComponent(salesEvent.m_Citizen) || salesEvent.m_HasPlannedPurchaseData)
+                m_CommandBuffer.SetComponent(salesEvent.m_Citizen, data);
+            else
+                m_CommandBuffer.AddComponent(salesEvent.m_Citizen, data);
+        }
 
         public void Execute()
         {
@@ -689,6 +720,7 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                             // ISSUE: reference to a compiler-generated field
                             this.m_CompanyStatistics[salesEvent.m_Buyer] = companyStatistic;
                         }
+                        RecordShoppingPurchase(salesEvent, Mathf.RoundToInt(num1));
                         // ISSUE: reference to a compiler-generated field
                         // ISSUE: reference to a compiler-generated field
                         // ISSUE: reference to a compiler-generated field
@@ -834,6 +866,8 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
         [ReadOnly]
         public ComponentLookup<Population> m_Populations;
         [ReadOnly]
+        public ComponentLookup<ShoppingPurchaseData> m_ShoppingPurchaseData;
+        [ReadOnly]
         public float m_TimeOfDay;
         [ReadOnly]
         public uint m_FrameIndex;
@@ -851,6 +885,41 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
         public Entity m_City;
         public NativeQueue<Time2WorkResourceBuyerSystem.SalesEvent>.ParallelWriter m_SalesQueue;
         public bool realisticPathfinding;
+        public bool m_LogShopping;
+
+        private int EstimateShoppingCost(Resource resource, int amount, Time2WorkResourceBuyerSystem.SaleFlags saleFlags)
+        {
+            if (amount <= 0)
+                return 0;
+
+            bool commercialSeller = (saleFlags & Time2WorkResourceBuyerSystem.SaleFlags.CommercialSeller) != 0;
+            float price = commercialSeller
+                ? EconomyUtils.GetMarketPrice(resource, this.m_ResourcePrefabs, ref this.m_ResourceDatas)
+                : EconomyUtils.GetIndustrialPrice(resource, this.m_ResourcePrefabs, ref this.m_ResourceDatas);
+            return math.max(0, Mathf.RoundToInt(price * amount));
+        }
+
+        private bool RecordPlannedShoppingPurchase(int unfilteredChunkIndex, Entity citizen, Resource resource, int amount, float distance, Time2WorkResourceBuyerSystem.SaleFlags saleFlags)
+        {
+            if (!m_LogShopping || citizen == Entity.Null)
+                return false;
+
+            ShoppingPurchaseData data = new ShoppingPurchaseData(
+                resource,
+                amount,
+                EstimateShoppingCost(resource, amount, saleFlags),
+                distance,
+                m_FrameIndex,
+                ShoppingPurchaseData.SourcePlanned,
+                true);
+
+            if (m_ShoppingPurchaseData.HasComponent(citizen))
+                m_CommandBuffer.SetComponent(unfilteredChunkIndex, citizen, data);
+            else
+                m_CommandBuffer.AddComponent(unfilteredChunkIndex, citizen, data);
+
+            return true;
+        }
 
         public void Execute(
           in ArchetypeChunk chunk,
@@ -898,9 +967,11 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                         m_Amount = buyingWithTarget.m_Amount,
                         m_Buyer = buyingWithTarget.m_Payer,
                         m_Seller = buyingWithTarget.m_Seller,
+                        m_Citizen = entity,
                         m_Resource = buyingWithTarget.m_Resource,
                         m_Flags = Time2WorkResourceBuyerSystem.SaleFlags.None,
-                        m_Distance = buyingWithTarget.m_Distance
+                        m_Distance = buyingWithTarget.m_Distance,
+                        m_ExpectVisit = true
                     };
                     // ISSUE: reference to a compiler-generated field
                     this.m_SalesQueue.Enqueue(salesEvent);
@@ -952,6 +1023,7 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                             m_Amount = resourceBuyingRequest.m_AmountNeeded,
                             m_Buyer = resourceBuyingRequest.m_Payer,
                             m_Seller = Entity.Null,        // no physical seller entity
+                            m_Citizen = entity,
                             m_Resource = resourceBuyingRequest.m_ResourceNeeded,
                             m_Flags = saleFlags,
                             m_Distance = 0f
@@ -972,7 +1044,7 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
 
 
                 // ISSUE: variable of a compiler-generated type
-                Time2WorkResourceBuyerSystem.SalesEvent salesEvent1;
+                Time2WorkResourceBuyerSystem.SalesEvent salesEvent1 = default;
                 // ISSUE: reference to a compiler-generated field
                 if (this.m_PathInformation.HasComponent(entity))
                 {
@@ -1043,15 +1115,13 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                                     // ISSUE: reference to a compiler-generated field
                                     salesEvent1.m_Seller = destination;
                                     // ISSUE: reference to a compiler-generated field
+                                    salesEvent1.m_Citizen = entity;
+                                    // ISSUE: reference to a compiler-generated field
                                     salesEvent1.m_Resource = resourceBuyingRequest.m_ResourceNeeded;
                                     // ISSUE: reference to a compiler-generated field
                                     salesEvent1.m_Flags = saleFlags;
                                     // ISSUE: reference to a compiler-generated field
                                     salesEvent1.m_Distance = pathInformation.m_Distance;
-                                    // ISSUE: variable of a compiler-generated type
-                                    Time2WorkResourceBuyerSystem.SalesEvent salesEvent2 = salesEvent1;
-                                    // ISSUE: reference to a compiler-generated field
-                                    this.m_SalesQueue.Enqueue(salesEvent2);
                                 }
                                 // ISSUE: reference to a compiler-generated field
                                 // ISSUE: reference to a compiler-generated field
@@ -1063,8 +1133,17 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                                 int population = this.m_Populations[this.m_City].m_Population;
                                 // ISSUE: reference to a compiler-generated field
                                 bool flag4 = citizens.Length > 0 && random.NextInt(100) < 100 - Mathf.RoundToInt(100f / math.max(1f, math.sqrt((float)((double)this.m_EconomyParameterData.m_TrafficReduction * (double)population * 0.10000000149011612))));
-                                if (((virtualGood ? 0 : (!flag4 ? 1 : 0)) & (flag3 ? 1 : 0)) != 0)
+                                bool expectVisit = !virtualGood && !flag4;
+                                if (expectVisit && flag3)
                                 {
+                                    salesEvent1.m_HasPlannedPurchaseData = RecordPlannedShoppingPurchase(
+                                        unfilteredChunkIndex,
+                                        entity,
+                                        resourceBuyingRequest.m_ResourceNeeded,
+                                        resourceBuyingRequest.m_AmountNeeded,
+                                        pathInformation.m_Distance,
+                                        saleFlags);
+
                                     // ISSUE: reference to a compiler-generated field
                                     // ISSUE: reference to a compiler-generated field
                                     // ISSUE: reference to a compiler-generated field
@@ -1093,6 +1172,12 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                                             m_Target = destination
                                         });
                                     }
+                                }
+                                if (flag3)
+                                {
+                                    salesEvent1.m_ExpectVisit = expectVisit;
+                                    Time2WorkResourceBuyerSystem.SalesEvent salesEvent2 = salesEvent1;
+                                    this.m_SalesQueue.Enqueue(salesEvent2);
                                 }
                             }
                         }
@@ -1144,6 +1229,8 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
                         // ISSUE: reference to a compiler-generated field
                         // ISSUE: reference to a compiler-generated field
                         salesEvent1.m_Seller = this.m_CurrentBuildings[entity].m_CurrentBuilding;
+                        // ISSUE: reference to a compiler-generated field
+                        salesEvent1.m_Citizen = entity;
                         // ISSUE: reference to a compiler-generated field
                         salesEvent1.m_Resource = resourceBuyingRequest.m_ResourceNeeded;
                         // ISSUE: reference to a compiler-generated field
@@ -1498,6 +1585,8 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
         public ComponentLookup<CompanyStatisticData> __Game_Companies_CompanyStatisticData_RW_ComponentLookup;
         [ReadOnly]
         public ComponentLookup<Population> __Game_City_Population_RO_ComponentLookup;
+        [ReadOnly]
+        public ComponentLookup<ShoppingPurchaseData> __Time2Work_Components_ShoppingPurchaseData_RO_ComponentLookup;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void __AssignHandles(ref SystemState state)
@@ -1600,6 +1689,7 @@ public partial class Time2WorkResourceBuyerSystem : GameSystemBase
             this.__Game_Companies_CompanyStatisticData_RW_ComponentLookup = state.GetComponentLookup<CompanyStatisticData>();
             // ISSUE: reference to a compiler-generated field
             this.__Game_City_Population_RO_ComponentLookup = state.GetComponentLookup<Population>(true);
+            this.__Time2Work_Components_ShoppingPurchaseData_RO_ComponentLookup = state.GetComponentLookup<ShoppingPurchaseData>(true);
         }
     }
 }

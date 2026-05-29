@@ -16,7 +16,7 @@ The main settings menu allows the user to select predefined settings - which wil
 
 * **Performance:** This is option is similar to the Vanilla behavior (but not equal), it will spread trips throughout the day and night and doesn't have a big impact on performance.
 * **Balanced:** This is the default setting, it has several of the realistic options, but without the features that cause a big impact on performance.
-* **Country Settings:** Using a country setting will make travel behavior more realistic. Data for the different countries available are based on data collected from different surveys from each country. Current countries that are available are: Brazil, Canada, France, Germany, Netherlands, Phillipines, Poland, UK and USA.
+* **Country Settings:** Using a country setting will make travel behavior more realistic. Data for the different countries available are based on data collected from different surveys from each country. Current countries that are available are: Australia, Brazil, Canada, France, Germany, India, Japan, Mexico, Netherlands, Philippines, Poland, Singapore, South Africa, UK and USA.
 
 If more control over the simulation is desired, the user can adjust the settings in the other sections defined below.
 
@@ -128,14 +128,16 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="2.4.3" />
+	<ModVersion Value="2.5" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.5.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="75426" />
 	<Dependency Id="121812" />
 	<ChangeLog>
-* Fixed a UI binding issue that could break the HUD.
+* Reduced frequency of health events proportionally to the slow time factor
+* Recalibrated shopping and shopping for leisure trips: reduced frequency and added options to configure shopping behaviour for different types of resources.
+* Added five new countries to the mod's settings: Australia, India, Mexico, Japan and South Africa. The data for these countries was based on different surveys from each country.
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

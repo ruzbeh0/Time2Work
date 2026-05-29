@@ -49,6 +49,8 @@ namespace Time2Work.Systems
             this.m_CityStatisticsSystem = this.World.GetOrCreateSystemManaged<CityStatisticsSystem>(); 
             this.RequireForUpdate(this.m_HouseholdPrefabQuery);
             this.RequireForUpdate(this.m_OutsideConnectionQuery);
+            this.RequireForUpdate(this.m_DemandParameterQuery);
+            this.RequireForUpdate(this.m_AttractivenessParameterQuery);
             if (Mod.m_Setting.tourism_trips)
             {
                 this.m_daytype = WeekSystem.currentDayOfTheWeek;
@@ -64,7 +66,7 @@ namespace Time2Work.Systems
             // If settings or city stats system aren’t ready yet, don’t run
             if (Mod.m_Setting == null || m_CityStatisticsSystem == null)
                 return;
-            
+
             if (Mod.m_Setting.tourism_trips)
             {
                 this.m_daytype = WeekSystem.currentDayOfTheWeek;
@@ -73,37 +75,90 @@ namespace Time2Work.Systems
             {
                 this.m_daytype = Setting.DTSimulationEnum.AverageDay;
             }
+
             JobHandle outJobHandle1;
             JobHandle outJobHandle2;
             JobHandle outJobHandle3;
             JobHandle outJobHandle4;
 
-            Time2WorkTouristSpawnSystem.SpawnTouristHouseholdJob jobData = new Time2WorkTouristSpawnSystem.SpawnTouristHouseholdJob()
-            {
-                m_PrefabEntities = this.m_HouseholdPrefabQuery.ToEntityListAsync((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle1),
-                m_Archetypes = this.m_HouseholdPrefabQuery.ToComponentDataListAsync<Game.Prefabs.ArchetypeData>((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle2),
-                m_HouseholdPrefabs = this.m_HouseholdPrefabQuery.ToComponentDataListAsync<HouseholdData>((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle3),
-                m_OutsideConnectionEntities = this.m_OutsideConnectionQuery.ToEntityListAsync((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle4),
-                m_Tourisms = InternalCompilerInterface.GetComponentLookup<Tourism>(ref this.__TypeHandle.__Game_City_Tourism_RO_ComponentLookup, ref this.CheckedStateRef),
-                m_OutsideConnectionDatas = InternalCompilerInterface.GetComponentLookup<OutsideConnectionData>(ref this.__TypeHandle.__Game_Prefabs_OutsideConnectionData_RO_ComponentLookup, ref this.CheckedStateRef),
-                m_PrefabRefs = InternalCompilerInterface.GetComponentLookup<PrefabRef>(ref this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup, ref this.CheckedStateRef),
-                m_AttractivenessParameter = this.m_AttractivenessParameterQuery.GetSingleton<AttractivenessParameterData>(),
-                m_DemandParameterData = this.m_DemandParameterQuery.GetSingleton<DemandParameterData>(),
-                m_WeatherClassification = this.m_ClimateSystem.classification,
-                m_Temperature = (float)this.m_ClimateSystem.temperature,
-                m_Precipitation = (float)this.m_ClimateSystem.precipitation,
-                m_IsRaining = this.m_ClimateSystem.isRaining,
-                m_IsSnowing = this.m_ClimateSystem.isSnowing,
-                m_StatisticsLookup = this.m_CityStatisticsSystem.GetLookup(),
-                m_CityStatistics = InternalCompilerInterface.GetBufferLookup<CityStatistic>(ref this.__TypeHandle.__Game_City_CityStatistic_RO_BufferLookup, ref this.CheckedStateRef),
-                m_City = this.m_CitySystem.City,
-                m_Frame = this.m_SimulationSystem.frameIndex,
-                m_RandomSeed = RandomSeed.Next(),
-                m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer(),
-                m_daytype = this.m_daytype
-            };
-            this.Dependency = jobData.Schedule<Time2WorkTouristSpawnSystem.SpawnTouristHouseholdJob>(JobHandle.CombineDependencies(outJobHandle1, outJobHandle2, JobHandle.CombineDependencies(outJobHandle3, this.Dependency, outJobHandle4)));
-            this.m_EndFrameBarrier.AddJobHandleForProducer(this.Dependency);
+            // Explicit TempJob allocations so disposal can be tied to the consumer job.
+            NativeList<Entity> prefabEntities =
+    this.m_HouseholdPrefabQuery.ToEntityListAsync(Allocator.Persistent, out outJobHandle1);
+
+            NativeList<Game.Prefabs.ArchetypeData> archetypes =
+                this.m_HouseholdPrefabQuery.ToComponentDataListAsync<Game.Prefabs.ArchetypeData>(
+                    Allocator.Persistent, out outJobHandle2);
+
+            NativeList<HouseholdData> householdPrefabs =
+                this.m_HouseholdPrefabQuery.ToComponentDataListAsync<HouseholdData>(
+                    Allocator.Persistent, out outJobHandle3);
+
+            NativeList<Entity> outsideConnectionEntities =
+                this.m_OutsideConnectionQuery.ToEntityListAsync(Allocator.Persistent, out outJobHandle4);
+
+            JobHandle gatherDeps = JobHandle.CombineDependencies(outJobHandle1, outJobHandle2);
+            gatherDeps = JobHandle.CombineDependencies(gatherDeps, outJobHandle3);
+            gatherDeps = JobHandle.CombineDependencies(gatherDeps, outJobHandle4);
+            gatherDeps = JobHandle.CombineDependencies(gatherDeps, this.Dependency);
+
+            Time2WorkTouristSpawnSystem.SpawnTouristHouseholdJob jobData =
+                new Time2WorkTouristSpawnSystem.SpawnTouristHouseholdJob()
+                {
+                    m_PrefabEntities = prefabEntities,
+                    m_Archetypes = archetypes,
+                    m_HouseholdPrefabs = householdPrefabs,
+                    m_OutsideConnectionEntities = outsideConnectionEntities,
+
+                    m_Tourisms = InternalCompilerInterface.GetComponentLookup<Tourism>(
+                        ref this.__TypeHandle.__Game_City_Tourism_RO_ComponentLookup,
+                        ref this.CheckedStateRef),
+
+                    m_OutsideConnectionDatas = InternalCompilerInterface.GetComponentLookup<OutsideConnectionData>(
+                        ref this.__TypeHandle.__Game_Prefabs_OutsideConnectionData_RO_ComponentLookup,
+                        ref this.CheckedStateRef),
+
+                    m_PrefabRefs = InternalCompilerInterface.GetComponentLookup<PrefabRef>(
+                        ref this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
+                        ref this.CheckedStateRef),
+
+                    m_AttractivenessParameter = this.m_AttractivenessParameterQuery.GetSingleton<AttractivenessParameterData>(),
+                    m_DemandParameterData = this.m_DemandParameterQuery.GetSingleton<DemandParameterData>(),
+
+                    m_WeatherClassification = this.m_ClimateSystem.classification,
+                    m_Temperature = (float)this.m_ClimateSystem.temperature,
+                    m_Precipitation = (float)this.m_ClimateSystem.precipitation,
+                    m_IsRaining = this.m_ClimateSystem.isRaining,
+                    m_IsSnowing = this.m_ClimateSystem.isSnowing,
+
+                    m_StatisticsLookup = this.m_CityStatisticsSystem.GetLookup(),
+
+                    m_CityStatistics = InternalCompilerInterface.GetBufferLookup<CityStatistic>(
+                        ref this.__TypeHandle.__Game_City_CityStatistic_RO_BufferLookup,
+                        ref this.CheckedStateRef),
+
+                    m_City = this.m_CitySystem.City,
+                    m_Frame = this.m_SimulationSystem.frameIndex,
+                    m_RandomSeed = RandomSeed.Next(),
+                    m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer(),
+                    m_daytype = this.m_daytype
+                };
+
+            JobHandle spawnJob = jobData.Schedule<Time2WorkTouristSpawnSystem.SpawnTouristHouseholdJob>(gatherDeps);
+
+            this.m_EndFrameBarrier.AddJobHandleForProducer(spawnJob);
+
+            // Dispose after the job that reads the lists is finished.
+            JobHandle disposePrefabEntities = prefabEntities.Dispose(spawnJob);
+            JobHandle disposeArchetypes = archetypes.Dispose(spawnJob);
+            JobHandle disposeHouseholdPrefabs = householdPrefabs.Dispose(spawnJob);
+            JobHandle disposeOutsideConnections = outsideConnectionEntities.Dispose(spawnJob);
+
+            JobHandle disposeDeps = JobHandle.CombineDependencies(disposePrefabEntities, disposeArchetypes);
+            disposeDeps = JobHandle.CombineDependencies(disposeDeps, disposeHouseholdPrefabs);
+            disposeDeps = JobHandle.CombineDependencies(disposeDeps, disposeOutsideConnections);
+
+            // Keep the system dependency alive until disposal is complete.
+            this.Dependency = disposeDeps;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -168,6 +223,8 @@ namespace Time2Work.Systems
 
                 float touristProbability = Time2WorkTourismSystem.GetTouristProbability(this.m_AttractivenessParameter, this.m_Tourisms[this.m_City].m_Attractiveness, CityStatisticsSystem.GetStatisticValue(this.m_StatisticsLookup, this.m_CityStatistics, StatisticType.TouristCount), this.m_WeatherClassification, this.m_Temperature, this.m_Precipitation, this.m_IsRaining, this.m_IsSnowing, this.m_daytype);
                 if ((double)random.NextFloat() >= (double)touristProbability)
+                    return;
+                if (this.m_HouseholdPrefabs.Length <= 0 || this.m_PrefabEntities.Length <= 0 || this.m_Archetypes.Length <= 0)
                     return;
                 int index = random.NextInt(this.m_HouseholdPrefabs.Length);
                 Entity prefabEntity = this.m_PrefabEntities[index];

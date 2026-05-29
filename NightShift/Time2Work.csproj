@@ -4,7 +4,7 @@
 		<OutputType>Library</OutputType>
 		<TargetFramework>net48</TargetFramework>
 		<Configurations>Debug;Release</Configurations>
-		<LangVersion>9.0</LangVersion>
+		<LangVersion>12.0</LangVersion>
 		
 		<!--The folder where Game.dll is located. Set it only if the game is not installed in the default location, otherwise keep it empty-->
 		<CustomManagedPath>C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed</CustomManagedPath>
@@ -14,7 +14,7 @@
 		<!--The file should contain 2 lines:-->
 		<!--Your.PDX@Account.login-->
 		<!--Your-PDX-Account-Pa$$word-->
-		<PDXAccountDataPath>C:\Users\12249\Documents\pdx_account.txt</PDXAccountDataPath>
+		<PDXAccountDataPath>C:\Users\Usuario\Documents\pdx_account.txt</PDXAccountDataPath>
 		
 		<!--The file where mod information which is required for publishing mod on PDX mods are stored-->
 		<PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>

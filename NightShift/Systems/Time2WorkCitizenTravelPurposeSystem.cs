@@ -13,8 +13,12 @@ using Game.Events;
 using Game.Prefabs;
 using Game.Simulation;
 using Game.Tools;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Collections.Specialized;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Time2Work.Components;
 using Time2Work.Systems;
 using Time2Work.Utils;
@@ -34,6 +38,7 @@ namespace Time2Work
     public partial class Time2WorkCitizenTravelPurposeSystem : GameSystemBase
     {
         private Time2WorkTimeSystem m_TimeSystem;
+        private ResourceSystem m_ResourceSystem;
         private CityStatisticsSystem m_CityStatisticsSystem;
         private EndFrameBarrier m_EndFrameBarrier;
         private EntityQuery m_ArrivedGroup;
@@ -42,6 +47,12 @@ namespace Time2Work
         private EntityQuery m_EconomyParameterGroup;
         private EntityQuery m_OutsideConnectionQuery;
         private EntityQuery m_ServiceBuildingQuery;
+        private NativeQueue<ShoppingLogEvent> m_ShoppingLogQueue;
+        private readonly Dictionary<Resource, ShoppingHourlyTotals> m_ShoppingHourlyTotals = new Dictionary<Resource, ShoppingHourlyTotals>();
+        private DateTime m_ShoppingLogHourStart;
+        private bool m_ShoppingLogHourInitialized;
+        private bool m_ShoppingLogSettingInitialized;
+        private bool m_LastShoppingLogEnabled;
         private Time2WorkCitizenTravelPurposeSystem.TypeHandle __TypeHandle;
 
         public override int GetUpdateInterval(SystemUpdatePhase phase) => 16;
@@ -51,6 +62,7 @@ namespace Time2Work
             base.OnCreate();
             
             this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>(); 
+            this.m_ResourceSystem = this.World.GetOrCreateSystemManaged<ResourceSystem>();
             this.m_CityStatisticsSystem = this.World.GetOrCreateSystemManaged<CityStatisticsSystem>(); 
             this.m_EndFrameBarrier = this.World.GetOrCreateSystemManaged<EndFrameBarrier>();
             this.m_ArrivedGroup = this.GetEntityQuery(new EntityQueryDesc()
@@ -78,15 +90,33 @@ namespace Time2Work
             this.m_ServiceBuildingQuery = this.GetEntityQuery(ComponentType.ReadWrite<CityServiceUpkeep>(), ComponentType.ReadWrite<Building>(), ComponentType.Exclude<Deleted>(), ComponentType.Exclude<Destroyed>(), ComponentType.Exclude<Temp>());
             this.m_EconomyParameterGroup = this.GetEntityQuery(ComponentType.ReadOnly<EconomyParameterData>());
             this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>();
+            this.m_ShoppingLogQueue = new NativeQueue<ShoppingLogEvent>((AllocatorManager.AllocatorHandle)Allocator.Persistent);
             
             this.RequireAnyForUpdate(this.m_ArrivedGroup, this.m_StuckGroup, this.m_ShoppingGroup);
         }
 
+        protected override void OnDestroy()
+        {
+            this.Dependency.Complete();
+            if (Mod.m_Setting != null && Mod.m_Setting.shopping_log_enabled)
+            {
+                DrainShoppingLogs(this.m_TimeSystem.GetCurrentDateTime());
+                FlushShoppingHourlyTotals();
+            }
+            if (this.m_ShoppingLogQueue.IsCreated)
+            {
+                this.m_ShoppingLogQueue.Dispose();
+            }
+            base.OnDestroy();
+        }
+
         protected override void OnUpdate()
         {
-            NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive> nativeQueue = new NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive>((AllocatorManager.AllocatorHandle)Allocator.TempJob);
+            NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive> nativeQueue = new NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive>((AllocatorManager.AllocatorHandle)Allocator.Persistent);
 
             var now = m_TimeSystem.GetCurrentDateTime();
+            bool logShopping = Mod.m_Setting != null && Mod.m_Setting.shopping_log_enabled;
+            LogShoppingSettingState(logShopping, now);
 
             Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob jobData = new Time2WorkCitizenTravelPurposeSystem.CitizenArriveJob()
             {
@@ -114,7 +144,9 @@ namespace Time2Work
                 m_EconomyParameters = this.m_EconomyParameterGroup.GetSingleton<EconomyParameterData>(),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 m_ArriveQueue = nativeQueue.AsParallelWriter(),
+                m_ShoppingLogQueue = this.m_ShoppingLogQueue.AsParallelWriter(),
                 m_NormalizedTime = this.m_TimeSystem.normalizedTime,
+                m_LogShopping = logShopping,
                 m_RandomSeed = RandomSeed.Next(),
                 lunch_break_pct = Mod.m_Setting.lunch_break_percentage,
                 school_start_time = (int)Mod.m_Setting.school_start_time,
@@ -160,12 +192,18 @@ namespace Time2Work
                 m_CurrentBuildingType = this.__TypeHandle.__Game_Citizens_CurrentBuilding_RO_ComponentTypeHandle,
                 m_TravelPurposeType = this.__TypeHandle.__Game_Citizens_TravelPurpose_RW_ComponentTypeHandle,
                 m_Shopping = this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup,
+                m_ShoppingPurchaseData = InternalCompilerInterface.GetComponentLookup<ShoppingPurchaseData>(ref this.__TypeHandle.__Time2Work_Components_ShoppingPurchaseData_RW_ComponentLookup, ref this.CheckedStateRef),
+                m_ResourcePrefabs = this.m_ResourceSystem.GetPrefabs(),
+                m_ResourceDatas = InternalCompilerInterface.GetComponentLookup<ResourceData>(ref this.__TypeHandle.__Game_Prefabs_ResourceData_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
-                m_NormalizedTime = this.m_TimeSystem.normalizedTime
+                m_NormalizedTime = this.m_TimeSystem.normalizedTime,
+                m_LogShopping = logShopping,
+                m_ShoppingLogQueue = this.m_ShoppingLogQueue.AsParallelWriter()
             };
 
             this.Dependency = jobData2.ScheduleParallel<Time2WorkCitizenTravelPurposeSystem.CitizenStopShoppingJob>(this.m_ShoppingGroup, this.Dependency);
 
+            this.m_ResourceSystem.AddPrefabsReader(this.Dependency);
             this.m_EndFrameBarrier.AddJobHandleForProducer(this.Dependency);
 
             JobHandle deps;
@@ -182,32 +220,265 @@ namespace Time2Work
                 m_StatisticsQueue = this.m_CityStatisticsSystem.GetStatisticsEventQueue(out deps),
                 m_ArriveQueue = nativeQueue
             }.Schedule<Time2WorkCitizenTravelPurposeSystem.ArriveJob>(JobHandle.CombineDependencies(this.Dependency, deps));
-            nativeQueue.Dispose(jobHandle1);
+            JobHandle disposeArriveQueue = nativeQueue.Dispose(jobHandle1);
             this.m_CityStatisticsSystem.AddWriter(jobHandle1);
 
 
             this.__TypeHandle.__Unity_Entities_Entity_TypeHandle.Update(ref this.CheckedStateRef);
             JobHandle outJobHandle1;
             JobHandle outJobHandle2;
-            
-            JobHandle jobHandle2 = new Time2WorkCitizenTravelPurposeSystem.CitizenStuckJob()
-            {
-                m_EntityType = InternalCompilerInterface.GetEntityTypeHandle(ref this.__TypeHandle.__Unity_Entities_Entity_TypeHandle, ref this.CheckedStateRef),
-                m_HouseholdMemberType = InternalCompilerInterface.GetComponentTypeHandle<HouseholdMember>(ref this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentTypeHandle, ref this.CheckedStateRef),
-                m_HealthProblemType = InternalCompilerInterface.GetComponentTypeHandle<HealthProblem>(ref this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentTypeHandle, ref this.CheckedStateRef),
-                m_CitizenType = InternalCompilerInterface.GetComponentTypeHandle<Citizen>(ref this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentTypeHandle, ref this.CheckedStateRef),
-                m_Households = InternalCompilerInterface.GetComponentLookup<Household>(ref this.__TypeHandle.__Game_Citizens_Household_RO_ComponentLookup, ref this.CheckedStateRef),
-                m_MovingAways = InternalCompilerInterface.GetComponentLookup<MovingAway>(ref this.__TypeHandle.__Game_Agents_MovingAway_RO_ComponentLookup, ref this.CheckedStateRef),
-                m_Buildings = InternalCompilerInterface.GetComponentLookup<Building>(ref this.__TypeHandle.__Game_Buildings_Building_RO_ComponentLookup, ref this.CheckedStateRef),
-                m_PropertyRenters = InternalCompilerInterface.GetComponentLookup<PropertyRenter>(ref this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup, ref this.CheckedStateRef),
-                m_RandomSeed = RandomSeed.Next(),
-                m_ServiceBuildings = this.m_ServiceBuildingQuery.ToEntityListAsync((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle1),
-                m_OutsideConnections = this.m_OutsideConnectionQuery.ToEntityListAsync((AllocatorManager.AllocatorHandle)this.World.UpdateAllocator.ToAllocator, out outJobHandle2),
-                m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter()
-            }.ScheduleParallel<Time2WorkCitizenTravelPurposeSystem.CitizenStuckJob>(this.m_StuckGroup, JobUtils.CombineDependencies(outJobHandle2, outJobHandle1, jobHandle1, this.Dependency));
-            
+
+            NativeList<Entity> serviceBuildings =
+    this.m_ServiceBuildingQuery.ToEntityListAsync(Allocator.Persistent, out outJobHandle1);
+
+            NativeList<Entity> outsideConnections =
+                this.m_OutsideConnectionQuery.ToEntityListAsync(Allocator.Persistent, out outJobHandle2);
+
+            Time2WorkCitizenTravelPurposeSystem.CitizenStuckJob stuckJob =
+                new Time2WorkCitizenTravelPurposeSystem.CitizenStuckJob()
+                {
+                    m_EntityType = InternalCompilerInterface.GetEntityTypeHandle(
+                        ref this.__TypeHandle.__Unity_Entities_Entity_TypeHandle,
+                        ref this.CheckedStateRef),
+
+                    m_HouseholdMemberType = InternalCompilerInterface.GetComponentTypeHandle<HouseholdMember>(
+                        ref this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentTypeHandle,
+                        ref this.CheckedStateRef),
+
+                    m_HealthProblemType = InternalCompilerInterface.GetComponentTypeHandle<HealthProblem>(
+                        ref this.__TypeHandle.__Game_Citizens_HealthProblem_RO_ComponentTypeHandle,
+                        ref this.CheckedStateRef),
+
+                    m_CitizenType = InternalCompilerInterface.GetComponentTypeHandle<Citizen>(
+                        ref this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentTypeHandle,
+                        ref this.CheckedStateRef),
+
+                    m_Households = InternalCompilerInterface.GetComponentLookup<Household>(
+                        ref this.__TypeHandle.__Game_Citizens_Household_RO_ComponentLookup,
+                        ref this.CheckedStateRef),
+
+                    m_MovingAways = InternalCompilerInterface.GetComponentLookup<MovingAway>(
+                        ref this.__TypeHandle.__Game_Agents_MovingAway_RO_ComponentLookup,
+                        ref this.CheckedStateRef),
+
+                    m_Buildings = InternalCompilerInterface.GetComponentLookup<Building>(
+                        ref this.__TypeHandle.__Game_Buildings_Building_RO_ComponentLookup,
+                        ref this.CheckedStateRef),
+
+                    m_PropertyRenters = InternalCompilerInterface.GetComponentLookup<PropertyRenter>(
+                        ref this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup,
+                        ref this.CheckedStateRef),
+
+                    m_RandomSeed = RandomSeed.Next(),
+                    m_ServiceBuildings = serviceBuildings,
+                    m_OutsideConnections = outsideConnections,
+                    m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter()
+                };
+
+            JobHandle stuckDeps = JobUtils.CombineDependencies(
+                outJobHandle1,
+                outJobHandle2,
+                jobHandle1,
+                this.Dependency);
+
+            JobHandle jobHandle2 =
+                stuckJob.ScheduleParallel<Time2WorkCitizenTravelPurposeSystem.CitizenStuckJob>(
+                    this.m_StuckGroup,
+                    stuckDeps);
+
             this.m_EndFrameBarrier.AddJobHandleForProducer(jobHandle2);
-            this.Dependency = JobHandle.CombineDependencies(jobHandle1, jobHandle2);
+
+            JobHandle disposeServiceBuildings = serviceBuildings.Dispose(jobHandle2);
+            JobHandle disposeOutsideConnections = outsideConnections.Dispose(jobHandle2);
+
+            this.Dependency = JobHandle.CombineDependencies(disposeArriveQueue, jobHandle2);
+            this.Dependency = JobHandle.CombineDependencies(
+                this.Dependency,
+                disposeServiceBuildings,
+                disposeOutsideConnections);
+
+            if (logShopping)
+            {
+                this.Dependency.Complete();
+                DrainShoppingLogs(now);
+            }
+            else
+            {
+                ClearShoppingLogState();
+            }
+        }
+
+        private void DrainShoppingLogs(DateTime now)
+        {
+            EnsureShoppingLogHour(now);
+
+            while (this.m_ShoppingLogQueue.TryDequeue(out ShoppingLogEvent logEvent))
+            {
+                if (!this.m_ShoppingHourlyTotals.TryGetValue(logEvent.resource, out ShoppingHourlyTotals totals))
+                {
+                    totals = default;
+                }
+
+                totals.startedTrips += logEvent.startedTrips;
+                totals.completedTrips += logEvent.completedTrips;
+                totals.amount += logEvent.amount;
+                totals.cost += logEvent.cost;
+                totals.durationMinutes += logEvent.durationMinutes;
+                totals.distance += logEvent.distance;
+                totals.missingPurchaseData += logEvent.missingPurchaseData;
+                totals.actualPurchaseData += logEvent.actualPurchaseData;
+                totals.estimatedPurchaseData += logEvent.estimatedPurchaseData;
+                totals.fallbackPurchaseData += logEvent.fallbackPurchaseData;
+                totals.longDurationTrips += logEvent.longDurationTrips;
+                this.m_ShoppingHourlyTotals[logEvent.resource] = totals;
+            }
+        }
+
+        private void LogShoppingSettingState(bool logShopping, DateTime now)
+        {
+            if (this.m_ShoppingLogSettingInitialized && this.m_LastShoppingLogEnabled == logShopping)
+                return;
+
+            this.m_ShoppingLogSettingInitialized = true;
+            this.m_LastShoppingLogEnabled = logShopping;
+
+            if (logShopping)
+            {
+                EnsureShoppingLogHour(now);
+                Mod.log.Info($"Shopping diagnostics log enabled at {now:yyyy-MM-dd HH:mm}; first ShoppingHourlyLog is written when the in-game hour changes.");
+            }
+            else
+            {
+                Mod.log.Info("Shopping diagnostics log disabled.");
+            }
+        }
+
+        private void EnsureShoppingLogHour(DateTime now)
+        {
+            DateTime currentHour = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0);
+            if (!this.m_ShoppingLogHourInitialized)
+            {
+                this.m_ShoppingLogHourStart = currentHour;
+                this.m_ShoppingLogHourInitialized = true;
+                return;
+            }
+
+            if (currentHour != this.m_ShoppingLogHourStart)
+            {
+                FlushShoppingHourlyTotals();
+                this.m_ShoppingLogHourStart = currentHour;
+            }
+        }
+
+        private void FlushShoppingHourlyTotals()
+        {
+            if (!this.m_ShoppingLogHourInitialized)
+                return;
+
+            int totalStartedTrips = 0;
+            int totalCompletedTrips = 0;
+            int totalAmount = 0;
+            int totalCost = 0;
+            int totalMissingPurchaseData = 0;
+            int totalActualPurchaseData = 0;
+            int totalEstimatedPurchaseData = 0;
+            int totalFallbackPurchaseData = 0;
+            int totalLongDurationTrips = 0;
+            float totalDuration = 0f;
+            float totalDistance = 0f;
+
+            foreach (ShoppingHourlyTotals totals in this.m_ShoppingHourlyTotals.Values)
+            {
+                totalStartedTrips += totals.startedTrips;
+                totalCompletedTrips += totals.completedTrips;
+                totalAmount += totals.amount;
+                totalCost += totals.cost;
+                totalMissingPurchaseData += totals.missingPurchaseData;
+                totalActualPurchaseData += totals.actualPurchaseData;
+                totalEstimatedPurchaseData += totals.estimatedPurchaseData;
+                totalFallbackPurchaseData += totals.fallbackPurchaseData;
+                totalLongDurationTrips += totals.longDurationTrips;
+                totalDuration += totals.durationMinutes;
+                totalDistance += totals.distance;
+            }
+
+            StringBuilder resourceSummary = new StringBuilder();
+            foreach (Resource resource in Enum.GetValues(typeof(Resource)))
+            {
+                if (!this.m_ShoppingHourlyTotals.TryGetValue(resource, out ShoppingHourlyTotals totals) || (totals.startedTrips == 0 && totals.completedTrips == 0))
+                    continue;
+
+                if (resourceSummary.Length > 0)
+                    resourceSummary.Append("; ");
+
+                float avgResourceDuration = totals.completedTrips > 0 ? totals.durationMinutes / totals.completedTrips : 0f;
+                int purchaseDataTrips = totals.actualPurchaseData + totals.estimatedPurchaseData + totals.fallbackPurchaseData;
+                float avgResourceDistance = purchaseDataTrips > 0 ? totals.distance / purchaseDataTrips : 0f;
+                resourceSummary.Append(resource);
+                resourceSummary.Append("(started=");
+                resourceSummary.Append(totals.startedTrips);
+                resourceSummary.Append(",completed=");
+                resourceSummary.Append(totals.completedTrips);
+                resourceSummary.Append(",amount=");
+                resourceSummary.Append(totals.amount);
+                resourceSummary.Append(",spend=");
+                resourceSummary.Append(totals.cost);
+                resourceSummary.Append(",avgDuration=");
+                resourceSummary.Append(FormatLogFloat(avgResourceDuration));
+                resourceSummary.Append(",avgDistance=");
+                resourceSummary.Append(FormatLogFloat(avgResourceDistance));
+                if (totals.missingPurchaseData > 0)
+                {
+                    resourceSummary.Append(",missingPurchaseData=");
+                    resourceSummary.Append(totals.missingPurchaseData);
+                }
+                if (totals.actualPurchaseData > 0)
+                {
+                    resourceSummary.Append(",actualPurchaseData=");
+                    resourceSummary.Append(totals.actualPurchaseData);
+                }
+                if (totals.estimatedPurchaseData > 0)
+                {
+                    resourceSummary.Append(",estimatedPurchaseData=");
+                    resourceSummary.Append(totals.estimatedPurchaseData);
+                }
+                if (totals.fallbackPurchaseData > 0)
+                {
+                    resourceSummary.Append(",fallbackPurchaseData=");
+                    resourceSummary.Append(totals.fallbackPurchaseData);
+                }
+                if (totals.longDurationTrips > 0)
+                {
+                    resourceSummary.Append(",longDurationTrips=");
+                    resourceSummary.Append(totals.longDurationTrips);
+                }
+                resourceSummary.Append(")");
+            }
+
+            int totalPurchaseDataTrips = totalActualPurchaseData + totalEstimatedPurchaseData + totalFallbackPurchaseData;
+            float avgDuration = totalCompletedTrips > 0 ? totalDuration / totalCompletedTrips : 0f;
+            float avgDistance = totalPurchaseDataTrips > 0 ? totalDistance / totalPurchaseDataTrips : 0f;
+            string resources = resourceSummary.Length > 0 ? resourceSummary.ToString() : "none";
+
+            Mod.log.Info(
+                $"ShoppingHourlyLog hour={this.m_ShoppingLogHourStart:yyyy-MM-dd HH}:00 started={totalStartedTrips} completed={totalCompletedTrips} trips={totalCompletedTrips} amount={totalAmount} spend={totalCost} avgDurationMinutes={FormatLogFloat(avgDuration)} avgDistance={FormatLogFloat(avgDistance)} actualPurchaseData={totalActualPurchaseData} estimatedPurchaseData={totalEstimatedPurchaseData} fallbackPurchaseData={totalFallbackPurchaseData} missingPurchaseData={totalMissingPurchaseData} longDurationTrips={totalLongDurationTrips} resources={resources}");
+
+            this.m_ShoppingHourlyTotals.Clear();
+        }
+
+        private static string FormatLogFloat(float value)
+        {
+            return value.ToString("F1", CultureInfo.InvariantCulture);
+        }
+
+        private void ClearShoppingLogState()
+        {
+            while (this.m_ShoppingLogQueue.IsCreated && this.m_ShoppingLogQueue.TryDequeue(out ShoppingLogEvent _))
+            {
+            }
+
+            this.m_ShoppingHourlyTotals.Clear();
+            this.m_ShoppingLogHourInitialized = false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -225,6 +496,37 @@ namespace Time2Work
 
         public Time2WorkCitizenTravelPurposeSystem()
         {
+        }
+
+        private struct ShoppingLogEvent
+        {
+            public Resource resource;
+            public int startedTrips;
+            public int completedTrips;
+            public int amount;
+            public int cost;
+            public int missingPurchaseData;
+            public int actualPurchaseData;
+            public int estimatedPurchaseData;
+            public int fallbackPurchaseData;
+            public int longDurationTrips;
+            public float distance;
+            public float durationMinutes;
+        }
+
+        private struct ShoppingHourlyTotals
+        {
+            public int startedTrips;
+            public int completedTrips;
+            public int amount;
+            public int cost;
+            public int missingPurchaseData;
+            public int actualPurchaseData;
+            public int estimatedPurchaseData;
+            public int fallbackPurchaseData;
+            public int longDurationTrips;
+            public float durationMinutes;
+            public float distance;
         }
 
         [BurstCompile]
@@ -271,8 +573,10 @@ namespace Time2Work
             public ComponentLookup<CitizenSchedule> CitizenScheduleLookup;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
             public NativeQueue<Time2WorkCitizenTravelPurposeSystem.Arrive>.ParallelWriter m_ArriveQueue;
+            public NativeQueue<ShoppingLogEvent>.ParallelWriter m_ShoppingLogQueue;
             public EconomyParameterData m_EconomyParameters;
             public float m_NormalizedTime;
+            public bool m_LogShopping;
             public RandomSeed m_RandomSeed;
             public int lunch_break_pct;
             public int school_start_time;
@@ -327,7 +631,7 @@ namespace Time2Work
                 NativeArray<TravelPurpose> nativeArray2 = chunk.GetNativeArray<TravelPurpose>(ref this.m_TravelPurposeType);
                 
                 NativeArray<CurrentBuilding> nativeArray3 = chunk.GetNativeArray<CurrentBuilding>(ref this.m_CurrentBuildingType);
-                Random random = this.m_RandomSeed.GetRandom(unfilteredChunkIndex);
+                Unity.Mathematics.Random random = this.m_RandomSeed.GetRandom(unfilteredChunkIndex);
 
                 bool flag1 = chunk.Has<HealthProblem>(ref this.m_HealthProblemType);
                 for (int index = 0; index < chunk.Count; ++index)
@@ -421,7 +725,7 @@ namespace Time2Work
                                 this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
                                 continue;
                             case Game.Citizens.Purpose.Shopping:
-                                shoppingTime(unfilteredChunkIndex, entity, travelPurpose.m_Resource);
+                                shoppingTime(unfilteredChunkIndex, entity, travelPurpose);
                                 continue;
                             case Game.Citizens.Purpose.GoingHome:
                                 
@@ -543,8 +847,9 @@ namespace Time2Work
                 }
             }
 
-            private void shoppingTime(int unfilteredChunkIndex, Entity entity, Resource resource)
+            private void shoppingTime(int unfilteredChunkIndex, Entity entity, TravelPurpose travelPurpose)
             {
+                Resource resource = travelPurpose.m_Resource;
                 Shopper shopper;
                 if (!this.m_Shopping.TryGetComponent(entity, out shopper))
                 {
@@ -630,7 +935,15 @@ namespace Time2Work
                         duration -= 1f;
                     }
 
-                    this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(duration));
+                    this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(duration, this.m_NormalizedTime));
+                    if (m_LogShopping)
+                    {
+                        m_ShoppingLogQueue.Enqueue(new ShoppingLogEvent()
+                        {
+                            resource = resource,
+                            startedTrips = 1
+                        });
+                    }
                 }
             }
 
@@ -653,7 +966,7 @@ namespace Time2Work
                         duration -= 1f;
                     }
                     
-                    this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(duration));
+                    this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(duration, this.m_NormalizedTime));
                 }
             }
 
@@ -676,8 +989,35 @@ namespace Time2Work
             public ComponentTypeHandle<CurrentBuilding> m_CurrentBuildingType;
             public ComponentTypeHandle<TravelPurpose> m_TravelPurposeType;
             public ComponentLookup<Shopper> m_Shopping;
+            [ReadOnly]
+            public ComponentLookup<ShoppingPurchaseData> m_ShoppingPurchaseData;
+            [ReadOnly]
+            public ResourcePrefabs m_ResourcePrefabs;
+            [ReadOnly]
+            public ComponentLookup<ResourceData> m_ResourceDatas;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
+            public NativeQueue<ShoppingLogEvent>.ParallelWriter m_ShoppingLogQueue;
             public float m_NormalizedTime;
+            public bool m_LogShopping;
+
+            private int EstimateShoppingCost(TravelPurpose travelPurpose, int amount)
+            {
+                if (travelPurpose.m_Resource == Resource.NoResource || amount <= 0)
+                    return 0;
+
+                float price = travelPurpose.m_Purpose == Game.Citizens.Purpose.CompanyShopping
+                    ? EconomyUtils.GetIndustrialPrice(travelPurpose.m_Resource, this.m_ResourcePrefabs, ref this.m_ResourceDatas)
+                    : EconomyUtils.GetMarketPrice(travelPurpose.m_Resource, this.m_ResourcePrefabs, ref this.m_ResourceDatas);
+
+                return math.max(0, (int)math.round(price * amount));
+            }
+
+            private static float GetElapsed(float start, float end)
+            {
+                start = math.frac(start);
+                end = math.frac(end);
+                return end >= start ? end - start : 1f - start + end;
+            }
 
             public void Execute(
               in ArchetypeChunk chunk,
@@ -698,10 +1038,59 @@ namespace Time2Work
                     Shopper shopper;
                     if (this.m_Shopping.TryGetComponent(entity, out shopper))
                     {
-                        // If time exceeds normalizedTime, remove Shopping component
-                        if (shopper.duration <= this.m_NormalizedTime)
+                        float elapsed = GetElapsed(shopper.start_time, this.m_NormalizedTime);
+                        float plannedDuration = GetElapsed(shopper.start_time, shopper.duration);
+                        if (elapsed >= plannedDuration)
                         {
-                            //Mod.log.Info($"{entity.Index}: Shopping end time reached: {shopper.duration}, time: {this.m_NormalizedTime}");
+                            bool hasPurchaseData = m_ShoppingPurchaseData.HasComponent(entity);
+                            if (m_LogShopping && (travelPurpose.m_Purpose == Game.Citizens.Purpose.Shopping || travelPurpose.m_Purpose == Game.Citizens.Purpose.CompanyShopping))
+                            {
+                                float durationMinutes = elapsed * 1440f;
+                                ShoppingLogEvent logEvent = new ShoppingLogEvent()
+                                {
+                                    resource = travelPurpose.m_Resource,
+                                    completedTrips = 1,
+                                    amount = math.max(0, travelPurpose.m_Data),
+                                    durationMinutes = durationMinutes,
+                                    longDurationTrips = durationMinutes > 360f ? 1 : 0,
+                                    missingPurchaseData = hasPurchaseData ? 0 : 1
+                                };
+
+                                if (hasPurchaseData)
+                                {
+                                    ShoppingPurchaseData purchase = m_ShoppingPurchaseData[entity];
+                                    logEvent.resource = purchase.resource;
+                                    logEvent.amount = purchase.amount;
+                                    logEvent.cost = purchase.cost;
+                                    logEvent.distance = purchase.distance;
+                                    logEvent.missingPurchaseData = 0;
+                                    if (purchase.source == ShoppingPurchaseData.SourceActual && !purchase.estimatedCost)
+                                    {
+                                        logEvent.actualPurchaseData = 1;
+                                    }
+                                    else if (purchase.source == ShoppingPurchaseData.SourceFallback)
+                                    {
+                                        logEvent.fallbackPurchaseData = 1;
+                                    }
+                                    else
+                                    {
+                                        logEvent.estimatedPurchaseData = 1;
+                                    }
+                                }
+                                else if (logEvent.resource != Resource.NoResource && logEvent.amount > 0)
+                                {
+                                    logEvent.cost = EstimateShoppingCost(travelPurpose, logEvent.amount);
+                                    logEvent.fallbackPurchaseData = 1;
+                                    logEvent.missingPurchaseData = 0;
+                                }
+
+                                m_ShoppingLogQueue.Enqueue(logEvent);
+                            }
+
+                            if (hasPurchaseData)
+                            {
+                                this.m_CommandBuffer.RemoveComponent<ShoppingPurchaseData>(unfilteredChunkIndex, entity);
+                            }
                             this.m_CommandBuffer.RemoveComponent<Shopper>(unfilteredChunkIndex, entity);
                             this.m_CommandBuffer.RemoveComponent<TravelPurpose>(unfilteredChunkIndex, entity);
                         } 
@@ -890,7 +1279,7 @@ namespace Time2Work
                     {
                         Entity entity2 = Entity.Null;
                         
-                        Random random = this.m_RandomSeed.GetRandom((1 + index) * (entity1.Index + 1));
+                        Unity.Mathematics.Random random = this.m_RandomSeed.GetRandom((1 + index) * (entity1.Index + 1));
                         if (flag)
                         {
                             
@@ -1006,6 +1395,9 @@ namespace Time2Work
             public ComponentTypeHandle<Citizen> __Game_Citizens_Citizen_RW_ComponentTypeHandle;
             [ReadOnly]
             public ComponentLookup<Household> __Game_Citizens_Household_RO_ComponentLookup;
+            public ComponentLookup<ShoppingPurchaseData> __Time2Work_Components_ShoppingPurchaseData_RW_ComponentLookup;
+            [ReadOnly]
+            public ComponentLookup<ResourceData> __Game_Prefabs_ResourceData_RO_ComponentLookup;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void __AssignHandles(ref SystemState state)
@@ -1067,6 +1459,8 @@ namespace Time2Work
                 this.__Game_Citizens_Citizen_RW_ComponentTypeHandle = state.GetComponentTypeHandle<Citizen>();
                 
                 this.__Game_Citizens_Household_RO_ComponentLookup = state.GetComponentLookup<Household>(true);
+                this.__Time2Work_Components_ShoppingPurchaseData_RW_ComponentLookup = state.GetComponentLookup<ShoppingPurchaseData>();
+                this.__Game_Prefabs_ResourceData_RO_ComponentLookup = state.GetComponentLookup<ResourceData>(true);
             }
         }
     }

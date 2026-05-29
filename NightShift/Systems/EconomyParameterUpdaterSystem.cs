@@ -27,15 +27,21 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
-            var prefabs = _query.ToEntityArray(Allocator.Temp);
+            if (Mod.m_Setting == null)
+            {
+                return;
+            }
+
+            using var prefabs = _query.ToEntityArray(Allocator.Temp);
 
             foreach (var tsd in prefabs)
             {
                 EconomyParameterData data = EntityManager.GetComponentData<EconomyParameterData>(tsd);
 
-                data.m_TrafficReduction = Mod.m_Setting.trafficReduction / (float)10000;
+                data.m_TrafficReduction = Mod.m_Setting.trafficReduction / 10000f;
                 data.m_ResourceConsumptionPerCitizen = Mod.m_Setting.resourceConsumption;
-                EntityManager.SetComponentData<EconomyParameterData>(tsd, data);
+
+                EntityManager.SetComponentData(tsd, data);
             }
         }
 
