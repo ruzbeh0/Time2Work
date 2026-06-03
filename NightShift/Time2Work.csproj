@@ -25,8 +25,14 @@
 	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.targets" />
 	<ItemGroup>
 	  <Compile Remove="UI\**" />
+	  <Compile Remove="obj\**" />
+	  <Compile Remove="obj-codex\**" />
 	  <EmbeddedResource Remove="UI\**" />
+	  <EmbeddedResource Remove="obj\**" />
+	  <EmbeddedResource Remove="obj-codex\**" />
 	  <None Remove="UI\**" />
+	  <None Remove="obj\**" />
+	  <None Remove="obj-codex\**" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Content Include="Time2WorkUI\.idea\inspectionProfiles\Project_Default.xml" />

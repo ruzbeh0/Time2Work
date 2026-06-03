@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Time2Work.Bridge;
 using Time2Work.Components;
 using Time2Work.Systems;
 using Time2Work.Utils;
@@ -159,6 +160,7 @@ namespace Time2Work
             DateTime currentDateTime = World.GetExistingSystemManaged<Time2WorkTimeSystem>().GetCurrentDateTime();
             int hour = currentDateTime.Hour;
             bool logLeisure = Mod.m_Setting != null && Mod.m_Setting.shopping_log_enabled;
+            int socialTripsConversionChancePercent = SocialTripsBridge.GetLeisureTripConversionChancePercent();
             LogLeisureSettingState(logLeisure, currentDateTime);
 
             JobHandle jobHandle2 = new Time2WorkLeisureSystem.LeisureJob()
@@ -206,9 +208,12 @@ namespace Time2Work
                 m_SpecialEventDatas = InternalCompilerInterface.GetComponentLookup<SpecialEventData>(ref this.__TypeHandle.__Game_Citizens_SpecialEventData_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_ResourceBuyers = InternalCompilerInterface.GetComponentLookup<ResourceBuyer>(ref this.__TypeHandle.__Game_Companies_ResourceBuyer_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_Transforms = InternalCompilerInterface.GetComponentLookup<Game.Objects.Transform>(ref this.__TypeHandle.__Game_Objects_Transform_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_SocialLeisureOpportunities = InternalCompilerInterface.GetComponentLookup<SocialLeisureOpportunity>(ref this.__TypeHandle.__Time2Work_Components_SocialLeisureOpportunity_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                 m_SimulationFrame = this.m_SimulationSystem.frameIndex,
                 m_TimeOfDay = this.m_TimeSystem.normalizedTime,
+                m_SocialTripsMacroAvailable = socialTripsConversionChancePercent > 0,
+                m_SocialTripsConversionChancePercent = socialTripsConversionChancePercent,
                 CommercialPropertyLookup = InternalCompilerInterface.GetComponentLookup<CommercialProperty>(ref this.__TypeHandle.CommercialPropertyLookup, ref this.CheckedStateRef),
                 IndustrialPropertyLookup = InternalCompilerInterface.GetComponentLookup<IndustrialProperty>(ref this.__TypeHandle.IndustrialPropertyLookup, ref this.CheckedStateRef),
                 OfficePropertyLookup = InternalCompilerInterface.GetComponentLookup<OfficeProperty>(ref this.__TypeHandle.OfficePropertyLookup, ref this.CheckedStateRef),
@@ -703,6 +708,8 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<Game.Objects.Transform> m_Transforms;
             [ReadOnly]
+            public ComponentLookup<SocialLeisureOpportunity> m_SocialLeisureOpportunities;
+            [ReadOnly]
             public ComponentLookup<PropertyRenter> m_Renters;
             [NativeDisableParallelForRestriction]
             public ComponentLookup<Citizen> m_CitizenDatas;
@@ -820,6 +827,8 @@ namespace Time2Work
             public float park_hourly_factor;
             public int remote_work_prob;
             public bool m_LogLeisure;
+            public bool m_SocialTripsMacroAvailable;
+            public int m_SocialTripsConversionChancePercent;
 
             private static float GetElapsed(float start, float end)
             {
@@ -834,6 +843,59 @@ namespace Time2Work
                 end = math.frac(end);
                 time = math.frac(time);
                 return start <= end ? time >= start && time <= end : time >= start || time <= end;
+            }
+
+            private bool ShouldCreateSocialLeisureOpportunity(Entity citizen, Citizen citizenData, Entity destination)
+            {
+                int chancePercent = math.clamp(this.m_SocialTripsConversionChancePercent, 0, 100);
+                if (!this.m_SocialTripsMacroAvailable || chancePercent <= 0)
+                    return false;
+                if (chancePercent >= 100)
+                    return true;
+
+                uint seed = (uint)math.max(
+                    1,
+                    math.abs(citizenData.m_PseudoRandom) +
+                    citizen.Index * 397 +
+                    destination.Index * 1009 +
+                    (int)(this.m_SimulationFrame % 65521u) +
+                    17);
+                Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex(seed);
+                return random.NextInt(100) < chancePercent;
+            }
+
+            private void StartNormalLeisureTrip(
+                int unfilteredChunkIndex,
+                Entity citizen,
+                DynamicBuffer<TripNeeded> trips,
+                Citizen citizenData,
+                LeisureProviderData provider,
+                Entity destination)
+            {
+                trips.Add(new TripNeeded()
+                {
+                    m_TargetAgent = destination,
+                    m_Purpose = Game.Citizens.Purpose.Leisure
+                });
+
+                if (this.m_LogLeisure)
+                {
+                    this.m_LeisureLogQueue.Enqueue(new LeisureLogEvent()
+                    {
+                        leisureType = provider.m_LeisureType,
+                        startedTrips = 1
+                    });
+                }
+
+                this.m_CommandBuffer.AddComponent<Game.Common.Target>(unfilteredChunkIndex, citizen, new Game.Common.Target()
+                {
+                    m_Target = destination
+                });
+
+                if (destination != Entity.Null && this.m_CurrentBuildings.HasComponent(citizen))
+                {
+                    shoppingTime(unfilteredChunkIndex, citizen, citizenData, provider.m_LeisureType);
+                }
             }
 
             private float GetPostEventDepartureDelay(Citizen citizen, Entity eventEntity, int day)
@@ -1266,26 +1328,22 @@ namespace Time2Work
                                         leisure.m_TargetAgent = destination;
                                         nativeArray2[index] = leisure;
 
-                                        dynamicBuffer.Add(new TripNeeded()
+                                        if (ShouldCreateSocialLeisureOpportunity(entity1, citizenData, destination))
                                         {
-                                            m_TargetAgent = destination,
-                                            m_Purpose = Game.Citizens.Purpose.Leisure
-                                        });
-                                        if (this.m_LogLeisure)
-                                        {
-                                            this.m_LeisureLogQueue.Enqueue(new LeisureLogEvent()
+                                            if (!this.m_SocialLeisureOpportunities.HasComponent(entity1))
                                             {
-                                                leisureType = provider.m_LeisureType,
-                                                startedTrips = 1
-                                            });
+                                                this.m_CommandBuffer.AddComponent<SocialLeisureOpportunity>(unfilteredChunkIndex, entity1, new SocialLeisureOpportunity()
+                                                {
+                                                    version = 1,
+                                                    originalTarget = destination,
+                                                    originalLeisureType = (int)provider.m_LeisureType,
+                                                    requestedFrame = this.m_SimulationFrame
+                                                });
+                                            }
                                         }
-                                        this.m_CommandBuffer.AddComponent<Game.Common.Target>(unfilteredChunkIndex, entity1, new Game.Common.Target()
+                                        else
                                         {
-                                            m_Target = destination
-                                        });
-                                        if (leisure.m_TargetAgent != Entity.Null && this.m_CurrentBuildings.HasComponent(entity1))
-                                        {
-                                            shoppingTime(unfilteredChunkIndex, entity1, citizenData, provider.m_LeisureType);
+                                            StartNormalLeisureTrip(unfilteredChunkIndex, entity1, dynamicBuffer, citizenData, provider, destination);
                                         }
                                     }
                                     else
@@ -1692,6 +1750,8 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<Game.Objects.Transform> __Game_Objects_Transform_RO_ComponentLookup;
             [ReadOnly]
+            public ComponentLookup<SocialLeisureOpportunity> __Time2Work_Components_SocialLeisureOpportunity_RO_ComponentLookup;
+            [ReadOnly]
             public BufferLookup<Game.Economy.Resources> __Game_Economy_Resources_RO_BufferLookup;
             public ComponentLookup<Citizen> __Game_Citizens_Citizen_RW_ComponentLookup;
             [ReadOnly]
@@ -1776,6 +1836,7 @@ namespace Time2Work
                 this.__Game_Citizens_SpecialEventData_RO_ComponentLookup = state.GetComponentLookup<SpecialEventData>(true);
                 this.__Game_Companies_ResourceBuyer_RO_ComponentLookup = state.GetComponentLookup<ResourceBuyer>(true);
                 this.__Game_Objects_Transform_RO_ComponentLookup = state.GetComponentLookup<Game.Objects.Transform>(true);
+                this.__Time2Work_Components_SocialLeisureOpportunity_RO_ComponentLookup = state.GetComponentLookup<SocialLeisureOpportunity>(true);
                 this.__Game_Economy_Resources_RO_BufferLookup = state.GetBufferLookup<Game.Economy.Resources>(true);
                 this.__Game_Citizens_Citizen_RW_ComponentLookup = state.GetComponentLookup<Citizen>();
                 this.__Game_Prefabs_CarData_RO_ComponentLookup = state.GetComponentLookup<CarData>(true);

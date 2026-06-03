@@ -5,6 +5,12 @@
 		},
 		{
 			"path": "../../../GameCode/Game1509/Game/Game"
+		},
+		{
+			"path": "../../SocialTrips"
+		},
+		{
+			"path": "../../CustomChirps"
 		}
 	],
 	"settings": {}

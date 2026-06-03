@@ -15,6 +15,7 @@ const coTimeControlsStyles: Record<string, string> = getModule(
 
 // Stable binding instance shared by both portals
 const dayOfWeek$ = bindValue<string>(mod.id, "dayOfWeek");
+const useUniversalModMenu$ = bindValue<boolean>(mod.id, "useUniversalModMenu", false);
 
 type PortalProps = {
     children?: ReactNode;
@@ -52,7 +53,8 @@ export const register: ModRegistrar = (moduleRegistry) => {
         timeControlsStyles
     );
 
-    moduleRegistry.append("GameTopLeft", RealisticTripsMenu);
+    moduleRegistry.append("GameTopLeft", RealisticTripsTopLeft);
+    moduleRegistry.append("UniversalModMenu", RealisticTripsUniversalModMenu);
 };
 
 function TimeControlsPortal(props: PortalProps): ReactElement {
@@ -292,6 +294,18 @@ function TimeControlsNewPortal(props: PortalProps): ReactElement {
     }, []);
 
     return <>{props.children}</>;
+}
+
+function RealisticTripsTopLeft(): ReactElement {
+    const useUniversalModMenu = useValue(useUniversalModMenu$);
+
+    return <>{!useUniversalModMenu && <RealisticTripsMenu />}</>;
+}
+
+function RealisticTripsUniversalModMenu(): ReactElement {
+    const useUniversalModMenu = useValue(useUniversalModMenu$);
+
+    return <>{useUniversalModMenu && <RealisticTripsMenu />}</>;
 }
 
 export default register;

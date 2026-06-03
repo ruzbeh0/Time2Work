@@ -38,6 +38,7 @@ namespace Time2Work
     public partial class Time2WorkCitizenTravelPurposeSystem : GameSystemBase
     {
         private Time2WorkTimeSystem m_TimeSystem;
+        private SimulationSystem m_SimulationSystem;
         private ResourceSystem m_ResourceSystem;
         private CityStatisticsSystem m_CityStatisticsSystem;
         private EndFrameBarrier m_EndFrameBarrier;
@@ -62,6 +63,7 @@ namespace Time2Work
             base.OnCreate();
             
             this.m_TimeSystem = this.World.GetOrCreateSystemManaged<Time2WorkTimeSystem>(); 
+            this.m_SimulationSystem = this.World.GetOrCreateSystemManaged<SimulationSystem>();
             this.m_ResourceSystem = this.World.GetOrCreateSystemManaged<ResourceSystem>();
             this.m_CityStatisticsSystem = this.World.GetOrCreateSystemManaged<CityStatisticsSystem>(); 
             this.m_EndFrameBarrier = this.World.GetOrCreateSystemManaged<EndFrameBarrier>();
@@ -178,6 +180,17 @@ namespace Time2Work
                 avg_time_recreation = Mod.m_Setting.avg_time_recreation,
                 avg_time_entertainment = Mod.m_Setting.avg_time_entertainment,
                 avg_time_vehicles = Mod.m_Setting.avg_time_vehicles,
+                hospital_stay_duration_enabled = Mod.m_Setting.hospital_stay_duration_enabled,
+                hospital_stay_inpatient_chance_pct = Mod.m_Setting.hospital_stay_inpatient_chance_pct,
+                hospital_short_stay_average_hours = Mod.m_Setting.hospital_short_stay_average_hours,
+                hospital_short_stay_stddev_hours = Mod.m_Setting.hospital_short_stay_stddev_hours,
+                hospital_short_stay_minimum_hours = Mod.m_Setting.hospital_short_stay_minimum_hours,
+                hospital_short_stay_maximum_hours = Mod.m_Setting.hospital_short_stay_maximum_hours,
+                hospital_inpatient_average_hours = Mod.m_Setting.hospital_inpatient_average_hours,
+                hospital_inpatient_stddev_hours = Mod.m_Setting.hospital_inpatient_stddev_hours,
+                hospital_inpatient_minimum_hours = Mod.m_Setting.hospital_inpatient_minimum_hours,
+                hospital_inpatient_maximum_hours = Mod.m_Setting.hospital_inpatient_maximum_hours,
+                frameIndex = this.m_SimulationSystem.frameIndex,
                 newyearseve = (now.Day == (Mod.m_Setting.daysPerMonth*12)),
                 dow = (int)WeekSystem.currentDayOfTheWeek
             };
@@ -608,9 +621,19 @@ namespace Time2Work
             public int avg_time_recreation;
             public int avg_time_entertainment;
             public int avg_time_vehicles;
+            public bool hospital_stay_duration_enabled;
+            public int hospital_stay_inpatient_chance_pct;
+            public int hospital_short_stay_average_hours;
+            public int hospital_short_stay_stddev_hours;
+            public int hospital_short_stay_minimum_hours;
+            public int hospital_short_stay_maximum_hours;
+            public int hospital_inpatient_average_hours;
+            public int hospital_inpatient_stddev_hours;
+            public int hospital_inpatient_minimum_hours;
+            public int hospital_inpatient_maximum_hours;
+            public uint frameIndex;
             public bool newyearseve;
             public int dow;
-            //public int avg_time_hospital;
             //public int avg_time_prison;
 
             private bool IsSleepAllowed(Entity citizenEntity)
@@ -784,7 +807,7 @@ namespace Time2Work
                                     travelPurpose.m_Purpose = Game.Citizens.Purpose.InHospital;
                                     nativeArray2[index] = travelPurpose;
                                     this.m_ArriveQueue.Enqueue(new Time2WorkCitizenTravelPurposeSystem.Arrive(entity, nativeArray3[index].m_CurrentBuilding, Time2WorkCitizenTravelPurposeSystem.ArriveType.Patient));
-                                    //buildingTime(unfilteredChunkIndex, entity, avg_time_hospital);
+                                    AddHospitalStay(unfilteredChunkIndex, entity);
                                     continue;
                                 }
 
@@ -968,6 +991,51 @@ namespace Time2Work
                     
                     this.m_CommandBuffer.AddComponent<Shopper>(unfilteredChunkIndex, entity, new Shopper(duration, this.m_NormalizedTime));
                 }
+            }
+
+            private void AddHospitalStay(int unfilteredChunkIndex, Entity entity)
+            {
+                if (!hospital_stay_duration_enabled)
+                    return;
+
+                Citizen citizen = this.m_Citizens[entity];
+                uint seed = (uint)math.max(1, math.abs(citizen.m_PseudoRandom) ^ (int)frameIndex ^ entity.Index * 397);
+                Unity.Mathematics.Random random = Unity.Mathematics.Random.CreateFromIndex(seed);
+                bool inpatientStay = random.NextInt(100) < math.clamp(hospital_stay_inpatient_chance_pct, 0, 100);
+                float sampledHours = inpatientStay
+                    ? SampleHospitalStayHours(
+                        ref random,
+                        hospital_inpatient_average_hours,
+                        hospital_inpatient_stddev_hours,
+                        hospital_inpatient_minimum_hours,
+                        hospital_inpatient_maximum_hours)
+                    : SampleHospitalStayHours(
+                        ref random,
+                        hospital_short_stay_average_hours,
+                        hospital_short_stay_stddev_hours,
+                        hospital_short_stay_minimum_hours,
+                        hospital_short_stay_maximum_hours);
+
+                uint durationFrames = (uint)math.max(1, (int)math.round(sampledHours / 24f * math.max(1, ticksPerDay)));
+                this.m_CommandBuffer.AddComponent<HospitalStay>(
+                    unfilteredChunkIndex,
+                    entity,
+                    new HospitalStay(frameIndex, frameIndex + durationFrames, sampledHours));
+            }
+
+            private float SampleHospitalStayHours(
+                ref Unity.Mathematics.Random random,
+                int average,
+                int stddev,
+                int minimum,
+                int maximum)
+            {
+                float minimumHours = math.max(1f / 60f, minimum);
+                float maximumHours = math.max(minimumHours, maximum);
+                float averageHours = math.clamp(average, minimumHours, maximumHours);
+                float stddevHours = math.max(0f, stddev);
+                float sampledHours = averageHours + (float)(GaussianRandom.NextGaussianDouble(random) * stddevHours);
+                return math.clamp(sampledHours, minimumHours, maximumHours);
             }
 
             void IJobChunk.Execute(

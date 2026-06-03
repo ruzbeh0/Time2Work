@@ -104,8 +104,11 @@ namespace Time2Work
             updateSystem.UpdateAt<WorkerShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkCitizenBehaviorSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkCitizenTravelPurposeSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAt<SocialTripSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAt<HospitalStaySystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkWorkerSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkLeisureSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAt<SocialLeisureOpportunitySystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkStudentSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAfter<WeekSystem>(SystemUpdatePhase.GameSimulation);
             

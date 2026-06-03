@@ -40,8 +40,8 @@ namespace Time2Work.Utils
 
         // Day type IDs: Weekday = 1, Friday = 0, Saturday = 2, Sunday = 3
         // Country IDs follow the English alphabetical country list used by SettingsEnum.
-        // Examples: Australia=10, Brazil=25, Canada=34, Germany=66, India=79,
-        //           Japan=87, Mexico=112, Netherlands=124, SouthAfrica=163, USA=188
+        // Examples: Argentina=8, Australia=10, Brazil=25, Canada=34, Germany=66, India=79,
+        //           Italy=85, Japan=87, Mexico=112, Netherlands=124, SouthAfrica=163, Spain=166, USA=188
 
         /// <summary>
         /// Returns the probability (%) for Meals at the given hour.
@@ -101,7 +101,7 @@ namespace Time2Work.Utils
             }
 
             // Country adjustments for Entertainment:
-            if (countryId == 25 || countryId == 140 || countryId == 112 || countryId == 79) // Brazil, Philippines, Mexico, or India
+            if (countryId == 25 || countryId == 140 || countryId == 112 || countryId == 79 || countryId == 8 || countryId == 166) // Brazil, Philippines, Mexico, India, Argentina, or Spain
             {
                 // Boost later hours (20-22)
                 MultiplyRange(profile, 20, 23, 1.3);
@@ -151,7 +151,7 @@ namespace Time2Work.Utils
                 }
             }
 
-            else if (countryId == 87 || countryId == 79) // Japan or India
+            else if (countryId == 87 || countryId == 79 || countryId == 166 || countryId == 8) // Japan, India, Spain, or Argentina
             {
                 // Later shopping windows are common in dense urban areas.
                 MultiplyRange(profile, 18, 22, 1.15);
@@ -186,7 +186,7 @@ namespace Time2Work.Utils
             }
 
             // Country adjustments for Park:
-            if (countryId == 25 || countryId == 140 || countryId == 112 || countryId == 79) // Brazil, Philippines, Mexico, or India
+            if (countryId == 25 || countryId == 140 || countryId == 112 || countryId == 79 || countryId == 8 || countryId == 166) // Brazil, Philippines, Mexico, India, Argentina, or Spain
             {
                 MultiplyRange(profile, 11, 17, 1.2);
                 MultiplyRange(profile, 0, 8, 0.8);

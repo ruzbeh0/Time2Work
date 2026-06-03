@@ -21,12 +21,18 @@ namespace Time2Work
         private EntityQuery m_TimeDataQuery;
         private SimulationSystem m_SimulationSystem;
         private ValueBinding<string> _weekDay;
+        private ValueBinding<bool> _useUniversalModMenu;
         private string dateOutput = "";
 
         public string BindGroupName => nameof(Time2Work);
 
         private void Refresh()
         {
+        }
+
+        public void UpdateUseUniversalModMenu(bool value)
+        {
+            _useUniversalModMenu?.Update(value);
         }
 
         protected override void OnCreate()
@@ -37,6 +43,7 @@ namespace Time2Work
             this.m_SimulationSystem = this.World.GetOrCreateSystemManaged<SimulationSystem>();
 
             AddBinding(_weekDay = new ValueBinding<string>(BindGroupName, "dayOfWeek", dateOutput));
+            AddBinding(_useUniversalModMenu = new ValueBinding<bool>(BindGroupName, "useUniversalModMenu", Mod.m_Setting?.use_universal_mod_menu ?? false));
             _weekUpdateThrottle = Throttle.BySeconds(1, () => { _weekDay.Update(dateOutput); });
         }
 

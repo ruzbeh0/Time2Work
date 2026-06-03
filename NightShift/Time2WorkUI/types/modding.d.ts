@@ -3,7 +3,7 @@ declare module "cs2/modding" {
   
   export type ModuleRegistryExtend = <T extends ComponentType<any>>(curr: T) => (props: any) => JSX.Element;
   export type ModuleRegistryAppend = ComponentType<{}> | (() => JSX.Element);
-  export type AppendHookTargets = "Menu" | "Editor" | "Game" | "GameTopLeft" | "GameTopRight" | "GameBottomRight";
+  export type AppendHookTargets = "Menu" | "Editor" | "Game" | "GameTopLeft" | "GameTopRight" | "GameBottomRight" | "UniversalModMenu";
   export type ModuleRegistry = {
   	get(modulePath: string, exportName: string): any;
   	add(modulePath: string, module: Record<string, any>): void;
