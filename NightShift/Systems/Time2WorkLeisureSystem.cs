@@ -278,11 +278,11 @@ namespace Time2Work
                 avg_time_vehicles = Mod.m_Setting.avg_time_vehicles,
                 remote_work_prob = Mod.m_Setting.remote_percentage,
                 //Meals = 0, Entertainment = 1,Shopping = 2,Park = 3,Travel = 4
-                meal_hourly_factor = LeisureProbabilityCalculator.GetMealsProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
-                entertainment_hourly_factor = LeisureProbabilityCalculator.GetEntertainmentProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
-                shopping_hourly_factor = LeisureProbabilityCalculator.GetShoppingProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
-                park_hourly_factor = LeisureProbabilityCalculator.GetParkProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour),
-                travel_hourly_factor = LeisureProbabilityCalculator.GetTravelProbability((int)Mod.m_Setting.settings_choice, (int)Mod.m_Setting.dt_simulation, hour)
+                meal_hourly_factor = LeisureProbabilityCalculator.GetMealsProbability((int)Mod.m_Setting.settings_choice, (int)this.m_daytype, hour),
+                entertainment_hourly_factor = LeisureProbabilityCalculator.GetEntertainmentProbability((int)Mod.m_Setting.settings_choice, (int)this.m_daytype, hour),
+                shopping_hourly_factor = LeisureProbabilityCalculator.GetShoppingProbability((int)Mod.m_Setting.settings_choice, (int)this.m_daytype, hour),
+                park_hourly_factor = LeisureProbabilityCalculator.GetParkProbability((int)Mod.m_Setting.settings_choice, (int)this.m_daytype, hour),
+                travel_hourly_factor = LeisureProbabilityCalculator.GetTravelProbability((int)Mod.m_Setting.settings_choice, (int)this.m_daytype, hour)
             }.ScheduleParallel<Time2WorkLeisureSystem.LeisureJob>(
                 this.m_LeisureQuery,
                 JobUtils.CombineDependencies(this.Dependency, outJobHandle, deps1, jobHandle1));

@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Time2Work.Bridge;
 using Time2Work.Components;
 using Time2Work.Utils;
 using Unity.Collections;
@@ -78,6 +79,14 @@ namespace Time2Work.Systems
                 int minute = currentDateTime.Minute;
 
                 bool isNewYearsEve = (currentDateTime.Day == (Mod.m_Setting.daysPerMonth*12));
+                if (ElectionsBridge.AreElectionDaySpecialEventsSuppressed(currentDateTime.Year, currentDateTime.DayOfYear))
+                {
+                    numberEvents = 0;
+                    EnsureTimeBuffers(0);
+                    ClearEventsForDay(entities, day);
+                    updated = true;
+                    return;
+                }
 
                 //Mod.log.Info($"isNewYearsEve:{isNewYearsEve}, currentDateTime.Month:{currentDateTime.Month},currentDateTime.Day:{currentDateTime.Day},Mod.m_Setting.daysPerMonth:{Mod.m_Setting.daysPerMonth*12},{currentDateTime.Month == 12},{currentDateTime.Day == (Mod.m_Setting.daysPerMonth * 12)}");
 
@@ -272,6 +281,25 @@ namespace Time2Work.Systems
                     : default;
 
                 _timesCount = count;
+            }
+        }
+
+        private void ClearEventsForDay(NativeArray<Entity> entities, int day)
+        {
+            for (int i = 0; i < entities.Length; i++)
+            {
+                Entity ent = entities[i];
+                if (!EntityManager.HasComponent<SpecialEventData>(ent))
+                    continue;
+
+                SpecialEventData specialEventData = EntityManager.GetComponentData<SpecialEventData>(ent);
+                if (specialEventData.day != day)
+                    continue;
+
+                specialEventData.day = -1;
+                specialEventData.start_time = 0f;
+                specialEventData.duration = 0f;
+                EntityManager.SetComponentData(ent, specialEventData);
             }
         }
 

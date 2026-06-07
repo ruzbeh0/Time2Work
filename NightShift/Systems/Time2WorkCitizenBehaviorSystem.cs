@@ -17,6 +17,7 @@ using Game.Vehicles;
 using System;
 using System.Data;
 using System.Runtime.CompilerServices;
+using Time2Work.Bridge;
 using Time2Work.Components;
 using Time2Work.Systems;
 using Time2Work.Utils;
@@ -398,7 +399,7 @@ namespace Time2Work
                 specialEventEndTime = SpecialEventSystem.endTime,
                 remote_work_prob = Mod.m_Setting.remote_percentage,
                 newyearseve = (now.Day == (Mod.m_Setting.daysPerMonth*12)),
-                resourceConsumption = Mod.m_Setting.resourceConsumption,
+                resourceConsumption = ElectionsBridge.GetEffectiveResourceConsumption(Mod.m_Setting.resourceConsumption),
                 shoppingTripGatesEnabled = Mod.m_Setting.shopping_trip_gates_enabled,
                 shoppingGateMealsPct = Mod.m_Setting.shopping_gate_meals_pct,
                 shoppingGateGroceriesPct = Mod.m_Setting.shopping_gate_groceries_pct,
@@ -776,7 +777,7 @@ namespace Time2Work
             public NativeArray<float> specialEventEndTime;
             public int remote_work_prob;
             public bool newyearseve;
-            public int resourceConsumption;
+            public float resourceConsumption;
             public bool shoppingTripGatesEnabled;
             public int shoppingGateMealsPct;
             public int shoppingGateGroceriesPct;

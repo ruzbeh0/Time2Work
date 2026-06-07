@@ -41,12 +41,14 @@ namespace Time2Work.Systems
         private EntityQuery m_NewCitizenScheduleQuery;
         private EntityQuery m_TimeDataQuery;
         private EntityQuery m_EconomyParameterQuery;
+        private EntityQuery m_PopulationQuery;
         private SimulationSystem m_SimulationSystem;
         private Time2WorkTimeSystem m_TimeSystem;
         private EndFrameBarrier m_EndFrameBarrier;
         private CitizenScheduleSystem.TypeHandle __TypeHandle;
         private Setting.DTSimulationEnum m_daytype;
         private int lastUpdatedDay = -1;
+        private int lastUpdatedDayTypeRevision = -1;
 
 
         public override int GetUpdateInterval(SystemUpdatePhase phase)
@@ -100,6 +102,7 @@ namespace Time2Work.Systems
              }
             });
             this.m_TimeDataQuery = this.GetEntityQuery(ComponentType.ReadOnly<Game.Common.TimeData>());
+            this.m_PopulationQuery = this.GetEntityQuery(ComponentType.ReadOnly<Population>());
             this.RequireAnyForUpdate(m_AllCitizenScheduleQuery, m_NewCitizenScheduleQuery);
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
 
@@ -138,10 +141,12 @@ namespace Time2Work.Systems
             JobHandle jobHandle;
 
             //Run after work shift update system
-            if (currentDateTime.Hour == 3 && currentDateTime.Minute > 4 && currentDateTime.Minute < 9 && lastUpdatedDay != day)
+            bool dayTypeChanged = lastUpdatedDayTypeRevision != WeekSystem.dayTypeRevision;
+            if ((currentDateTime.Hour == 3 && currentDateTime.Minute > 4 && currentDateTime.Minute < 9 && lastUpdatedDay != day) ||
+                dayTypeChanged)
             {
                 //Refresh All Schedules
-                Mod.log.Info($"Recalculating All Schedules - Normalized Time:{m_TimeSystem.normalizedTime}");
+                Mod.log.Info($"Recalculating All Schedules - Normalized Time:{m_TimeSystem.normalizedTime}, Day Type Revision:{WeekSystem.dayTypeRevision}");
                 CitizenScheduleSystem.AllCitizenScheduleJob jobDataAll = new CitizenScheduleSystem.AllCitizenScheduleJob()
                     {
                         m_CitizenType = this.__TypeHandle.__Game_Citizens_Citizen_RW_ComponentTypeHandle,
@@ -150,8 +155,9 @@ namespace Time2Work.Systems
                         m_PropertyRenters = this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup,
                     m_WorkerType = __TypeHandle.WorkerTypeHandle,
                     m_StudentType = __TypeHandle.StudentTypeHandle,
-                    m_Prefabs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
+                        m_Prefabs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
                         m_PopulationData = this.__TypeHandle.__Game_City_Population_RO_ComponentLookup,
+                        m_PopulationEntity = this.m_PopulationQuery.GetSingletonEntity(),
                         CommercialPropertyLookup = this.__TypeHandle.CommercialPropertyLookup,
                         IndustrialPropertyLookup = this.__TypeHandle.IndustrialPropertyLookup,
                         OfficePropertyLookup = this.__TypeHandle.OfficePropertyLookup,
@@ -189,6 +195,7 @@ namespace Time2Work.Systems
                 jobHandle = jobDataAll.ScheduleParallel<CitizenScheduleSystem.AllCitizenScheduleJob>(this.m_AllCitizenScheduleQuery, this.Dependency);
                 this.Dependency = jobHandle;
                 lastUpdatedDay = day;
+                lastUpdatedDayTypeRevision = WeekSystem.dayTypeRevision;
             }
             else
             {
@@ -203,6 +210,7 @@ namespace Time2Work.Systems
                     m_StudentType = __TypeHandle.StudentTypeHandle,
                     m_Prefabs = this.__TypeHandle.__Game_Prefabs_PrefabRef_RO_ComponentLookup,
                     m_PopulationData = this.__TypeHandle.__Game_City_Population_RO_ComponentLookup,
+                    m_PopulationEntity = this.m_PopulationQuery.GetSingletonEntity(),
                     CommercialPropertyLookup = this.__TypeHandle.CommercialPropertyLookup,
                     IndustrialPropertyLookup = this.__TypeHandle.IndustrialPropertyLookup,
                     OfficePropertyLookup = this.__TypeHandle.OfficePropertyLookup,

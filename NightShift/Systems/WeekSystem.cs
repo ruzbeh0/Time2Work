@@ -27,7 +27,9 @@ namespace Time2Work.Systems
         private static int year;
         private static bool updated = false;
         private static Setting.months month;
+        private static int electionSundayOverrideRevision = -1;
         public static bool initialized = false;
+        public static int dayTypeRevision { get; private set; }
         // Prevent duplicate "Happy New Year" chirps each year/day
         private int _lastNewYearChirpYear = -1;
 
@@ -235,92 +237,37 @@ namespace Time2Work.Systems
             year = currentDateTime.Year;
             int day = Mathf.FloorToInt(dayOfYear / (float)Mod.m_Setting.daysPerMonth);
             month = (Setting.months)((day % 12 + 12) % 12 + 1);
+            int bridgeOverrideRevision = ElectionsBridge.GetElectionDaySundayOverrideRevision();
+            bool electionSundayOverrideChanged = bridgeOverrideRevision != electionSundayOverrideRevision;
 
 
-            if (!initialized || (hour == 0 && !updated) || dayOfWeekTemp < 0 || currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.sevendayweek))
+            if (!initialized || (hour == 0 && !updated) || dayOfWeekTemp < 0 || currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.sevendayweek) || electionSundayOverrideChanged)
             {
-                int dow = ((dayOfYear + 12 * (year - 1953)) % 7);
-                dayOfWeekTemp = (DayOfWeek)dow;
-                if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.AverageDay))
-                {
-                    dayOfWeekTemp = DayOfWeek.Friday;
-                    if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Weekday))
-                    {
-                        dayOfWeekTemp = DayOfWeek.Monday;
-                    }
-                    else
-                    {
-                        if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Saturday))
-                        {
-                            dayOfWeekTemp = DayOfWeek.Saturday;
-                        }
-                        else if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Sunday))
-                        {
-                            dayOfWeekTemp = DayOfWeek.Sunday;
-                        }
-                    }
-                }
+                GetEffectiveDayType(out dayOfWeekTemp, out _);
                 updated = true;
             }
 
             //The day of the week actually changes at 3 AM since this is the hour with least activity
-            if (!initialized || hour == 3 && minute < 4 || currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.sevendayweek))
+            if (!initialized || hour == 3 && minute < 4 || currentDayOfTheWeek.Equals(Setting.DTSimulationEnum.sevendayweek) || electionSundayOverrideChanged)
             {
-                if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.sevendayweek))
+                Setting.DTSimulationEnum previousDayType = currentDayOfTheWeek;
+                DayOfWeek previousDayOfWeek = dayOfWeek;
+                bool wasInitialized = initialized;
+
+                currentDayOfTheWeek = GetEffectiveDayType(out dayOfWeek, out bool electionSundayOverrideActive);
+                dayOfWeekTemp = dayOfWeek;
+                if (!wasInitialized ||
+                    previousDayType != currentDayOfTheWeek ||
+                    previousDayOfWeek != dayOfWeek ||
+                    electionSundayOverrideChanged)
                 {
-                    int dow = ((dayOfYear + 12 * (year - 1953)) % 7);
-
-                    dayOfWeek = (DayOfWeek)dow;
-
-                    if (dayOfWeek.Equals(DayOfWeek.Saturday))
-                    {
-                        currentDayOfTheWeek = Setting.DTSimulationEnum.Saturday;
-                    }
-                    else if (dayOfWeek.Equals(DayOfWeek.Sunday))
-                    {
-                        currentDayOfTheWeek = Setting.DTSimulationEnum.Sunday;
-                    }
-                    else
-                    {
-                        if (dayOfWeek.Equals(DayOfWeek.Friday))
-                        {
-
-                            currentDayOfTheWeek = Setting.DTSimulationEnum.AverageDay;
-                        }
-                        else
-                        {
-                            currentDayOfTheWeek = Setting.DTSimulationEnum.Weekday;
-                        }
-                    }
-                }
-                else
-                {
-                    if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Weekday))
-                    {
-                        currentDayOfTheWeek = Setting.DTSimulationEnum.Weekday;
-                        dayOfWeek = DayOfWeek.Monday;
-                    }
-                    else
-                    {
-                        if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Saturday))
-                        {
-                            currentDayOfTheWeek = Setting.DTSimulationEnum.Saturday;
-                            dayOfWeek = DayOfWeek.Saturday;
-                        }
-                        else if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Sunday))
-                        {
-                            currentDayOfTheWeek = Setting.DTSimulationEnum.Sunday;
-                            dayOfWeek = DayOfWeek.Sunday;
-                        }
-                        else
-                        {
-                            currentDayOfTheWeek = Setting.DTSimulationEnum.AverageDay;
-                            dayOfWeek = DayOfWeek.Friday;
-                        }
-                    }
+                    dayTypeRevision++;
                 }
 
-                Mod.log.Info($"Day of the Week: {dayOfWeek}, Day Type: {currentDayOfTheWeek}, Month: {month}");
+                electionSundayOverrideRevision = bridgeOverrideRevision;
+
+                string overrideText = electionSundayOverrideActive ? " (Election Day Sunday override)" : string.Empty;
+                Mod.log.Info($"Day of the Week: {dayOfWeek}, Day Type: {currentDayOfTheWeek}, Month: {month}{overrideText}");
                 updateProbabilities();
                 Mod.log.Info($"Office Off Day Prob: {office_offdayprob}");
                 Mod.log.Info($"Commercial Off Day Prob: {commercial_offdayprob}");
@@ -333,6 +280,72 @@ namespace Time2Work.Systems
 
             TrySendNewYearChirp();
 
+        }
+
+        private static Setting.DTSimulationEnum GetEffectiveDayType(out DayOfWeek displayedDayOfWeek, out bool electionSundayOverrideActive)
+        {
+            displayedDayOfWeek = GetDisplayedDayOfWeek();
+            electionSundayOverrideActive = ElectionsBridge.IsElectionDaySundayOverrideActive(year, dayOfYear);
+            if (electionSundayOverrideActive)
+            {
+                return Setting.DTSimulationEnum.Sunday;
+            }
+
+            return GetDayTypeForDisplayedDay(displayedDayOfWeek);
+        }
+
+        private static DayOfWeek GetDisplayedDayOfWeek()
+        {
+            if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.sevendayweek))
+            {
+                int dow = ((dayOfYear + 12 * (year - 1953)) % 7);
+                return (DayOfWeek)dow;
+            }
+
+            if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Weekday))
+            {
+                return DayOfWeek.Monday;
+            }
+
+            if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Saturday))
+            {
+                return DayOfWeek.Saturday;
+            }
+
+            if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Sunday))
+            {
+                return DayOfWeek.Sunday;
+            }
+
+            return DayOfWeek.Friday;
+        }
+
+        private static Setting.DTSimulationEnum GetDayTypeForDisplayedDay(DayOfWeek displayedDayOfWeek)
+        {
+            if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.sevendayweek))
+            {
+                if (displayedDayOfWeek.Equals(DayOfWeek.Saturday))
+                    return Setting.DTSimulationEnum.Saturday;
+
+                if (displayedDayOfWeek.Equals(DayOfWeek.Sunday))
+                    return Setting.DTSimulationEnum.Sunday;
+
+                if (displayedDayOfWeek.Equals(DayOfWeek.Friday))
+                    return Setting.DTSimulationEnum.AverageDay;
+
+                return Setting.DTSimulationEnum.Weekday;
+            }
+
+            if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Weekday))
+                return Setting.DTSimulationEnum.Weekday;
+
+            if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Saturday))
+                return Setting.DTSimulationEnum.Saturday;
+
+            if (Mod.m_Setting.dt_simulation.Equals(Setting.DTSimulationEnum.Sunday))
+                return Setting.DTSimulationEnum.Sunday;
+
+            return Setting.DTSimulationEnum.AverageDay;
         }
 
         private void TrySendNewYearChirp()

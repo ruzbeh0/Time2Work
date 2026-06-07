@@ -2,6 +2,7 @@
 using Game.Prefabs;
 using System;
 using System.Collections.Generic;
+using Time2Work.Bridge;
 using Unity.Collections;
 using Unity.Entities;
 
@@ -39,7 +40,7 @@ namespace Time2Work.Systems
                 EconomyParameterData data = EntityManager.GetComponentData<EconomyParameterData>(tsd);
 
                 data.m_TrafficReduction = Mod.m_Setting.trafficReduction / 10000f;
-                data.m_ResourceConsumptionPerCitizen = Mod.m_Setting.resourceConsumption;
+                data.m_ResourceConsumptionPerCitizen = (int)Math.Round(ElectionsBridge.GetEffectiveResourceConsumption(Mod.m_Setting.resourceConsumption));
 
                 EntityManager.SetComponentData(tsd, data);
             }
