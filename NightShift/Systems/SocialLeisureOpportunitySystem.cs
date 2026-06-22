@@ -154,7 +154,8 @@ namespace Time2Work.Systems
             trips.Add(new TripNeeded()
             {
                 m_TargetAgent = target,
-                m_Purpose = purpose
+                m_Purpose = purpose,
+                m_Priority = 128
             });
         }
 

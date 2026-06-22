@@ -55,6 +55,7 @@ namespace Time2Work
         private EntityQuery m_LeisureQuery;
         private EntityQuery m_EconomyParameterQuery;
         private EntityQuery m_LeisureParameterQuery;
+        private EntityQuery m_TripPriorityParametersQuery;
         private EntityQuery m_ResidentPrefabQuery;
         private EntityQuery m_TimeDataQuery;
         private EntityQuery m_PopulationQuery;
@@ -91,6 +92,7 @@ namespace Time2Work
             this.m_PersonalCarSelectData = new PersonalCarSelectData((SystemBase)this);
             this.m_EconomyParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<EconomyParameterData>());
             this.m_LeisureParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<LeisureParametersData>());
+            this.m_TripPriorityParametersQuery = this.GetEntityQuery(ComponentType.ReadOnly<TripPriorityParametersData>());
             this.m_LeisureQuery = this.GetEntityQuery(new EntityQueryDesc()
             {
                 All = new ComponentType[4]
@@ -121,6 +123,7 @@ namespace Time2Work
             this.RequireForUpdate(this.m_LeisureQuery);
             this.RequireForUpdate(this.m_EconomyParameterQuery);
             this.RequireForUpdate(this.m_LeisureParameterQuery);
+            this.RequireForUpdate(this.m_TripPriorityParametersQuery);
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
         }
 
@@ -210,6 +213,7 @@ namespace Time2Work
                 m_Transforms = InternalCompilerInterface.GetComponentLookup<Game.Objects.Transform>(ref this.__TypeHandle.__Game_Objects_Transform_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_SocialLeisureOpportunities = InternalCompilerInterface.GetComponentLookup<SocialLeisureOpportunity>(ref this.__TypeHandle.__Time2Work_Components_SocialLeisureOpportunity_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
+                m_TripPriorityParameters = this.m_TripPriorityParametersQuery.GetSingleton<TripPriorityParametersData>(),
                 m_SimulationFrame = this.m_SimulationSystem.frameIndex,
                 m_TimeOfDay = this.m_TimeSystem.normalizedTime,
                 m_SocialTripsMacroAvailable = socialTripsConversionChancePercent > 0,
@@ -761,6 +765,7 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<PrefabRef> PrefabRefLookup;
             public EconomyParameterData m_EconomyParameters;
+            public TripPriorityParametersData m_TripPriorityParameters;
             public EntityCommandBuffer.ParallelWriter m_CommandBuffer;
             public NativeQueue<SetupQueueItem>.ParallelWriter m_PathfindQueue;
             public NativeQueue<LeisureEvent>.ParallelWriter m_LeisureQueue;
@@ -875,7 +880,8 @@ namespace Time2Work
                 trips.Add(new TripNeeded()
                 {
                     m_TargetAgent = destination,
-                    m_Purpose = Game.Citizens.Purpose.Leisure
+                    m_Purpose = Game.Citizens.Purpose.Leisure,
+                    m_Priority = 128
                 });
 
                 if (this.m_LogLeisure)
@@ -891,6 +897,7 @@ namespace Time2Work
                 {
                     m_Target = destination
                 });
+                this.m_CommandBuffer.RemoveComponent<LeisureSeekerCooldown>(unfilteredChunkIndex, citizen);
 
                 if (destination != Entity.Null && this.m_CurrentBuildings.HasComponent(citizen))
                 {
@@ -1340,6 +1347,7 @@ namespace Time2Work
                                                     requestedFrame = this.m_SimulationFrame
                                                 });
                                             }
+                                            this.m_CommandBuffer.RemoveComponent<LeisureSeekerCooldown>(unfilteredChunkIndex, entity1);
                                         }
                                         else
                                         {
@@ -1355,6 +1363,10 @@ namespace Time2Work
                                         }
                                         this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
                                         this.m_CommandBuffer.RemoveComponent(unfilteredChunkIndex, entity1, in this.m_PathfindTypes);
+                                        this.m_CommandBuffer.AddComponent<LeisureSeekerCooldown>(unfilteredChunkIndex, entity1, new LeisureSeekerCooldown()
+                                        {
+                                            m_SimulationFrame = this.m_SimulationFrame
+                                        });
                                     }
                                 }
                                 else
@@ -1368,6 +1380,10 @@ namespace Time2Work
                                         }
                                         this.m_CommandBuffer.RemoveComponent<Leisure>(unfilteredChunkIndex, entity1);
                                         this.m_CommandBuffer.RemoveComponent(unfilteredChunkIndex, entity1, in this.m_PathfindTypes);
+                                        this.m_CommandBuffer.AddComponent<LeisureSeekerCooldown>(unfilteredChunkIndex, entity1, new LeisureSeekerCooldown()
+                                        {
+                                            m_SimulationFrame = this.m_SimulationFrame
+                                        });
                                     }
                                 }
                             }
@@ -1601,7 +1617,7 @@ namespace Time2Work
                         m_Weights = CitizenUtils.GetPathfindWeights(citizenData, household1, householdCitizen.Length),
                         m_Methods = PathMethod.Pedestrian | PathMethod.Taxi | RouteUtils.GetPublicTransportMethods(this.m_TimeOfDay),
                         m_TaxiIgnoredRules = VehicleUtils.GetIgnoredPathfindRulesTaxiDefaults(),
-                        m_MaxCost = Time2WorkCitizenBehaviorSystem.kMaxPathfindCostLeisure
+                        m_MaxCost = this.m_TripPriorityParameters.GetMaxCost(this.m_TripPriorityParameters.GetPriority(Game.Citizens.Purpose.Leisure, citizenData))
                     };
                     SetupQueueTarget setupQueueTarget = new SetupQueueTarget();
                     setupQueueTarget.m_Type = SetupTargetType.CurrentLocation;

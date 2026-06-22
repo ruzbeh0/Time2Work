@@ -8,7 +8,9 @@
 	<!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
 	<!--LongDescription Value="This is a long description" /-->
 	<LongDescription>
-This mod has several options to configure the travel behavior of the population. There is also a feature to change the simulation to follow a weekly schedule, with travel patterns changing based on each day of the week. And there is another option to slow down time and make the day longer - without changing the simulation speed.
+Realistic Trips changes how cims decide when and why to travel. Instead of spreading activity across an average vanilla day, it gives work, school, shopping, leisure, and commuter trips more realistic timing, including rush hours, quieter nights, lunch breaks, and different weekday/weekend patterns.
+
+You can use presets for performance, balanced behavior, or country-based schedules, or tune the systems individually. The mod can also simulate a full seven-day week and optionally make the in-game day longer by slowing the clock without lowering the simulation speed, so travel times and daily schedules line up more naturally.
 
 ## Settings
 
@@ -128,14 +130,15 @@ There are also other four plots comparing the three day types: Weekday, Average 
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/time2work-mod.1655887/" />
 	<!--Version of the mod-->
-	<ModVersion Value="2.8" />
+	<ModVersion Value="2.9" />
 	<!--Recommended version of the base game to use the mod-->
-	<GameVersion Value="1.5.*" />
+	<GameVersion Value="1.6.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="75426" />
 	<Dependency Id="121812" />
 	<ChangeLog>
-* Added support for Elections mod
+* Updated for game version 1.6.0f1
+* Improved personal car parking recovery to avoid cims loosing their cars.
 	</ChangeLog>
 	<!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
 	<ExternalLink Type="github" Url="https://github.com/ruzbeh0/Time2Work" />

@@ -844,7 +844,8 @@ namespace Time2Work
                                                 dynamicBuffer.Add(new TripNeeded()
                                                 {
                                                     m_TargetAgent = home,
-                                                    m_Purpose = Game.Citizens.Purpose.GoingHome
+                                                    m_Purpose = Game.Citizens.Purpose.GoingHome,
+                                                    m_Priority = 128
                                                 });
                                             }
                                         }
@@ -853,7 +854,8 @@ namespace Time2Work
                                             dynamicBuffer.Add(new TripNeeded()
                                             {
                                                 m_TargetAgent = workplace,
-                                                m_Purpose = Game.Citizens.Purpose.GoingToWork
+                                                m_Purpose = Game.Citizens.Purpose.GoingToWork,
+                                                m_Priority = 128
                                             });
                                         }
 

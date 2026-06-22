@@ -1,4 +1,5 @@
 ﻿using Colossal.Entities;
+using Colossal.Mathematics;
 using Game;
 using Game.Agents;
 using Game.Areas;
@@ -9,6 +10,7 @@ using Game.Common;
 using Game.Companies;
 using Game.Economy;
 using Game.Events;
+using Game.Net;
 using Game.Pathfind;
 using Game.Prefabs;
 using Game.Simulation;
@@ -38,8 +40,9 @@ namespace Time2Work
     {
         public static readonly float kMaxPathfindCost = 17000f;
         public static readonly float kMaxPathfindCostLeisure = 17000f;
-        public static readonly float kMaxMovingAwayCost = CitizenBehaviorSystem.kMaxPathfindCost * 10f;
         public static readonly int kMinLeisurePossibility = 80;
+        public static readonly uint kLeisureSeekerCooldownFrames = 20000;
+        private const float kRemotePersonalCarDistanceSq = 1000f * 1000f;
         private JobHandle m_CarReserveWriters;
         private EntityQuery m_CitizenQuery;
         private EntityQuery m_OutsideConnectionQuery;
@@ -335,8 +338,10 @@ namespace Time2Work
                 m_Households = InternalCompilerInterface.GetComponentLookup<Household>(ref this.__TypeHandle.__Game_Citizens_Household_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_PropertyRenters = InternalCompilerInterface.GetComponentLookup<PropertyRenter>(ref this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_Transforms = InternalCompilerInterface.GetComponentLookup<Game.Objects.Transform>(ref this.__TypeHandle.__Game_Objects_Transform_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_CurveData = InternalCompilerInterface.GetComponentLookup<Curve>(ref this.__TypeHandle.__Game_Net_Curve_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_CarKeepers = InternalCompilerInterface.GetComponentLookup<CarKeeper>(ref this.__TypeHandle.__Game_Citizens_CarKeeper_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_PersonalCars = InternalCompilerInterface.GetComponentLookup<Game.Vehicles.PersonalCar>(ref this.__TypeHandle.__Game_Vehicles_PersonalCar_RW_ComponentLookup, ref this.CheckedStateRef),
+                m_ParkedCars = InternalCompilerInterface.GetComponentLookup<ParkedCar>(ref this.__TypeHandle.__Game_Vehicles_ParkedCar_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_MovingAway = InternalCompilerInterface.GetComponentLookup<MovingAway>(ref this.__TypeHandle.__Game_Agents_MovingAway_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_Workers = InternalCompilerInterface.GetComponentLookup<Worker>(ref this.__TypeHandle.__Game_Citizens_Worker_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_Students = InternalCompilerInterface.GetComponentLookup<Game.Citizens.Student>(ref this.__TypeHandle.__Game_Citizens_Student_RO_ComponentLookup, ref this.CheckedStateRef),
@@ -355,6 +360,7 @@ namespace Time2Work
                 m_OwnedVehicles = InternalCompilerInterface.GetBufferLookup<OwnedVehicle>(ref this.__TypeHandle.__Game_Vehicles_OwnedVehicle_RO_BufferLookup, ref this.CheckedStateRef),
                 m_CommuterHouseholds = InternalCompilerInterface.GetComponentLookup<CommuterHousehold>(ref this.__TypeHandle.__Game_Citizens_CommuterHousehold_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_CriminalData = InternalCompilerInterface.GetComponentLookup<Criminal>(ref this.__TypeHandle.__Game_Citizens_Criminal_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_LeisureSeekerCooldowns = InternalCompilerInterface.GetComponentLookup<LeisureSeekerCooldown>(ref this.__TypeHandle.__Game_Citizens_LeisureSeekerCooldown_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_HouseholdArchetype = this.m_HouseholdArchetype,
                 CommercialPropertyLookup = InternalCompilerInterface.GetComponentLookup<CommercialProperty>(ref this.__TypeHandle.CommercialPropertyLookup, ref this.CheckedStateRef),
                 IndustrialPropertyLookup = InternalCompilerInterface.GetComponentLookup<IndustrialProperty>(ref this.__TypeHandle.IndustrialPropertyLookup, ref this.CheckedStateRef),
@@ -433,10 +439,14 @@ namespace Time2Work
                 m_CarKeepers = this.__TypeHandle.__Game_Citizens_CarKeeper_RW_ComponentLookup,
                 m_HouseholdMembers = this.__TypeHandle.__Game_Citizens_HouseholdMember_RO_ComponentLookup,
                 m_PropertyRenters = InternalCompilerInterface.GetComponentLookup<PropertyRenter>(ref this.__TypeHandle.__Game_Buildings_PropertyRenter_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_CurrentBuildings = InternalCompilerInterface.GetComponentLookup<CurrentBuilding>(ref this.__TypeHandle.__Game_Citizens_CurrentBuilding_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_Transforms = InternalCompilerInterface.GetComponentLookup<Game.Objects.Transform>(ref this.__TypeHandle.__Game_Objects_Transform_RO_ComponentLookup, ref this.CheckedStateRef),
+                m_CurveData = InternalCompilerInterface.GetComponentLookup<Curve>(ref this.__TypeHandle.__Game_Net_Curve_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_OwnedVehicles = this.__TypeHandle.__Game_Vehicles_OwnedVehicle_RO_BufferLookup,
                 m_DistrictModifiers = InternalCompilerInterface.GetBufferLookup<DistrictModifier>(ref this.__TypeHandle.__Game_Areas_DistrictModifier_RO_BufferLookup, ref this.CheckedStateRef),
                 m_CurrentDistricts = InternalCompilerInterface.GetComponentLookup<CurrentDistrict>(ref this.__TypeHandle.__Game_Areas_CurrentDistrict_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_PersonalCars = this.__TypeHandle.__Game_Vehicles_PersonalCar_RW_ComponentLookup,
+                m_ParkedCars = InternalCompilerInterface.GetComponentLookup<ParkedCar>(ref this.__TypeHandle.__Game_Vehicles_ParkedCar_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_Citizens = this.__TypeHandle.__Game_Citizens_Citizen_RO_ComponentLookup,
                 m_BicycleOwners = InternalCompilerInterface.GetComponentLookup<BicycleOwner>(ref this.__TypeHandle.__Game_Citizens_BicycleOwner_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_ReserverQueue = this.m_CarReserveQueue
@@ -504,11 +514,19 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<PropertyRenter> m_PropertyRenters;
             [ReadOnly]
+            public ComponentLookup<CurrentBuilding> m_CurrentBuildings;
+            [ReadOnly]
+            public ComponentLookup<Game.Objects.Transform> m_Transforms;
+            [ReadOnly]
+            public ComponentLookup<Curve> m_CurveData;
+            [ReadOnly]
             public BufferLookup<OwnedVehicle> m_OwnedVehicles;
             [ReadOnly]
             public BufferLookup<DistrictModifier> m_DistrictModifiers;
             [ReadOnly]
             public ComponentLookup<CurrentDistrict> m_CurrentDistricts;
+            [ReadOnly]
+            public ComponentLookup<ParkedCar> m_ParkedCars;
             [ReadOnly]
             public ComponentLookup<Citizen> m_Citizens;
             [ReadOnly]
@@ -538,7 +556,7 @@ namespace Time2Work
                         {
                             Entity car = Entity.Null;
 
-                            if (HouseholdBehaviorSystem.GetFreeCar(componentData2.m_Household, this.m_OwnedVehicles, this.m_PersonalCars, ref car))
+                            if (TryGetUsableFreeCar(entity, componentData2.m_Household, ref car))
                             {
                                 this.m_CarKeepers.SetComponentEnabled(entity, true);
                                 this.m_CarKeepers[entity] = new CarKeeper()
@@ -554,6 +572,66 @@ namespace Time2Work
                         }
                     }
                 }
+            }
+
+            private bool TryGetUsableFreeCar(Entity citizen, Entity household, ref Entity car)
+            {
+                if (!this.m_OwnedVehicles.HasBuffer(household))
+                    return false;
+
+                DynamicBuffer<OwnedVehicle> ownedVehicles = this.m_OwnedVehicles[household];
+                for (int i = 0; i < ownedVehicles.Length; i++)
+                {
+                    Entity candidate = ownedVehicles[i].m_Vehicle;
+                    if (!this.m_PersonalCars.HasComponent(candidate))
+                        continue;
+
+                    Game.Vehicles.PersonalCar personalCar = this.m_PersonalCars[candidate];
+                    if (!personalCar.m_Keeper.Equals(Entity.Null))
+                        continue;
+
+                    if (!IsUsableFreeCar(citizen, household, candidate, personalCar))
+                        continue;
+
+                    car = candidate;
+                    return true;
+                }
+
+                return false;
+            }
+
+            private bool IsUsableFreeCar(Entity citizen, Entity household, Entity car, Game.Vehicles.PersonalCar personalCar)
+            {
+                if ((personalCar.m_State & PersonalCarFlags.HomeTarget) != (PersonalCarFlags)0)
+                    return true;
+
+                ParkedCar parkedCar;
+                if (!this.m_ParkedCars.TryGetComponent(car, out parkedCar))
+                    return true;
+
+                PropertyRenter propertyRenter;
+                if (this.m_PropertyRenters.TryGetComponent(household, out propertyRenter) && IsParkedNearEntity(parkedCar, propertyRenter.m_Property))
+                    return true;
+
+                CurrentBuilding currentBuilding;
+                if (this.m_CurrentBuildings.TryGetComponent(citizen, out currentBuilding) && IsParkedNearEntity(parkedCar, currentBuilding.m_CurrentBuilding))
+                    return true;
+
+                return false;
+            }
+
+            private bool IsParkedNearEntity(ParkedCar parkedCar, Entity target)
+            {
+                if (target == Entity.Null)
+                    return false;
+
+                Game.Objects.Transform targetTransform;
+                Curve curve;
+                if (!this.m_Transforms.TryGetComponent(target, out targetTransform) || !this.m_CurveData.TryGetComponent(parkedCar.m_Lane, out curve))
+                    return false;
+
+                float3 parkedPosition = MathUtils.Position(curve.m_Bezier, parkedCar.m_CurvePosition);
+                return math.distancesq(parkedPosition, targetTransform.m_Position) <= kRemotePersonalCarDistanceSq;
             }
         }
 
@@ -687,9 +765,13 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<Game.Objects.Transform> m_Transforms;
             [ReadOnly]
+            public ComponentLookup<Curve> m_CurveData;
+            [ReadOnly]
             public ComponentLookup<CarKeeper> m_CarKeepers;
             [NativeDisableParallelForRestriction]
             public ComponentLookup<Game.Vehicles.PersonalCar> m_PersonalCars;
+            [ReadOnly]
+            public ComponentLookup<ParkedCar> m_ParkedCars;
             [ReadOnly]
             public ComponentLookup<MovingAway> m_MovingAway;
             [ReadOnly]
@@ -726,6 +808,8 @@ namespace Time2Work
             public ComponentLookup<CommuterHousehold> m_CommuterHouseholds;
             [ReadOnly]
             public ComponentLookup<Criminal> m_CriminalData;
+            [ReadOnly]
+            public ComponentLookup<LeisureSeekerCooldown> m_LeisureSeekerCooldowns;
             [ReadOnly]
             public EntityArchetype m_HouseholdArchetype;
             [ReadOnly]
@@ -821,7 +905,7 @@ namespace Time2Work
                     });
 
                     this.m_SleepQueue.Enqueue(entity);
-                    this.ReleaseCar(index, entity);
+                    this.ReleaseCar(index, entity, home);
                 }
                 else
                 {
@@ -855,7 +939,8 @@ namespace Time2Work
                 TripNeeded elem = new TripNeeded()
                 {
                     m_TargetAgent = target,
-                    m_Purpose = Game.Citizens.Purpose.GoingHome
+                    m_Purpose = Game.Citizens.Purpose.GoingHome,
+                    m_Priority = 128
                 };
                 trips.Add(elem);
             }
@@ -899,7 +984,8 @@ namespace Time2Work
                     trips.Add(new TripNeeded()
                     {
                         m_TargetAgent = targetBuilding,
-                        m_Purpose = purpose
+                        m_Purpose = purpose,
+                        m_Priority = 128
                     });
                 }
                 else
@@ -1209,6 +1295,9 @@ namespace Time2Work
                 }
                 else if (!flag)
                 {
+                    LeisureSeekerCooldown componentData;
+                    if (this.m_LeisureSeekerCooldowns.TryGetComponent(citizenEntity, out componentData) && this.m_SimulationFrame < componentData.m_SimulationFrame + Time2WorkCitizenBehaviorSystem.kLeisureSeekerCooldownFrames)
+                        return false;
                     int num = 128 - (int)citizenData.m_LeisureCounter;
                     if (specialEvent)
                     {
@@ -1265,7 +1354,7 @@ namespace Time2Work
                 return true;
             }
 
-            private void ReleaseCar(int chunkIndex, Entity citizen)
+            private void ReleaseCar(int chunkIndex, Entity citizen, Entity home)
             {
                 if (!this.m_CarKeepers.IsComponentEnabled(citizen))
                     return;
@@ -1273,11 +1362,43 @@ namespace Time2Work
                 if (this.m_PersonalCars.HasComponent(car))
                 {
                     Game.Vehicles.PersonalCar personalCar = this.m_PersonalCars[car];
+                    if (ShouldKeepRemoteCarReservation(car, personalCar, home))
+                        return;
+
                     personalCar.m_Keeper = Entity.Null;
 
                     this.m_PersonalCars[car] = personalCar;
                 }
                 this.m_CommandBuffer.SetComponentEnabled<CarKeeper>(chunkIndex, citizen, false);
+            }
+
+            private bool ShouldKeepRemoteCarReservation(Entity car, Game.Vehicles.PersonalCar personalCar, Entity home)
+            {
+                if (home == Entity.Null)
+                    return false;
+
+                if ((personalCar.m_State & PersonalCarFlags.HomeTarget) != (PersonalCarFlags)0)
+                    return false;
+
+                ParkedCar parkedCar;
+                if (!this.m_ParkedCars.TryGetComponent(car, out parkedCar))
+                    return false;
+
+                return !IsParkedNearEntity(parkedCar, home);
+            }
+
+            private bool IsParkedNearEntity(ParkedCar parkedCar, Entity target)
+            {
+                if (target == Entity.Null)
+                    return false;
+
+                Game.Objects.Transform targetTransform;
+                Curve curve;
+                if (!this.m_Transforms.TryGetComponent(target, out targetTransform) || !this.m_CurveData.TryGetComponent(parkedCar.m_Lane, out curve))
+                    return false;
+
+                float3 parkedPosition = MathUtils.Position(curve.m_Bezier, parkedCar.m_CurvePosition);
+                return math.distancesq(parkedPosition, targetTransform.m_Position) <= kRemotePersonalCarDistanceSq;
             }
 
             private bool AttendMeeting(
@@ -1336,7 +1457,8 @@ namespace Time2Work
                                         m_Purpose = coordinatedMeetingData.m_TravelPurpose.m_Purpose,
                                         m_Resource = coordinatedMeetingData.m_TravelPurpose.m_Resource,
                                         m_Data = coordinatedMeetingData.m_TravelPurpose.m_Data,
-                                        m_TargetAgent = new Entity()
+                                        m_TargetAgent = new Entity(),
+                                        m_Priority = 128
                                     });
                                     return true;
                                 }
@@ -1354,7 +1476,8 @@ namespace Time2Work
                                             m_Purpose = coordinatedMeetingData.m_TravelPurpose.m_Purpose,
                                             m_Resource = coordinatedMeetingData.m_TravelPurpose.m_Resource,
                                             m_Data = coordinatedMeetingData.m_TravelPurpose.m_Data,
-                                            m_TargetAgent = meeting2.m_Target
+                                            m_TargetAgent = meeting2.m_Target,
+                                            m_Priority = 128
                                         });
                                     return true;
                                 }
@@ -1711,7 +1834,7 @@ namespace Time2Work
                                                                         }
                                                                         else
                                                                         {
-                                                                            this.ReleaseCar(unfilteredChunkIndex, entity1);
+                                                                            this.ReleaseCar(unfilteredChunkIndex, entity1, entity3);
                                                                         }
                                                                     }
                                                                 }
@@ -1765,8 +1888,12 @@ namespace Time2Work
             [ReadOnly]
             public ComponentLookup<Game.Objects.Transform> __Game_Objects_Transform_RO_ComponentLookup;
             [ReadOnly]
+            public ComponentLookup<Curve> __Game_Net_Curve_RO_ComponentLookup;
+            [ReadOnly]
             public ComponentLookup<CarKeeper> __Game_Citizens_CarKeeper_RO_ComponentLookup;
             public ComponentLookup<Game.Vehicles.PersonalCar> __Game_Vehicles_PersonalCar_RW_ComponentLookup;
+            [ReadOnly]
+            public ComponentLookup<ParkedCar> __Game_Vehicles_ParkedCar_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<MovingAway> __Game_Agents_MovingAway_RO_ComponentLookup;
             [ReadOnly]
@@ -1802,6 +1929,8 @@ namespace Time2Work
             public ComponentLookup<CommuterHousehold> __Game_Citizens_CommuterHousehold_RO_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<Criminal> __Game_Citizens_Criminal_RO_ComponentLookup;
+            [ReadOnly]
+            public ComponentLookup<LeisureSeekerCooldown> __Game_Citizens_LeisureSeekerCooldown_RO_ComponentLookup;
             public ComponentLookup<CarKeeper> __Game_Citizens_CarKeeper_RW_ComponentLookup;
             [ReadOnly]
             public ComponentLookup<HouseholdMember> __Game_Citizens_HouseholdMember_RO_ComponentLookup;
@@ -1852,8 +1981,10 @@ namespace Time2Work
                 this.__Game_Citizens_Household_RO_ComponentLookup = state.GetComponentLookup<Household>(true);
                 this.__Game_Buildings_PropertyRenter_RO_ComponentLookup = state.GetComponentLookup<PropertyRenter>(true);
                 this.__Game_Objects_Transform_RO_ComponentLookup = state.GetComponentLookup<Game.Objects.Transform>(true);
+                this.__Game_Net_Curve_RO_ComponentLookup = state.GetComponentLookup<Curve>(true);
                 this.__Game_Citizens_CarKeeper_RO_ComponentLookup = state.GetComponentLookup<CarKeeper>(true);
                 this.__Game_Vehicles_PersonalCar_RW_ComponentLookup = state.GetComponentLookup<Game.Vehicles.PersonalCar>();
+                this.__Game_Vehicles_ParkedCar_RO_ComponentLookup = state.GetComponentLookup<ParkedCar>(true);
                 this.__Game_Agents_MovingAway_RO_ComponentLookup = state.GetComponentLookup<MovingAway>(true);
                 this.__Game_Citizens_Worker_RO_ComponentLookup = state.GetComponentLookup<Worker>(true);
                 this.__Game_Citizens_Student_RO_ComponentLookup = state.GetComponentLookup<Game.Citizens.Student>(true);
@@ -1872,6 +2003,7 @@ namespace Time2Work
                 this.__Game_Vehicles_OwnedVehicle_RO_BufferLookup = state.GetBufferLookup<OwnedVehicle>(true);
                 this.__Game_Citizens_CommuterHousehold_RO_ComponentLookup = state.GetComponentLookup<CommuterHousehold>(true);
                 this.__Game_Citizens_Criminal_RO_ComponentLookup = state.GetComponentLookup<Criminal>(true);
+                this.__Game_Citizens_LeisureSeekerCooldown_RO_ComponentLookup = state.GetComponentLookup<LeisureSeekerCooldown>(true);
                 this.__Game_Citizens_CarKeeper_RW_ComponentLookup = state.GetComponentLookup<CarKeeper>();
                 this.__Game_Citizens_HouseholdMember_RO_ComponentLookup = state.GetComponentLookup<HouseholdMember>(true);
                 this.__Game_Areas_DistrictModifier_RO_BufferLookup = state.GetBufferLookup<DistrictModifier>(true);

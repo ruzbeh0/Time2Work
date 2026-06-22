@@ -31,6 +31,7 @@ namespace Time2Work
         public static int numCurrentEvents = 999;
         public static string modPath;
         public static bool realisticPathFindingPresent = false;
+        public static bool realLifePresent = false;
         public static Mod Instance { get; private set; }
         internal ILog Log { get; private set; }
 
@@ -60,6 +61,8 @@ namespace Time2Work
             m_Setting = new Setting(this);
             //m_ModData = new ModData();
 
+            realisticPathFindingPresent = false;
+            realLifePresent = false;
 
             foreach (var modInfo in GameManager.instance.modManager)
             {
@@ -71,6 +74,11 @@ namespace Time2Work
                 {
                     Mod.log.Info($"RealisticPathFinding Mod present");
                     realisticPathFindingPresent = true;
+                }
+                if (modInfo.asset.name.Equals("RealLife"))
+                {
+                    Mod.log.Info($"RealLife Mod present; Realistic Trips mortality compensation disabled");
+                    realLifePresent = true;
                 }
                 
             }
@@ -96,6 +104,10 @@ namespace Time2Work
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.BuyingCompanySystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.UI.InGame.TimeUISystem>().Enabled = false;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.UI.InGame.StatisticsUISystem>().Enabled = false;
+            if (!realLifePresent)
+            {
+                World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.DeathCheckSystem>().Enabled = false;
+            }
 
             updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.EditorSimulation);
@@ -103,7 +115,13 @@ namespace Time2Work
             updateSystem.UpdateAt<WorkPlaceShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<WorkerShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkCitizenBehaviorSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAt<PersonalCarRepairSystem>(SystemUpdatePhase.GameSimulation);
+            updateSystem.UpdateAt<PersonalCarDebugSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkCitizenTravelPurposeSystem>(SystemUpdatePhase.GameSimulation);
+            if (!realLifePresent)
+            {
+                updateSystem.UpdateAt<Time2WorkDeathCheckSystem>(SystemUpdatePhase.GameSimulation);
+            }
             updateSystem.UpdateAt<SocialTripSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<HospitalStaySystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkWorkerSystem>(SystemUpdatePhase.GameSimulation);

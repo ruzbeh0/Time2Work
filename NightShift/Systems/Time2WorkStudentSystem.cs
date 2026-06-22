@@ -113,8 +113,14 @@ namespace Time2Work
             {
                 offdayprob = offdayprob3.z;
             }
-            int num = math.min((int)Math.Round(offdayprob), Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
-            if (Unity.Mathematics.Random.CreateFromIndex((uint)citizen.m_PseudoRandom + (uint)day).NextInt(100) <= num)
+            int configuredOffDayPct = math.clamp((int)Math.Round(offdayprob), 0, 100);
+            if (configuredOffDayPct >= 100)
+                return true;
+            if (configuredOffDayPct <= 0)
+                return false;
+
+            int num = math.min(configuredOffDayPct, Mathf.RoundToInt(100f / math.max(1f, math.sqrt(economyParameters.m_TrafficReduction * (float)population))));
+            if (Unity.Mathematics.Random.CreateFromIndex((uint)citizen.m_PseudoRandom + (uint)day).NextInt(100) < num)
                 return true;
             return false;
         }
@@ -333,7 +339,8 @@ namespace Time2Work
                                     dynamicBuffer.Add(new TripNeeded()
                                     {
                                         m_TargetAgent = school,
-                                        m_Purpose = Game.Citizens.Purpose.GoingToSchool
+                                        m_Purpose = Game.Citizens.Purpose.GoingToSchool,
+                                        m_Priority = 128
                                     });
                                 }
                             }
