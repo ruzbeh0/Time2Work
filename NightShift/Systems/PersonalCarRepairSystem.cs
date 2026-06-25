@@ -7,6 +7,7 @@ using Game.Net;
 using Game.Simulation;
 using Game.Tools;
 using Game.Vehicles;
+using System.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -18,12 +19,15 @@ namespace Time2Work.Systems
         private const uint kRepairIntervalFrames = 4096;
         private const int kMaxFreeRemoteRepairsPerUpdate = 64;
         private const float kRemotePersonalCarDistanceSq = 1000f * 1000f;
+        private const long kSlowRepairLogMilliseconds = 100;
 
         private EntityQuery m_HouseholdVehicleQuery;
         private SimulationSystem m_SimulationSystem;
         private Time2WorkTimeSystem m_TimeSystem;
         private EndFrameBarrier m_EndFrameBarrier;
         private uint m_LastRepairFrame;
+
+        public override int GetUpdateInterval(SystemUpdatePhase phase) => (int)kRepairIntervalFrames;
 
         protected override void OnCreate()
         {
@@ -57,6 +61,7 @@ namespace Time2Work.Systems
 
             m_LastRepairFrame = frame;
 
+            Stopwatch stopwatch = Stopwatch.StartNew();
             NativeArray<Entity> households = m_HouseholdVehicleQuery.ToEntityArray(Allocator.Temp);
             try
             {
@@ -156,9 +161,14 @@ namespace Time2Work.Systems
                     }
                 }
 
-                if (remoteFree > 0 || remoteKeptHome > 0 || repairQueued > 0 || alreadyPending > 0 || updatedQueued > 0 || unknownLocation > 0)
+                long elapsedMs = stopwatch.ElapsedMilliseconds;
+                if (remoteFree > 0 || remoteKeptHome > 0 || repairQueued > 0 || alreadyPending > 0 || updatedQueued > 0 || unknownLocation > 0 || elapsedMs >= kSlowRepairLogMilliseconds)
                 {
-                    Mod.log.Info($"[RT][PersonalCarRepair] frame={frame} time={m_TimeSystem.normalizedTime:0.000} remote_free={remoteFree} remote_free_near_household_member={remoteFreeNearHouseholdMember} free_repair_queued={freeRepairQueued} free_repair_deferred={freeRepairDeferred} remote_kept_home={remoteKeptHome} repair_queued={repairQueued} already_pending={alreadyPending} updated_queued={updatedQueued} unknown_location={unknownLocation}");
+                    string message = $"[RT][PersonalCarRepair] frame={frame} time={m_TimeSystem.normalizedTime:0.000} elapsed_ms={elapsedMs} remote_free={remoteFree} remote_free_near_household_member={remoteFreeNearHouseholdMember} free_repair_queued={freeRepairQueued} free_repair_deferred={freeRepairDeferred} remote_kept_home={remoteKeptHome} repair_queued={repairQueued} already_pending={alreadyPending} updated_queued={updatedQueued} unknown_location={unknownLocation}";
+                    if (elapsedMs >= kSlowRepairLogMilliseconds)
+                        Mod.log.Warn(message);
+                    else
+                        Mod.log.Info(message);
                 }
             }
             finally

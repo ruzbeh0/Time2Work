@@ -872,6 +872,9 @@ namespace Time2Work
         public bool shopping_log_enabled { get; set; } = false;
 
         [SettingsUISection(OtherSection, OtherGroup)]
+        public bool personal_car_diagnostics_enabled { get; set; } = false;
+
+        [SettingsUISection(OtherSection, OtherGroup)]
         [SettingsUISetter(typeof(Setting), nameof(SetUseUniversalModMenu))]
         public bool use_universal_mod_menu { get; set; } = false;
 
@@ -1288,6 +1291,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.resourceConsumption)), $"Set the amount of resources needed to be consumed by each citizen. Easy game mode value is 1, normal mode is 20." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.shopping_log_enabled)), "Shopping diagnostics log" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.shopping_log_enabled)), $"Logs hourly shopping totals by resource, including trips, amount, spend, average stay duration, and average distance. This is intended for calibration and can reduce performance while enabled." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.personal_car_diagnostics_enabled)), "Personal car diagnostics log" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.personal_car_diagnostics_enabled)), $"Logs personal-car repair metrics by scanning households with owned vehicles. This is intended for troubleshooting and can reduce performance while enabled." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.use_universal_mod_menu)), "Show button in Universal Mod Menu" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.use_universal_mod_menu)), $"Adds a Realistic Trips button to the Universal Mod Menu. Disabled by default. Restarting the game after changing this option is recommended." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.hospital_stay_duration_enabled)), "Enable hospital encounter duration" },
@@ -1742,6 +1747,8 @@ namespace Time2Work
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.resourceConsumption)), $"Defina a quantidade de recursos que cada cidadÃ£o precisa consumir. O valor no modo fÃ¡cil Ã© 1 e no modo normal Ã© 20." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.shopping_log_enabled)), "Log de diagnÃ³stico de compras" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.shopping_log_enabled)), $"Registra totais horÃ¡rios de compras por recurso, incluindo viagens, quantidade, gasto, duraÃ§Ã£o mÃ©dia e distÃ¢ncia mÃ©dia. Use para calibraÃ§Ã£o; pode reduzir o desempenho enquanto estiver ativado." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.personal_car_diagnostics_enabled)), "Log de diagnostico de carros pessoais" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.personal_car_diagnostics_enabled)), $"Registra metricas de reparo de carros pessoais varrendo domicilios com veiculos. Use para investigacao; pode reduzir o desempenho enquanto estiver ativado." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.use_universal_mod_menu)), "Mostrar botao no Universal Mod Menu" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.use_universal_mod_menu)), $"Adiciona um botao do Realistic Trips ao Universal Mod Menu. Desativado por padrao. Recomenda-se reiniciar o jogo depois de alterar esta opcao." },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.hospital_stay_duration_enabled)), "Ativar duracao de atendimento hospitalar" },

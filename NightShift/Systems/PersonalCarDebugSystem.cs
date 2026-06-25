@@ -23,6 +23,8 @@ namespace Time2Work.Systems
         private Time2WorkTimeSystem m_TimeSystem;
         private uint m_LastLogFrame;
 
+        public override int GetUpdateInterval(SystemUpdatePhase phase) => (int)kLogIntervalFrames;
+
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -47,6 +49,9 @@ namespace Time2Work.Systems
 
         protected override void OnUpdate()
         {
+            if (Mod.m_Setting == null || !Mod.m_Setting.personal_car_diagnostics_enabled)
+                return;
+
             uint frame = m_SimulationSystem.frameIndex;
             if (m_LastLogFrame != 0 && frame - m_LastLogFrame < kLogIntervalFrames)
                 return;

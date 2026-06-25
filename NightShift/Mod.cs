@@ -108,6 +108,11 @@ namespace Time2Work
             {
                 World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Game.Simulation.DeathCheckSystem>().Enabled = false;
             }
+            else
+            {
+                World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<Time2WorkDeathCheckSystem>().Enabled = false;
+                Mod.log.Info("Time2WorkDeathCheckSystem registered for save compatibility only");
+            }
 
             updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkTimeSystem>(SystemUpdatePhase.EditorSimulation);
