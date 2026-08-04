@@ -1,10 +1,18 @@
 @use '../base.scss' as _base;
 
+.root {
+  position: relative;
+  pointer-events: auto;
+}
+
 .panel {
   width: 200rem;
   z-index: 10;
   display: flex;
   flex-direction: column;
+  position: absolute;
+  top: 40rem;
+  left: 0;
   margin-top: var(--gap8);
   background-color: var(--panelColorNormal);
   backdrop-filter: var(--panelBlur);
@@ -70,6 +78,11 @@
   &:hover {
     background-color: var(--selectedColor);
   }
+}
+
+.icon {
+  width: 100%;
+  height: 100%;
 }
 
 @keyframes scale-up-center-alternate {

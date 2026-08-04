@@ -172,7 +172,7 @@ namespace Time2Work
                 log.Info($"Patched: {patchedMethod.DeclaringType?.FullName}.{patchedMethod.Name}");
             }
 
-            Unity.Collections.NativeLeakDetection.Mode = Unity.Collections.NativeLeakDetectionMode.EnabledWithStackTrace;
+            //Unity.Collections.NativeLeakDetection.Mode = Unity.Collections.NativeLeakDetectionMode.EnabledWithStackTrace;
         }
 
         public void OnDispose()

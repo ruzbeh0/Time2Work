@@ -1,5 +1,5 @@
 import React, { useCallback, useState, FC } from 'react';
-import { Button, FloatingButton, Tooltip, Portal, PanelProps } from "cs2/ui";
+import { Button, Icon, Tooltip, Portal, PanelProps } from "cs2/ui";
 import icon from "images/realistictrips.svg";
 import styles from "./RealisticTripsMenu.module.scss";
 import SpecialEvents from "mods/RealisticTripsSections/SpecialEventSection/SpecialEvents";
@@ -85,14 +85,17 @@ const RealisticTripsButton: FC = () => {
 );
 
   return (
-    <div>
+    <div className={styles.root}>
       {/* 5. Use the "tooltip" prop with our dynamic list of events */}
       <Tooltip tooltip={tooltipContent}>
-        <FloatingButton
-          onClick={toggleMainMenu}
-          src={icon}
+        <Button
+          variant="floating"
+          selected={mainMenuOpen}
           aria-label="Toggle Realistic Trips Menu"
-        />
+          onSelect={toggleMainMenu}
+        >
+          <Icon src={icon} tinted={true} className={styles.icon} />
+        </Button>
       </Tooltip>
 
       {mainMenuOpen && (
