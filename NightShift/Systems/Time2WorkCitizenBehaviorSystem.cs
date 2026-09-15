@@ -48,6 +48,7 @@ namespace Time2Work
         private EntityQuery m_OutsideConnectionQuery;
         private EntityQuery m_EconomyParameterQuery;
         private EntityQuery m_LeisureParameterQuery;
+        private EntityQuery m_ParkingParametersQuery;
         private EntityQuery m_TimeDataQuery;
         private EntityQuery m_PopulationQuery;
         private EntityQuery m_HouseholdShoppingCooldownInitQuery;
@@ -253,6 +254,7 @@ namespace Time2Work
             this.m_ParallelCarReserveQueue = this.m_CarReserveQueue.AsParallelWriter();
             this.m_EconomyParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<EconomyParameterData>());
             this.m_LeisureParameterQuery = this.GetEntityQuery(ComponentType.ReadOnly<LeisureParametersData>());
+            this.m_ParkingParametersQuery = this.GetEntityQuery(ComponentType.ReadOnly<ParkingParametersData>());
             this.m_PopulationQuery = this.GetEntityQuery(ComponentType.ReadOnly<Population>());
             this.m_CitizenQuery = this.GetEntityQuery(new EntityQueryDesc()
             {
@@ -322,6 +324,13 @@ namespace Time2Work
             this.m_daytype = WeekSystem.currentDayOfTheWeek;
             JobHandle outJobHandle;
 
+            float maxParkingSearchDistance = 150f;
+            ParkingParametersData parkingParameters;
+            if (this.m_ParkingParametersQuery.TryGetSingleton(out parkingParameters) && parkingParameters.m_MaxParkingSearchDistance > 0f)
+            {
+                maxParkingSearchDistance = parkingParameters.m_MaxParkingSearchDistance;
+            }
+
             Time2WorkCitizenBehaviorSystem.CitizenAITickJob jobData = new Time2WorkCitizenBehaviorSystem.CitizenAITickJob()
             {
                 CitizenScheduleLookup = InternalCompilerInterface.GetComponentLookup<CitizenSchedule>(ref this.__TypeHandle.CitizenScheduleLookup, ref this.CheckedStateRef),
@@ -372,6 +381,7 @@ namespace Time2Work
                 out outJobHandle),
                 m_EconomyParameters = this.m_EconomyParameterQuery.GetSingleton<EconomyParameterData>(),
                 m_LeisureParameters = this.m_LeisureParameterQuery.GetSingleton<LeisureParametersData>(),
+                m_MaxParkingSearchDistance = maxParkingSearchDistance,
                 m_CommandBuffer = this.m_EndFrameBarrier.CreateCommandBuffer().AsParallelWriter(),
                 m_UpdateFrameIndex = frameWithInterval,
                 m_SimulationFrame = this.m_SimulationSystem.frameIndex,
@@ -818,6 +828,8 @@ namespace Time2Work
             public EconomyParameterData m_EconomyParameters;
             [ReadOnly]
             public LeisureParametersData m_LeisureParameters;
+            [ReadOnly]
+            public float m_MaxParkingSearchDistance;
             [ReadOnly]
             public ComponentLookup<CommercialProperty> CommercialPropertyLookup;
             [ReadOnly]
@@ -1362,43 +1374,22 @@ namespace Time2Work
                 if (this.m_PersonalCars.HasComponent(car))
                 {
                     Game.Vehicles.PersonalCar personalCar = this.m_PersonalCars[car];
-                    if (ShouldKeepRemoteCarReservation(car, personalCar, home))
-                        return;
-
                     personalCar.m_Keeper = Entity.Null;
-
                     this.m_PersonalCars[car] = personalCar;
+                    Game.Objects.Transform carTransform;
+                    Game.Objects.Transform homeTransform;
+                    if (home != Entity.Null &&
+                        (personalCar.m_State & PersonalCarFlags.HomeTarget) == (PersonalCarFlags)0 &&
+                        this.m_ParkedCars.HasComponent(car) &&
+                        this.m_Transforms.TryGetComponent(car, out carTransform) &&
+                        this.m_Transforms.TryGetComponent(home, out homeTransform) &&
+                        math.distancesq(carTransform.m_Position, homeTransform.m_Position) > this.m_MaxParkingSearchDistance * this.m_MaxParkingSearchDistance)
+                    {
+                        this.m_CommandBuffer.AddComponent(chunkIndex, car, new FixParkingLocation(Entity.Null, home));
+                        this.m_CommandBuffer.AddComponent<Updated>(chunkIndex, car);
+                    }
                 }
                 this.m_CommandBuffer.SetComponentEnabled<CarKeeper>(chunkIndex, citizen, false);
-            }
-
-            private bool ShouldKeepRemoteCarReservation(Entity car, Game.Vehicles.PersonalCar personalCar, Entity home)
-            {
-                if (home == Entity.Null)
-                    return false;
-
-                if ((personalCar.m_State & PersonalCarFlags.HomeTarget) != (PersonalCarFlags)0)
-                    return false;
-
-                ParkedCar parkedCar;
-                if (!this.m_ParkedCars.TryGetComponent(car, out parkedCar))
-                    return false;
-
-                return !IsParkedNearEntity(parkedCar, home);
-            }
-
-            private bool IsParkedNearEntity(ParkedCar parkedCar, Entity target)
-            {
-                if (target == Entity.Null)
-                    return false;
-
-                Game.Objects.Transform targetTransform;
-                Curve curve;
-                if (!this.m_Transforms.TryGetComponent(target, out targetTransform) || !this.m_CurveData.TryGetComponent(parkedCar.m_Lane, out curve))
-                    return false;
-
-                float3 parkedPosition = MathUtils.Position(curve.m_Bezier, parkedCar.m_CurvePosition);
-                return math.distancesq(parkedPosition, targetTransform.m_Position) <= kRemotePersonalCarDistanceSq;
             }
 
             private bool AttendMeeting(

@@ -203,8 +203,6 @@ namespace Time2Work
                 m_ServiceAvailables = InternalCompilerInterface.GetComponentLookup<ServiceAvailable>(ref this.__TypeHandle.__Game_Companies_ServiceAvailable_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_PopulationData = InternalCompilerInterface.GetComponentLookup<Population>(ref this.__TypeHandle.__Game_City_Population_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_HouseholdCitizens = InternalCompilerInterface.GetBufferLookup<HouseholdCitizen>(ref this.__TypeHandle.__Game_Citizens_HouseholdCitizen_RO_BufferLookup, ref this.CheckedStateRef),
-                m_RenterBufs = InternalCompilerInterface.GetBufferLookup<Renter>(ref this.__TypeHandle.__Game_Buildings_Renter_RO_BufferLookup, ref this.CheckedStateRef),
-                m_ConsumptionDatas = InternalCompilerInterface.GetComponentLookup<ConsumptionData>(ref this.__TypeHandle.__Game_Prefabs_ConsumptionData_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_CurrentDistrictData = InternalCompilerInterface.GetComponentLookup<CurrentDistrict>(ref this.__TypeHandle.__Game_Areas_CurrentDistrict_RO_ComponentLookup, ref this.CheckedStateRef),
                 m_DistrictModifiers = InternalCompilerInterface.GetBufferLookup<DistrictModifier>(ref this.__TypeHandle.__Game_Areas_DistrictModifier_RO_BufferLookup, ref this.CheckedStateRef),
                 m_Shopping = InternalCompilerInterface.GetComponentLookup<Shopper>(ref this.__TypeHandle.__Game_Citizens_Shopping_RW_ComponentLookup, ref this.CheckedStateRef),
@@ -737,10 +735,6 @@ namespace Time2Work
             public ComponentLookup<ServiceAvailable> m_ServiceAvailables;
             [ReadOnly]
             public ComponentLookup<Population> m_PopulationData;
-            [ReadOnly]
-            public BufferLookup<Renter> m_RenterBufs;
-            [ReadOnly]
-            public ComponentLookup<ConsumptionData> m_ConsumptionDatas;
             [ReadOnly]
             public ComponentLookup<CurrentDistrict> m_CurrentDistrictData;
             [ReadOnly]
@@ -1401,7 +1395,7 @@ namespace Time2Work
                 }
             }
 
-            private float GetWeight(LeisureType type, int wealth, CitizenAge age)
+            private float GetWeight(LeisureType type, int disposableIncome, int affluenceIncome, CitizenAge age)
             {
                 float num1 = 1f;
                 float num2;
@@ -1537,7 +1531,7 @@ namespace Time2Work
                         num1 = 0.0f;
                         break;
                 }
-                return num3 * num1 * num2 * math.smoothstep(a, 1f, (float)(((double)wealth + 5000.0) / 10000.0));
+                return num3 * num1 * num2 * math.smoothstep(a, 1f, math.max(0.01f, (float)disposableIncome / (float)affluenceIncome));
             }
 
             private LeisureType SelectLeisureType(
@@ -1551,22 +1545,32 @@ namespace Time2Work
                     return LeisureType.Attractions;
                 if (this.m_Households.HasComponent(household) && this.m_Resources.HasBuffer(household) && this.m_HouseholdCitizens.HasBuffer(household))
                 {
-                    int wealth = !tourist ? EconomyUtils.GetHouseholdSpendableMoney(this.m_Households[household], this.m_Resources[household], ref this.m_RenterBufs, ref this.m_ConsumptionDatas, ref this.m_PrefabRefs, propertyRenter) : EconomyUtils.GetResources(Resource.Money, this.m_Resources[household]);
+                    int disposableIncome;
+                    int affluenceIncome;
+                    if (tourist)
+                    {
+                        disposableIncome = EconomyUtils.GetTouristDisposableIncome(citizenData, this.m_EconomyParameters, this.m_EconomyParameters.m_TouristTravelSpendMultiplier);
+                        affluenceIncome = EconomyUtils.GetAffluenceReferenceIncome(this.m_EconomyParameters);
+                    }
+                    else
+                    {
+                        disposableIncome = EconomyUtils.GetHouseholdDisposableIncome(this.m_Households[household], propertyRenter);
+                        affluenceIncome = EconomyUtils.GetAffluenceReferenceIncome(this.m_EconomyParameters) * this.m_HouseholdCitizens[household].Length;
+                    }
                     float num1 = 0.0f;
                     CitizenAge age = citizenData.GetAge();
                     for (int type = 0; type < 10; ++type)
                     {
-                        num1 += this.GetWeight((LeisureType)type, wealth, age);
+                        num1 += this.GetWeight((LeisureType)type, disposableIncome, affluenceIncome, age);
                     }
                     float num2 = num1 * random.NextFloat();
                     for (int type = 0; type < 10; ++type)
                     {
-                        num2 -= this.GetWeight((LeisureType)type, wealth, age);
+                        num2 -= this.GetWeight((LeisureType)type, disposableIncome, affluenceIncome, age);
                         if ((double)num2 <= 1.0 / 1000.0)
                             return (LeisureType)type;
                     }
                 }
-                UnityEngine.Debug.LogWarning((object)"Leisure type randomization failed");
                 return LeisureType.Count;
             }
 
@@ -1579,6 +1583,25 @@ namespace Time2Work
               bool tourist)
             {
                 LeisureType leisureType = this.SelectLeisureType(household, tourist, citizenData, ref random);
+                if (leisureType == LeisureType.Count)
+                {
+                    if (this.m_LogLeisure)
+                    {
+                        this.m_LeisureLogQueue.Enqueue(new LeisureLogEvent()
+                        {
+                            leisureType = LeisureType.Count,
+                            failedTrips = 1
+                        });
+                    }
+
+                    this.m_CommandBuffer.RemoveComponent<Leisure>(chunkIndex, citizen);
+                    this.m_CommandBuffer.AddComponent<LeisureSeekerCooldown>(chunkIndex, citizen, new LeisureSeekerCooldown()
+                    {
+                        m_SimulationFrame = this.m_SimulationFrame
+                    });
+                    return;
+                }
+
                 //Mod.log.Info($"Leisure type: {leisureType.ToString()}, hour: {Math.Floor(24*m_TimeOfDay)}");
                 float num = (float)byte.MaxValue - (float)citizenData.m_LeisureCounter;
                 if (leisureType == LeisureType.Travel || leisureType == LeisureType.Sightseeing || leisureType == LeisureType.Attractions)
@@ -1791,10 +1814,6 @@ namespace Time2Work
             [ReadOnly]
             public BufferLookup<HouseholdCitizen> __Game_Citizens_HouseholdCitizen_RO_BufferLookup;
             [ReadOnly]
-            public BufferLookup<Renter> __Game_Buildings_Renter_RO_BufferLookup;
-            [ReadOnly]
-            public ComponentLookup<ConsumptionData> __Game_Prefabs_ConsumptionData_RO_ComponentLookup;
-            [ReadOnly]
             public ComponentLookup<CurrentDistrict> __Game_Areas_CurrentDistrict_RO_ComponentLookup;
             [ReadOnly]
             public BufferLookup<DistrictModifier> __Game_Areas_DistrictModifier_RO_BufferLookup;
@@ -1870,8 +1889,6 @@ namespace Time2Work
                 this.__Game_Economy_Resources_RW_BufferLookup = state.GetBufferLookup<Game.Economy.Resources>();
                 this.__Game_Citizens_HouseholdMember_RO_ComponentLookup = state.GetComponentLookup<HouseholdMember>(true);
                 this.__Game_Companies_ServiceCompanyData_RO_ComponentLookup = state.GetComponentLookup<ServiceCompanyData>(true);
-                this.__Game_Buildings_Renter_RO_BufferLookup = state.GetBufferLookup<Renter>(true);
-                this.__Game_Prefabs_ConsumptionData_RO_ComponentLookup = state.GetComponentLookup<ConsumptionData>(true);
                 this.__Game_Areas_CurrentDistrict_RO_ComponentLookup = state.GetComponentLookup<CurrentDistrict>(true);
                 this.__Game_Areas_DistrictModifier_RO_BufferLookup = state.GetBufferLookup<DistrictModifier>(true);
                 this.__Game_Prefabs_ResourceData_RO_ComponentLookup = state.GetComponentLookup<ResourceData>(true);

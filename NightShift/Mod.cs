@@ -120,7 +120,6 @@ namespace Time2Work
             updateSystem.UpdateAt<WorkPlaceShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<WorkerShiftUpdateSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkCitizenBehaviorSystem>(SystemUpdatePhase.GameSimulation);
-            updateSystem.UpdateAt<PersonalCarRepairSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<PersonalCarDebugSystem>(SystemUpdatePhase.GameSimulation);
             updateSystem.UpdateAt<Time2WorkCitizenTravelPurposeSystem>(SystemUpdatePhase.GameSimulation);
             if (!realLifePresent)
